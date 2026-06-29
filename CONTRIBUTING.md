@@ -3,10 +3,9 @@
 ## Branch Kurallari
 
 - prod: main
-- frontend integration: frontend
-- backend integration: backend
+- entegrasyon / gelistirme: develop
 
-Feature branchler her zaman ilgili entegrasyon branchinden acilir.
+Feature branchler her zaman `develop`'tan acilir.
 
 ## Gelistirme Prensipleri
 
@@ -18,9 +17,8 @@ Feature branchler her zaman ilgili entegrasyon branchinden acilir.
 
 ## PR Kurallari
 
-- PR hedefi:
-  - backend feature -> backend
-  - frontend feature -> frontend
+- PR hedefi: feature/fix branch -> develop
+- develop -> main yalnizca release asamasinda
 - Reviewer olarak ekip arkadaslari ve Copilot eklenmeli
 - En az bir onay alinmadan merge edilmemeli
 - `make test-docker` sonucu basarili olmali

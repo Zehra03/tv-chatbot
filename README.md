@@ -59,10 +59,9 @@ Makefile kullanmadan:
 ## Branch Stratejisi
 
 - Uretim: `main`
-- Frontend entegrasyon: `frontend`
-- Backend entegrasyon: `backend`
+- Entegrasyon / gelistirme: `develop`
 
-Feature branch adlandirma ornekleri:
+Feature branch'ler `develop`'tan acilir, `develop`'a PR edilir. Adlandirma ornekleri:
 
 - `feature/frontend/chat-ui`
 - `feature/backend/hotel-search`

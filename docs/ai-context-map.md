@@ -13,6 +13,8 @@
 
 ## Branch Eslestirme
 
+Tum branch'ler `develop`'tan acilir:
+
 - Backend module degisiklikleri: feature/backend/*
 - Frontend UI degisiklikleri: feature/frontend/*
-- Mimari/dokuman: docs/* veya chore/*
+- Mimari/dokuman: feature/docs/* veya chore/*
