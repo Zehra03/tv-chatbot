@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: paxassist-backend
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/paxassist}
+    username: ${SPRING_DATASOURCE_USERNAME:paxassist_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:paxassist_password}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      "[hibernate.format_sql]": true
+    open-in-view: false
+  flyway:
+    enabled: true
+
+server:
+  port: ${SERVER_PORT:${BACKEND_PORT:8080}}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  cors:
+    allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  rate-limit:
+    max-requests: 60
+    window-seconds: 60
+  ai:
+    provider-url: ${AI_PROVIDER_URL:https://api.openai.com/v1}
+    model: ${AI_PROVIDER_MODEL:gpt-4.1-mini}
+    api-key: ${AI_PROVIDER_API_KEY:replace-me}
