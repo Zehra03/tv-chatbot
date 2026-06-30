@@ -36,18 +36,20 @@ export default function Design() {
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="container flex items-center justify-between py-4">
-          <Logo size={36} withWordmark />
-          <span className="text-sm text-muted-foreground">Design Playground</span>
+          <Logo height={40} />
+          <a href="#login" className="text-sm font-medium text-primary hover:underline">
+            Login ekranı →
+          </a>
         </div>
       </header>
 
       <main className="container space-y-12 py-10">
-        <Section title="Logo (favicon → hero)">
-          <div className="flex flex-wrap items-end gap-6">
-            {[16, 24, 32, 48, 64, 96].map((s) => (
-              <div key={s} className="flex flex-col items-center gap-2">
-                <Logo size={s} />
-                <span className="text-xs text-muted-foreground">{s}px</span>
+        <Section title="Resmî logo (logo.png — olduğu gibi)">
+          <div className="flex flex-wrap items-end gap-8">
+            {[40, 72, 140, 220].map((h) => (
+              <div key={h} className="flex flex-col items-center gap-2">
+                <Logo height={h} />
+                <span className="text-xs text-muted-foreground">{h}px</span>
               </div>
             ))}
           </div>
