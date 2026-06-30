@@ -1,4 +1,12 @@
 package com.paximum.paxassist.chat.dto;
 
-public record ChatResponse(String reply) {
+import java.util.List;
+
+public record ChatResponse(
+        String reply,
+        String sessionId,
+        List<Object> hotels,
+        boolean redirectToReservation,
+        Object selectedProduct
+) {
 }
