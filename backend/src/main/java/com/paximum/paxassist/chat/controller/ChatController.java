@@ -20,6 +20,6 @@ public class ChatController {
 
     @PostMapping
     public ChatResponse chat(@RequestParam("request") @NonNull String request) {
-        return new ChatResponse(chatService.chat(request));
+        return new ChatResponse(chatService.chat(request), null, null, false, null);
     }
 }
