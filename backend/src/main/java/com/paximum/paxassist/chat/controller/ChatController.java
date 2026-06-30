@@ -1,11 +1,12 @@
 package com.paximum.paxassist.chat.controller;
 
+import com.paximum.paxassist.chat.dto.ChatRequest;
 import com.paximum.paxassist.chat.dto.ChatResponse;
 import com.paximum.paxassist.chat.service.ChatService;
-import org.springframework.lang.NonNull;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -19,7 +20,7 @@ public class ChatController {
     }
 
     @PostMapping
-    public ChatResponse chat(@RequestParam("request") @NonNull String request) {
-        return new ChatResponse(chatService.chat(request), null, null, false, null);
+    public ChatResponse chat(@RequestBody @Valid ChatRequest request) {
+        return new ChatResponse(chatService.chat(request.message()), null, null, false, null);
     }
 }
