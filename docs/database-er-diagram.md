@@ -101,10 +101,10 @@ erDiagram
         varchar destination
         varchar airline
         varchar trip_type "one_way | round_trip"
-        date depart_date
-        date return_date
-        timestamptz depart_time
-        timestamptz arrive_time
+        timestamptz depart_time "outbound departure (date is inside the instant)"
+        timestamptz arrive_time "outbound arrival"
+        timestamptz return_depart_time "return departure (NULL for one_way)"
+        timestamptz return_arrive_time "return arrival (NULL for one_way)"
         smallint stops
         varchar baggage
         smallint passenger_count
@@ -197,6 +197,14 @@ Live TourVisio search results are cached in **Redis**, not in any of these table
   session deletion. `session_id` is kept only as a correlation value.
 - **Types:** money is `numeric(12,2)` always paired with a `char(3)` ISO-4217 `currency`; stay/flight
   calendar dates use `date`; all instants (including flight depart/arrive times) use `timestamptz`.
+  - **`flight_reservation_details` stores precise instants only (no separate date columns):** each leg
+    is a `timestamptz` instant — `depart_time`/`arrive_time` for the outbound leg and
+    `return_depart_time`/`return_arrive_time` for the return leg (both `NULL` on a one-way trip). The
+    calendar date is contained inside the instant, so there are no `depart_date`/`return_date` columns.
+    This resolves the earlier model, which mixed a calendar-date approach with a precise-instant
+    approach: it had `depart_date` redundant with `depart_time`, and an asymmetry where only the
+    outbound leg carried times. A `CHECK` keeps the legs consistent (one-way ⇒ no return times;
+    round-trip ⇒ a return departure is present, ordered after the outbound).
 - **`lead_guest_name`** on `reservations` is a deliberate denormalization so the reservation-list
   screen renders without joining `passengers`; the canonical passenger data still lives in `passengers`.
 
