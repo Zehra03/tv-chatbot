@@ -12,7 +12,7 @@ spring:
       "[hibernate.format_sql]": true
     open-in-view: false
   flyway:
-    enabled: true
+    enabled: false
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
