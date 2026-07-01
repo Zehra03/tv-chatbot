@@ -23,7 +23,8 @@ spring:
       chat:
         model: ${AI_PROVIDER_MODEL:gemma3:4b}
         options:
-          temperature: 0.3
+          temperature: 0.0
+          num-predict: 1024
 
 server:
   port: ${SERVER_PORT:${BACKEND_PORT:8080}}
