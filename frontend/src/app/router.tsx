@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
+import { Layout } from '@/components/Layout'
 import LoginPage from '@/features/auth/LoginPage'
 import Design from '@/pages/Design'
 import { ChatPage } from '@/features/chat/ChatPage'
@@ -26,13 +27,19 @@ export const router = createBrowserRouter([
   {
     element: <ProtectedRoute />,
     children: [
-      { index: true, element: <Navigate to="/chat" replace /> },
-      { path: '/chat', element: <ChatPage /> },
-      { path: '/hotels', element: <HotelsPage /> },
-      { path: '/flights', element: <FlightsPage /> },
-      { path: '/reservation/new', element: <ReservationFormPage /> },
-      { path: '/reservations', element: <ReservationsPage /> },
-      { path: '/reservations/:id', element: <ReservationDetailPage /> },
+      {
+        // Ortak çatı (header + navigasyon); korumalı sayfalar bunun içinde render olur.
+        element: <Layout />,
+        children: [
+          { index: true, element: <Navigate to="/chat" replace /> },
+          { path: '/chat', element: <ChatPage /> },
+          { path: '/hotels', element: <HotelsPage /> },
+          { path: '/flights', element: <FlightsPage /> },
+          { path: '/reservation/new', element: <ReservationFormPage /> },
+          { path: '/reservations', element: <ReservationsPage /> },
+          { path: '/reservations/:id', element: <ReservationDetailPage /> },
+        ],
+      },
     ],
   },
   // Bilinmeyen yollar → /chat (oturum yoksa oradan /login'e düşer).
