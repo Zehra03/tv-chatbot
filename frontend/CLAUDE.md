@@ -43,8 +43,8 @@ screens consistent.
 
 ## Design Playground
 
-`src/pages/Design.tsx` (rendered by `App.tsx` at `/`) is the **screenshot target** for the
-Playwright MCP loop. It shows the logo at favicon→hero sizes, color swatches, typography,
+`src/pages/Design.tsx` (rendered by `App.tsx` at `#design`; `/` now lands on the login screen)
+is the **screenshot target** for the Playwright MCP loop. It shows the logo at favicon→hero sizes, color swatches, typography,
 and a **"Generated components" drop zone**. Put freshly generated components there, screenshot,
 critique, then move the approved component into its feature folder.
 
