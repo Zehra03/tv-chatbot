@@ -39,6 +39,9 @@ public class ChatService {
                     throw e;
                 }
             } catch (RuntimeException e) {
+                if (isParseFailure(e)) {
+                    return new AiReply("Bu konuda yardımcı olamıyorum. Otel veya uçuş araması için buradayım.");
+                }
                 AiClientException classified = classify(e);
                 if (isRetryable(classified) && attempt < MAX_ATTEMPTS) {
                     lastError = classified;
@@ -48,7 +51,8 @@ public class ChatService {
                 }
             }
         }
-        throw lastError;
+        throw (lastError != null) ? lastError
+                : new AiClientException(AiClientException.Code.UNKNOWN, "AI servisinden yanıt alınamadı");
     }
 
     public Flux<String> streamChat(@NonNull String message) {
@@ -61,6 +65,14 @@ public class ChatService {
         } catch (RuntimeException e) {
             return Flux.error(classify(e));
         }
+    }
+
+    private boolean isParseFailure(RuntimeException e) {
+        String msg = fullMessage(e);
+        return msg.contains("jsonprocessing") || msg.contains("cannot deserialize")
+                || msg.contains("unrecognized field") || msg.contains("unexpected character")
+                || msg.contains("no content to map") || msg.contains("invalid json")
+                || msg.contains("converter") || msg.contains("outputconverter");
     }
 
     private boolean isRetryable(AiClientException e) {
