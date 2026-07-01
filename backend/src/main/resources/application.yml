@@ -5,6 +5,11 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/paxassist}
     username: ${SPRING_DATASOURCE_USERNAME:paxassist_user}
     password: ${SPRING_DATASOURCE_PASSWORD:paxassist_password}
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST:localhost}
+      port: ${SPRING_REDIS_PORT:6379}
+      password: ${SPRING_REDIS_PASSWORD:}
   jpa:
     hibernate:
       ddl-auto: validate
@@ -40,3 +45,7 @@ app:
   rate-limit:
     max-requests: 60
     window-seconds: 60
+  cache:
+    default-ttl-minutes: 10
+    hotel-ttl-minutes: 5
+    flight-ttl-minutes: 5
