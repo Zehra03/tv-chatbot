@@ -26,7 +26,7 @@ public class ChatController {
     @PostMapping
     public ChatResponse chat(@RequestBody @Valid ChatRequest request) {
         ChatSession session = sessionStore.getOrCreate(request.sessionId());
-        String reply = chatService.chat(request.message());
-        return new ChatResponse(reply, session.getId(), null, false, null);
+        var aiReply = chatService.chat(request.message());
+        return new ChatResponse(aiReply.reply(), session.getId(), null, false, null);
     }
 }

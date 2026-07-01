@@ -1,5 +1,6 @@
 package com.paximum.paxassist.chat.service;
 
+import com.paximum.paxassist.chat.dto.AiReply;
 import com.paximum.paxassist.chat.exception.AiClientException;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.lang.NonNull;
@@ -17,14 +18,14 @@ public class ChatService {
         this.chatClient = chatClient;
     }
 
-    public String chat(@NonNull String message) {
+    public AiReply chat(@NonNull String message) {
         AiClientException lastError = null;
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
-                String reply = chatClient.prompt()
+                AiReply reply = chatClient.prompt()
                         .user(message)
                         .call()
-                        .content();
+                        .entity(AiReply.class);
                 if (reply == null) {
                     throw new AiClientException(AiClientException.Code.UNKNOWN, "AI yanıt üretemedi");
                 }
@@ -79,7 +80,7 @@ public class ChatService {
                     "AI sunucusu geçici hata döndürdü, lütfen tekrar deneyin", e);
         }
         return new AiClientException(AiClientException.Code.UNKNOWN,
-                "Beklenmeyen hata: AI servisinden yanıt alınamadı", e);
+                "Beklenmeyen hata, AI servisinden yanıt alınamadı", e);
     }
 
     private String fullMessage(Throwable e) {
