@@ -2,13 +2,16 @@ package com.paximum.paxassist.chat.service;
 
 import com.paximum.paxassist.chat.domain.ChatSession;
 
+import java.util.Optional;
+
 public interface ChatSessionStore {
 
-    /**
-     * Returns the existing session for the given id, or creates a new one.
-     * Passing null always creates a new session.
-     */
     ChatSession getOrCreate(String sessionId);
 
+    Optional<ChatSession> findById(String sessionId);
+
     void save(ChatSession session);
+
+    // Passes the found session so the implementation can do a CAS remove (key + value match)
+    void deleteById(String sessionId, ChatSession session);
 }

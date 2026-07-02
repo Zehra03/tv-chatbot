@@ -5,17 +5,16 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * In-memory session state. Swapped for a JPA entity once the DB teammate
- * delivers the chat_sessions entity + repository (Zehra koordinasyonu).
- */
+
 public class ChatSession {
 
     private final String id;
+    private Long userId;
     private Map<String, Object> accumulatedCriteria;
     private String flowState;
     private String pendingQuestion;
     private List<Object> lastResultCards;
+    private List<ChatMessage> messages;
 
     public ChatSession(String id) {
         this.id = id;
@@ -23,9 +22,13 @@ public class ChatSession {
         this.flowState = "IDLE";
         this.pendingQuestion = null;
         this.lastResultCards = new ArrayList<>();
+        this.messages = new ArrayList<>();
     }
 
     public String getId() { return id; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public Map<String, Object> getAccumulatedCriteria() { return accumulatedCriteria; }
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
@@ -40,4 +43,8 @@ public class ChatSession {
 
     public List<Object> getLastResultCards() { return lastResultCards; }
     public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }
+
+    public List<ChatMessage> getMessages() { return messages; }
+
+    public void addMessage(ChatMessage message) { this.messages.add(message); }
 }
