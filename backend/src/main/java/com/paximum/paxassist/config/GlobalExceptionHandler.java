@@ -1,6 +1,7 @@
 package com.paximum.paxassist.config;
 
 import com.paximum.paxassist.auth.exception.ConflictException;
+import com.paximum.paxassist.auth.exception.InvalidCredentialsException;
 import com.paximum.paxassist.chat.dto.ErrorResponse;
 import com.paximum.paxassist.chat.exception.AiClientException;
 import org.springframework.http.HttpStatus;
@@ -27,6 +28,12 @@ public class GlobalExceptionHandler {
     ResponseEntity<ErrorResponse> handleConflict(ConflictException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse("CONFLICT", e.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException e) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse("UNAUTHORIZED", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

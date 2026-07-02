@@ -1,5 +1,7 @@
 package com.paximum.paxassist.auth.controller;
 
+import com.paximum.paxassist.auth.dto.LoginRequest;
+import com.paximum.paxassist.auth.dto.LoginResponse;
 import com.paximum.paxassist.auth.dto.RegisterRequest;
 import com.paximum.paxassist.auth.dto.UserResponse;
 import com.paximum.paxassist.auth.service.AuthService;
@@ -28,13 +30,11 @@ public class AuthController {
         this.authService = authService;
     }
 
-    @Operation(
-            summary = "Yeni kullanıcı kaydı",
-            description = "E-posta ve şifre ile yeni bir kullanıcı oluşturur."
-    )
+    @Operation(summary = "Yeni kullanıcı kaydı",
+               description = "E-posta ve şifre ile yeni bir kullanıcı oluşturur.")
     @ApiResponse(responseCode = "201", description = "Kullanıcı başarıyla oluşturuldu",
             content = @Content(schema = @Schema(implementation = UserResponse.class)))
-    @ApiResponse(responseCode = "400", description = "Geçersiz istek (validasyon hatası)",
+    @ApiResponse(responseCode = "400", description = "Validasyon hatası",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "409", description = "E-posta zaten kayıtlı",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -42,5 +42,18 @@ public class AuthController {
     @ResponseStatus(HttpStatus.CREATED)
     public UserResponse register(@RequestBody @Valid RegisterRequest request) {
         return authService.register(request);
+    }
+
+    @Operation(summary = "Kullanıcı girişi",
+               description = "E-posta ve şifre doğrulanır, 24 saatlik JWT token döner.")
+    @ApiResponse(responseCode = "200", description = "Giriş başarılı",
+            content = @Content(schema = @Schema(implementation = LoginResponse.class)))
+    @ApiResponse(responseCode = "400", description = "Validasyon hatası",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "E-posta veya şifre hatalı",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @PostMapping("/login")
+    public LoginResponse login(@RequestBody @Valid LoginRequest request) {
+        return authService.login(request);
     }
 }
