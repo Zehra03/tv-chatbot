@@ -9,7 +9,7 @@ interface PagePlaceholderProps {
 
 export function PagePlaceholder({ title, route }: PagePlaceholderProps) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-2 bg-background text-foreground">
+    <div className="flex flex-col items-center justify-center gap-2 py-24 text-center">
       <h1 className="text-2xl font-bold">{title}</h1>
       <p className="text-sm text-muted-foreground">
         <code>{route}</code> — yakında (placeholder)

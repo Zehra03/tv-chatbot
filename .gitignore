@@ -32,3 +32,6 @@ coverage/
 
 # Docker
 postgres-data/
+
+# Personal Dev Files
+deniz_tasks.md
