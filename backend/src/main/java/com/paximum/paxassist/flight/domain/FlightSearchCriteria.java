@@ -30,7 +30,9 @@ public class FlightSearchCriteria {
                 String.valueOf(currency),
                 String.valueOf(nonstop),
                 String.valueOf(preferredAirline),
-                passengers.getAdults() + "A" + passengers.getChildren() + "C" + passengers.getInfants() + "I");
+                passengers == null
+                        ? "0A0C0I"
+                        : passengers.getAdults() + "A" + passengers.getChildren() + "C" + passengers.getInfants() + "I");
     }
 
     public List<String> missingRequiredFields() {

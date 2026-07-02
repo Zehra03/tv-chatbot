@@ -40,6 +40,9 @@ public class FlightSearchMapper {
     }
 
     private PassengerCount toDomain(PassengerCountDto dto) {
+        if (dto == null) {
+            return null;
+        }
         return PassengerCount.builder()
                 .adults(dto.adults())
                 .children(dto.children())

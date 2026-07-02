@@ -59,6 +59,12 @@ public class TourVisioFlightResponseMapper {
         TourVisioFlightItem item = flight.items().get(0);
         TourVisioOffer offer = flight.offer();
 
+        if (item.departure() == null || item.departure().airport() == null
+                || item.arrival() == null || item.arrival().airport() == null) {
+            log.warn("Skipping flight result {} due to missing departure/arrival airport data", flight.id());
+            return Optional.empty();
+        }
+
         if (requestedTripType == TripType.ROUND_TRIP) {
             // TourVisio's pricesearch response gives no signal (in the schema seen so far) for
             // distinguishing a return leg from outbound connection segments, so round-trip
@@ -96,6 +102,9 @@ public class TourVisioFlightResponseMapper {
     private Instant toInstant(String date) {
         if (date == null) {
             return null;
+        }
+        if (tourVisioProperties.timezone() == null || tourVisioProperties.timezone().isBlank()) {
+            throw new DateTimeException("Missing tourvisio timezone");
         }
         LocalDateTime localDateTime = LocalDateTime.parse(date, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         ZoneId zone = ZoneId.of(tourVisioProperties.timezone());

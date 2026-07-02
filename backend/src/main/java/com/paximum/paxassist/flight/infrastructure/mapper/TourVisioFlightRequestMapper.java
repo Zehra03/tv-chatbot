@@ -37,9 +37,14 @@ public class TourVisioFlightRequestMapper {
         if (roundTrip && criteria.getReturnDate() == null) {
             throw new IllegalArgumentException("returnDate is required for ROUND_TRIP searches");
         }
-        Integer night = roundTrip
-                ? (int) ChronoUnit.DAYS.between(criteria.getDepartDate(), criteria.getReturnDate())
-                : null;
+        Integer night = null;
+        if (roundTrip) {
+            night = (int) ChronoUnit.DAYS.between(criteria.getDepartDate(), criteria.getReturnDate());
+            if (night < 0) {
+                throw new IllegalArgumentException(
+                        "returnDate must be on or after departDate for ROUND_TRIP searches");
+            }
+        }
 
         return new TourVisioPriceSearchRequest(
                 PRODUCT_TYPE_FLIGHT,
