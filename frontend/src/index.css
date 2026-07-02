@@ -94,6 +94,10 @@
   .form-group-animated:focus-within .input-glow-bar {
     width: 100%;
   }
+  /* Odak x-kayması istenmeyen yerlerde (ör. composer) glow-bar'ı tek başına tetikler. */
+  .glow-group:focus-within .input-glow-bar {
+    width: 100%;
+  }
 
   /* Login'in "cıva" blob alanı — boyut/konum/süre inline (dinamik), görünüm burada. */
   .mercury-blob {
