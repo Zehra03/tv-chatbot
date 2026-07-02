@@ -1,7 +1,7 @@
 package com.paximum.paxassist.reservation;
 
-import com.paximum.paxassist.auth.exception.InvalidCredentialsException;
 import com.paximum.paxassist.chat.dto.ErrorResponse;
+import com.paximum.paxassist.common.exception.AuthenticationRequiredException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -101,6 +101,6 @@ public class ReservationController {
         if (auth != null && auth.getPrincipal() instanceof Long userId) {
             return userId;
         }
-        throw new InvalidCredentialsException();
+        throw new AuthenticationRequiredException();
     }
 }

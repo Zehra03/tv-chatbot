@@ -31,11 +31,12 @@ public class AuthService {
 
     @Transactional
     public UserResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.email())) {
+        String email = normalizeEmail(request.email());
+        if (userRepository.existsByEmail(email)) {
             throw new ConflictException("Bu e-posta adresi zaten kayıtlı");
         }
         User user = new User(
-                request.email(),
+                email,
                 passwordEncoder.encode(request.password()),
                 request.fullName(),
                 "USER"
@@ -45,7 +46,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public LoginResponse login(LoginRequest request) {
-        User user = userRepository.findByEmail(request.email())
+        User user = userRepository.findByEmail(normalizeEmail(request.email()))
                 .orElseThrow(InvalidCredentialsException::new);
 
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
@@ -61,5 +62,10 @@ public class AuthService {
         return userRepository.findById(userId)
                 .map(UserResponse::from)
                 .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
+    }
+
+    // E-posta eşsizliği büyük/küçük harften bağımsız olmalı (DB constraint case-sensitive)
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase(java.util.Locale.ROOT);
     }
 }

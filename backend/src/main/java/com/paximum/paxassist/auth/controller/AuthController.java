@@ -4,9 +4,9 @@ import com.paximum.paxassist.auth.dto.LoginRequest;
 import com.paximum.paxassist.auth.dto.LoginResponse;
 import com.paximum.paxassist.auth.dto.RegisterRequest;
 import com.paximum.paxassist.auth.dto.UserResponse;
-import com.paximum.paxassist.auth.exception.InvalidCredentialsException;
 import com.paximum.paxassist.auth.service.AuthService;
 import com.paximum.paxassist.chat.dto.ErrorResponse;
+import com.paximum.paxassist.common.exception.AuthenticationRequiredException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -85,7 +85,7 @@ public class AuthController {
     public UserResponse me() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth == null || !(auth.getPrincipal() instanceof Long userId)) {
-            throw new InvalidCredentialsException();
+            throw new AuthenticationRequiredException();
         }
         return authService.me(userId);
     }
