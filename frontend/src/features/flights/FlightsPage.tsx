@@ -6,7 +6,9 @@ import { NativeSelect } from '@/components/ui/native-select'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAppSelector } from '@/app/hooks'
+import { darkFieldClass, darkPrimaryButtonClass } from '@/lib/field-styles'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
 import { FlightList } from '@/features/flights/FlightList'
@@ -67,8 +69,8 @@ export function FlightsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Uçuşlar</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-bold text-white">Uçuşlar</h1>
+        <p className="text-sm text-brand-ice/70">
           Kriterlere göre ara; sonuçları aktarma, havayolu ve fiyata göre daralt.
         </p>
       </div>
@@ -82,6 +84,7 @@ export function FlightsPage() {
             onChange={(e) => setOrigin(e.target.value)}
             placeholder="Kalkış şehri"
             required
+            className={darkFieldClass}
           />
         </div>
         <div className="grid gap-1.5">
@@ -92,6 +95,7 @@ export function FlightsPage() {
             onChange={(e) => setDestination(e.target.value)}
             placeholder="Varış şehri"
             required
+            className={darkFieldClass}
           />
         </div>
         <div className="grid gap-1.5">
@@ -102,6 +106,7 @@ export function FlightsPage() {
             value={departDate}
             onChange={(e) => setDepartDate(e.target.value)}
             required
+            className={darkFieldClass}
           />
         </div>
         <div className="grid gap-1.5">
@@ -110,6 +115,7 @@ export function FlightsPage() {
             id="flight-triptype"
             value={tripType}
             onChange={(e) => setTripType(e.target.value as TripType)}
+            className={darkFieldClass}
           >
             <option value="one_way">Tek yön</option>
             <option value="round_trip">Gidiş-dönüş</option>
@@ -123,6 +129,7 @@ export function FlightsPage() {
               type="date"
               value={returnDate}
               onChange={(e) => setReturnDate(e.target.value)}
+              className={darkFieldClass}
             />
           </div>
         )}
@@ -132,17 +139,29 @@ export function FlightsPage() {
             id="flight-passengers"
             type="number"
             min={1}
-            className="w-24"
+            className={`w-24 ${darkFieldClass}`}
             value={passengers}
             onChange={(e) => setPassengers(Math.max(1, Number(e.target.value)))}
           />
         </div>
-        <Button type="submit">Ara</Button>
+        <Button type="submit" className={darkPrimaryButtonClass}>
+          Ara
+        </Button>
       </form>
 
       {!criteria && <EmptyState>Sonuçları görmek için arama kriterlerini girin.</EmptyState>}
 
-      {query.isFetching && <LoadingState label="Aranıyor…" />}
+      {query.isFetching && (
+        <div className="space-y-3">
+          <LoadingState label="Aranıyor…" />
+          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          <div aria-hidden="true" className="grid gap-3">
+            <Skeleton className="h-36" />
+            <Skeleton className="h-36" />
+            <Skeleton className="h-36" />
+          </div>
+        </div>
+      )}
 
       {query.isError && !query.isFetching && (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
@@ -151,7 +170,7 @@ export function FlightsPage() {
       {query.data && (
         <>
           <FlightFilters airlines={airlines} />
-          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
+          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
           <FlightList products={visible} />
         </>
       )}

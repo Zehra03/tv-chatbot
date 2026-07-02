@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { darkFieldClass } from '@/lib/field-styles'
 import {
   hotelFiltersChanged,
   hotelFiltersReset,
@@ -18,13 +19,14 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
   const dispatch = useAppDispatch()
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
+    <div className="glass-card flex flex-wrap items-center gap-3 p-4">
       <NativeSelect
         aria-label="Yıldız filtresi"
         value={filters.minStars ?? ''}
         onChange={(e) =>
           dispatch(hotelFiltersChanged({ minStars: e.target.value ? Number(e.target.value) : null }))
         }
+        className={darkFieldClass}
       >
         <option value="">Yıldız: tümü</option>
         <option value="3">3★ ve üzeri</option>
@@ -36,6 +38,7 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
         aria-label="Pansiyon filtresi"
         value={filters.boardType ?? ''}
         onChange={(e) => dispatch(hotelFiltersChanged({ boardType: e.target.value || null }))}
+        className={darkFieldClass}
       >
         <option value="">Pansiyon: tümü</option>
         {boardTypes.map((bt) => (
@@ -50,7 +53,7 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
         min={0}
         aria-label="En yüksek fiyat"
         placeholder="En yüksek fiyat"
-        className="w-40"
+        className={`w-40 ${darkFieldClass}`}
         value={filters.maxPrice ?? ''}
         onChange={(e) =>
           dispatch(hotelFiltersChanged({ maxPrice: e.target.value ? Number(e.target.value) : null }))
@@ -63,6 +66,7 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
         onChange={(e) =>
           dispatch(hotelFiltersChanged({ sort: (e.target.value || null) as HotelSort | null }))
         }
+        className={darkFieldClass}
       >
         <option value="">Sıralama: önerilen</option>
         <option value="price-asc">Fiyat (artan)</option>
@@ -70,7 +74,13 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
         <option value="stars-desc">Yıldız (azalan)</option>
       </NativeSelect>
 
-      <Button type="button" variant="ghost" size="sm" onClick={() => dispatch(hotelFiltersReset())}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-brand-ice/70 hover:bg-white/10 hover:text-white"
+        onClick={() => dispatch(hotelFiltersReset())}
+      >
         Temizle
       </Button>
     </div>
