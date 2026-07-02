@@ -1,6 +1,7 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
+import { FloatingInput } from '@/components/ui/floating-input'
 
 /**
  * /design — the design playground.
@@ -32,6 +33,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export default function Design() {
+  const [demoInput, setDemoInput] = useState('')
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <header className="border-b">
@@ -79,6 +82,65 @@ export default function Design() {
             <p className="text-sm text-muted-foreground">
               Yardımcı / ikincil metin — muted-foreground.
             </p>
+          </div>
+        </Section>
+
+        <Section title="Gece Uçuşu — koyu yüzey (AI bölgesi)">
+          <div className="space-y-8 rounded-3xl bg-brand-navy p-8">
+            <div className="space-y-1">
+              <h3 className="text-2xl font-bold tracking-tight text-gradient-brand">
+                Gece uçuşuna hoş geldin
+              </h3>
+              <p className="text-sm text-brand-ice/70">
+                Chat ve arama sonuçları bu yüzeyi kullanır; rezervasyon bilinçli olarak açık kalır.
+              </p>
+            </div>
+
+            <div className="glass-card max-w-md p-5">
+              <p className="text-sm font-semibold text-white">.glass-card reçetesi</p>
+              <p className="mt-1 text-xs text-white/70">
+                rounded-2xl · border-white/15 · bg-white/10 · backdrop-blur-md
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <span className="glass-chip text-brand-ice">Antalya</span>
+              <span className="glass-chip text-brand-ice">2 misafir</span>
+              <span className="glass-chip border-brand-teal/40 bg-brand-teal/15 text-white">
+                otel araması
+              </span>
+            </div>
+
+            <div className="max-w-sm">
+              <FloatingInput
+                id="design_floating"
+                label="Nereye gidiyorsun?"
+                value={demoInput}
+                onChange={setDemoInput}
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                className="bg-white px-6 py-3 text-sm font-bold uppercase tracking-widest text-brand-navy transition-all duration-300 hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
+              >
+                Birincil eylem
+              </button>
+              <button
+                type="button"
+                className="rounded-xl border border-brand-ice/30 bg-white/5 px-6 py-3 text-sm font-semibold text-brand-ice transition-all duration-300 hover:border-brand-teal hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
+              >
+                İkincil eylem
+              </button>
+            </div>
+
+            {/* Koyu drop zone — Magic/shadcn üretimi bileşenler önce buraya. */}
+            <div className="rounded-xl border border-dashed border-white/20 p-8">
+              <p className="text-center text-sm text-brand-ice/60">
+                Koyu yüzey drop zone — üretilen bileşeni buraya koy, screenshot al, kritik et.
+              </p>
+            </div>
           </div>
         </Section>
 
