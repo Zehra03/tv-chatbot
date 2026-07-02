@@ -53,7 +53,9 @@ export function Layout() {
           </div>
           <div className="flex items-center gap-3">
             {user && (
-              <span className="hidden text-sm text-muted-foreground sm:inline">{user.email}</span>
+              <span className="hidden text-sm text-muted-foreground sm:inline">
+                {user.name ?? user.email}
+              </span>
             )}
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Çıkış
