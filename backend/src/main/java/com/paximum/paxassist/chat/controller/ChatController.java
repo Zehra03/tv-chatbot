@@ -16,7 +16,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -27,7 +26,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import reactor.core.publisher.Flux;
 
 @Tag(name = "Chat", description = "Chatbot mesajlaşma işlemleri")
 @RestController
@@ -49,18 +47,22 @@ public class ChatController {
             content = @Content(schema = @Schema(implementation = ChatResponse.class)))
     @ApiResponse(responseCode = "400", description = "Validasyon hatası",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Bu oturuma erişim yetkiniz yok",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Oturum bulunamadı",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "503", description = "AI servisi geçici olarak ulaşılamıyor",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @PostMapping
     public ChatResponse chat(@RequestBody @Valid ChatRequest request) {
         Long userId = extractUserId();
 
-        ChatSession session = sessionStore.getOrCreate(request.sessionId());
+        ChatSession session = (request.sessionId() == null || request.sessionId().isBlank())
+                ? sessionStore.getOrCreate(null)
+                : sessionStore.findById(request.sessionId())
+                        .orElseThrow(() -> new ResourceNotFoundException("Sohbet oturumu bulunamadı"));
 
-        if (session.getUserId() != null && userId != null
-                && !session.getUserId().equals(userId)) {
-            throw new UnauthorizedAccessException("Bu oturuma erişim yetkiniz yok");
-        }
+        assertOwnership(session, userId);
         if (session.getUserId() == null && userId != null) {
             session.setUserId(userId);
         }
@@ -88,10 +90,7 @@ public class ChatController {
         ChatSession session = sessionStore.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sohbet oturumu bulunamadı"));
 
-        if (session.getUserId() != null && userId != null
-                && !session.getUserId().equals(userId)) {
-            throw new UnauthorizedAccessException("Bu oturuma erişim yetkiniz yok");
-        }
+        assertOwnership(session, userId);
 
         return new ChatHistoryResponse(session.getId(), session.getMessages());
     }
@@ -110,23 +109,18 @@ public class ChatController {
         ChatSession session = sessionStore.findById(sessionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Sohbet oturumu bulunamadı"));
 
-        if (session.getUserId() != null && userId != null
-                && !session.getUserId().equals(userId)) {
-            throw new UnauthorizedAccessException("Bu oturuma erişim yetkiniz yok");
-        }
+        assertOwnership(session, userId);
 
         // CAS remove: chat_messages deleted via ON DELETE CASCADE (V1__initial_schema.sql)
         sessionStore.deleteById(sessionId, session);
         return ResponseEntity.noContent().build();
     }
 
-    @Operation(summary = "Streaming chat (SSE)",
-               description = "Chatbot cevabını Server-Sent Events akışı olarak döner.")
-    @ApiResponse(responseCode = "200", description = "SSE akışı")
-    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public Flux<String> streamChat(@RequestBody @Valid ChatRequest request) {
-        sessionStore.getOrCreate(request.sessionId());
-        return chatService.streamChat(request.message());
+    // Sahipli oturuma yalnızca sahibi erişebilir; anonim (userId == null) istekler de reddedilir
+    private void assertOwnership(ChatSession session, Long userId) {
+        if (session.getUserId() != null && !session.getUserId().equals(userId)) {
+            throw new UnauthorizedAccessException("Bu oturuma erişim yetkiniz yok");
+        }
     }
 
     private Long extractUserId() {
