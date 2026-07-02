@@ -1,4 +1,5 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
@@ -121,5 +122,50 @@ describe('ReservationFormPage', () => {
     await user.click(submit)
     await waitFor(() => expect(requests).toContain('POST /api/v1/reservations'))
     server.events.removeAllListeners()
+  })
+
+  async function fillAndPreview(user: ReturnType<typeof userEvent.setup>) {
+    await user.type(screen.getByLabelText('Ad'), 'Zehra')
+    await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
+    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    await screen.findByText(/Toplam:/, {}, { timeout: 3000 })
+  }
+
+  it('başarıda sonuç ekranı gösterilir, liste invalidate edilir, taslak temizlenir', async () => {
+    const user = userEvent.setup()
+    const { store, queryClient } = renderPage()
+    const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
+
+    await fillAndPreview(user)
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Rezervasyonu onayla' }))
+
+    // Başarı ekranı: numara + durum + detay/liste bağlantıları.
+    expect(await screen.findByText('Rezervasyonunuz alındı', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText(/PAX-MOCK-\d+/)).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Detayı gör' })).toBeTruthy()
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['reservations'] })
+    expect(store.getState().reservationDraft.draft).toBeNull()
+  })
+
+  it('backend hatasında başarısızlık ekranı gösterilir', async () => {
+    server.use(
+      http.post('/api/v1/reservations', () =>
+        HttpResponse.json({ message: 'Kontenjan kalmadı' }, { status: 409 }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderPage()
+
+    await fillAndPreview(user)
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Rezervasyonu onayla' }))
+
+    expect(await screen.findByText('Rezervasyon oluşturulamadı', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByRole('alert').textContent).toContain('Kontenjan kalmadı')
+    expect(screen.getByRole('button', { name: 'Önizlemeye dön' })).toBeTruthy()
   })
 })

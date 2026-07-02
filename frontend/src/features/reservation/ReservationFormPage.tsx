@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { CheckCircle2, XCircle } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -17,6 +19,10 @@ import {
 } from '@/features/reservation/reservationFormSchema'
 import { useReservationPreview } from '@/features/reservation/useReservationPreview'
 import { useCreateReservation } from '@/features/reservation/useCreateReservation'
+import {
+  RESERVATION_STATUS_LABELS,
+  reservationStatusVariant,
+} from '@/features/reservation/status'
 import type { CreateReservationRequest } from '@/api'
 import { formatPrice } from '@/utils/format'
 
@@ -43,6 +49,70 @@ export function ReservationFormPage() {
     defaultValues: { passengers: [emptyPassenger], email: '', phone: '' },
   })
   const { fields, append, remove } = useFieldArray({ control, name: 'passengers' })
+
+  // Başarı ekranı — taslak başarıda temizlendiğinden no-draft kontrolünden ÖNCE.
+  if (create.isSuccess && create.data) {
+    const reservation = create.data
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <Card>
+          <CardContent className="space-y-4 p-8 text-center">
+            <CheckCircle2 className="mx-auto h-10 w-10 text-primary" aria-hidden />
+            <h1 className="text-xl font-bold">Rezervasyonunuz alındı</h1>
+            <div>
+              <p className="text-sm text-muted-foreground">Rezervasyon numaranız</p>
+              <p className="font-mono text-lg font-semibold">{reservation.reservationNumber}</p>
+            </div>
+            <div className="flex items-center justify-center gap-3">
+              <Badge variant={reservationStatusVariant(reservation.status)}>
+                {RESERVATION_STATUS_LABELS[reservation.status]}
+              </Badge>
+              <span className="font-bold">
+                {formatPrice(reservation.totalAmount, reservation.currency)}
+              </span>
+            </div>
+            <div className="flex justify-center gap-3">
+              <Button asChild>
+                <Link to={`/reservations/${reservation.id}`}>Detayı gör</Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/reservations">Rezervasyonlarım</Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
+  // Başarısızlık ekranı — hata mesajı + önizlemeye/forma dönüş.
+  if (create.isError) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <Card>
+          <CardContent className="space-y-4 p-8 text-center">
+            <XCircle className="mx-auto h-10 w-10 text-destructive" aria-hidden />
+            <h1 className="text-xl font-bold">Rezervasyon oluşturulamadı</h1>
+            <p role="alert" className="text-sm text-destructive">
+              {create.error.message}
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button onClick={() => create.reset()}>Önizlemeye dön</Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  create.reset()
+                  preview.reset()
+                }}
+              >
+                Forma dön
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   if (!draft) {
     return (
@@ -112,12 +182,6 @@ export function ReservationFormPage() {
               />
               Bilgilerimi kontrol ettim, rezervasyonu onaylıyorum.
             </label>
-
-            {create.isError && (
-              <p role="alert" className="text-sm text-destructive">
-                {create.error.message}
-              </p>
-            )}
 
             <div className="flex gap-3">
               <Button
