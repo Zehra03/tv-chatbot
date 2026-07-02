@@ -53,7 +53,8 @@ export function ReservationsPage() {
                 <th scope="col" className="p-3 font-semibold">Misafir</th>
                 <th scope="col" className="p-3 font-semibold">Toplam</th>
                 <th scope="col" className="p-3 font-semibold">Durum</th>
-                <th scope="col" className="p-3">
+                {/* relative: sr-only (absolute) hücre içinde kalsın, dokümanı genişletmesin. */}
+                <th scope="col" className="relative p-3">
                   <span className="sr-only">İşlemler</span>
                 </th>
               </tr>
