@@ -47,7 +47,8 @@ app:
     max-requests: 60
     window-seconds: 60
   jwt:
-    secret: ${JWT_SECRET:cGF4YXNzaXN0LWRldi1zZWNyZXQta2V5LW11c3QtYmUtYXQtbGVhc3QtMjU2LWJpdHMtbG9uZw==}
+    # Fallback yok: JWT_SECRET .env'den gelmek zorunda, yoksa uygulama ayaga kalkmaz
+    secret: ${JWT_SECRET}
     expiration-hours: 24
   cache:
     default-ttl-minutes: 10
