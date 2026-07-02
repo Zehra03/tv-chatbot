@@ -8,6 +8,8 @@ import org.springframework.stereotype.Component;
 @Component
 public class GuardRuleService {
 
+    private static final Locale TURKISH = Locale.forLanguageTag("tr");
+
     public GuardResult evaluate(String input) {
         if (input == null || input.isBlank()) {
             return new GuardResult(false, null);
@@ -23,9 +25,13 @@ public class GuardRuleService {
             return new GuardResult(true, "KVKK - Sensitive Data (TCKN) Detected");
         }
 
-        String lowerCaseInput = input.toLowerCase(Locale.ROOT);
+        // Locale.ROOT lowercases the Turkish dotless "I" to "i" instead of "ı" (and "İ" to a
+        // two-char "i̇"), so Turkish phrases like "ARTIK" fail to match "artık" unless we also
+        // lowercase with the Turkish locale, which applies the correct dotted/dotless mapping.
+        String lowerCaseInputRoot = input.toLowerCase(Locale.ROOT);
+        String lowerCaseInputTr = input.toLowerCase(TURKISH);
         for (String phrase : GuardPatterns.PROMPT_INJECTION_PHRASES) {
-            if (lowerCaseInput.contains(phrase)) {
+            if (lowerCaseInputRoot.contains(phrase) || lowerCaseInputTr.contains(phrase)) {
                 return new GuardResult(true, "Prompt Injection Detected");
             }
         }

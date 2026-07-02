@@ -10,7 +10,7 @@ final class SensitiveDataMasker {
     }
 
     static String mask(String input, String reason) {
-        if (reason == null) {
+        if (input == null || reason == null) {
             return input;
         }
         if (reason.contains("Credit Card")) {
