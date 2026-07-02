@@ -46,7 +46,11 @@ export function CriteriaChips() {
   )
 
   return (
-    <div aria-label="Biriken arama kriterleri" className="flex flex-wrap items-center gap-2">
+    <div
+      role="group"
+      aria-label="Biriken arama kriterleri"
+      className="flex flex-wrap items-center gap-2"
+    >
       <Badge>{INTENT_LABELS[criteria.intent]}</Badge>
       {entries.map(([key, value]) => (
         <Badge key={key} variant="secondary">

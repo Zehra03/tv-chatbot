@@ -22,8 +22,9 @@ export function HotelCard({ product }: { product: HotelProduct }) {
             <MapPin className="h-3.5 w-3.5" />
             {product.region}
             <span className="ml-1 inline-flex items-center gap-0.5">
-              <Star className="h-3.5 w-3.5 fill-primary text-primary" />
+              <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden />
               {product.stars}
+              <span className="sr-only"> yıldız</span>
             </span>
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -36,6 +37,7 @@ export function HotelCard({ product }: { product: HotelProduct }) {
           <Button
             size="sm"
             disabled={!product.availability}
+            aria-label={`${product.hotelName} otelini seç`}
             onClick={() =>
               select({
                 productType: 'hotel',

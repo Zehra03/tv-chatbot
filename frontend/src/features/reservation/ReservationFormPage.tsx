@@ -61,7 +61,9 @@ export function ReservationFormPage() {
             <h1 className="text-xl font-bold">Rezervasyonunuz alındı</h1>
             <div>
               <p className="text-sm text-muted-foreground">Rezervasyon numaranız</p>
-              <p className="font-mono text-lg font-semibold">{reservation.reservationNumber}</p>
+              <p className="break-all font-mono text-lg font-semibold">
+                {reservation.reservationNumber}
+              </p>
             </div>
             <div className="flex items-center justify-center gap-3">
               <Badge variant={reservationStatusVariant(reservation.status)}>
@@ -190,7 +192,7 @@ export function ReservationFormPage() {
               >
                 {create.isPending ? (
                   <>
-                    <Spinner size={16} className="text-primary-foreground" />
+                    <Spinner size={16} decorative className="text-primary-foreground" />
                     Gönderiliyor…
                   </>
                 ) : (
@@ -222,9 +224,9 @@ export function ReservationFormPage() {
           <CardTitle>Ürün özeti</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-between gap-4">
-          <div>
-            <p className="font-semibold">{draft.title}</p>
-            <p className="text-sm text-muted-foreground">{draft.summary}</p>
+          <div className="min-w-0">
+            <p className="break-words font-semibold">{draft.title}</p>
+            <p className="break-words text-sm text-muted-foreground">{draft.summary}</p>
           </div>
           <p className="shrink-0 text-lg font-bold">{formatPrice(draft.price, draft.currency)}</p>
         </CardContent>
@@ -242,7 +244,13 @@ export function ReservationFormPage() {
                     {index === 0 ? 'Ana misafir' : `Yolcu ${index + 1}`}
                   </p>
                   {index > 0 && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => remove(index)}>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Yolcu ${index + 1} kaldır`}
+                      onClick={() => remove(index)}
+                    >
                       Kaldır
                     </Button>
                   )}
@@ -252,20 +260,38 @@ export function ReservationFormPage() {
                     <Label htmlFor={`passenger-${index}-firstName`}>Ad</Label>
                     <Input
                       id={`passenger-${index}-firstName`}
+                      aria-invalid={!!pErr?.firstName}
+                      aria-describedby={
+                        pErr?.firstName ? `passenger-${index}-firstName-error` : undefined
+                      }
                       {...register(`passengers.${index}.firstName`)}
                     />
                     {pErr?.firstName && (
-                      <p className="text-xs text-destructive">{pErr.firstName.message}</p>
+                      <p
+                        id={`passenger-${index}-firstName-error`}
+                        className="text-xs text-destructive"
+                      >
+                        {pErr.firstName.message}
+                      </p>
                     )}
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`passenger-${index}-lastName`}>Soyad</Label>
                     <Input
                       id={`passenger-${index}-lastName`}
+                      aria-invalid={!!pErr?.lastName}
+                      aria-describedby={
+                        pErr?.lastName ? `passenger-${index}-lastName-error` : undefined
+                      }
                       {...register(`passengers.${index}.lastName`)}
                     />
                     {pErr?.lastName && (
-                      <p className="text-xs text-destructive">{pErr.lastName.message}</p>
+                      <p
+                        id={`passenger-${index}-lastName-error`}
+                        className="text-xs text-destructive"
+                      >
+                        {pErr.lastName.message}
+                      </p>
                     )}
                   </div>
                   <div className="grid gap-1.5">
@@ -283,9 +309,15 @@ export function ReservationFormPage() {
                     <Input
                       id={`passenger-${index}-age`}
                       inputMode="numeric"
+                      aria-invalid={!!pErr?.age}
+                      aria-describedby={pErr?.age ? `passenger-${index}-age-error` : undefined}
                       {...register(`passengers.${index}.age`)}
                     />
-                    {pErr?.age && <p className="text-xs text-destructive">{pErr.age.message}</p>}
+                    {pErr?.age && (
+                      <p id={`passenger-${index}-age-error`} className="text-xs text-destructive">
+                        {pErr.age.message}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`passenger-${index}-nationality`}>Uyruk (opsiyonel)</Label>
@@ -293,10 +325,19 @@ export function ReservationFormPage() {
                       id={`passenger-${index}-nationality`}
                       placeholder="TR"
                       maxLength={2}
+                      aria-invalid={!!pErr?.nationality}
+                      aria-describedby={
+                        pErr?.nationality ? `passenger-${index}-nationality-error` : undefined
+                      }
                       {...register(`passengers.${index}.nationality`)}
                     />
                     {pErr?.nationality && (
-                      <p className="text-xs text-destructive">{pErr.nationality.message}</p>
+                      <p
+                        id={`passenger-${index}-nationality-error`}
+                        className="text-xs text-destructive"
+                      >
+                        {pErr.nationality.message}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -313,13 +354,34 @@ export function ReservationFormPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="contact-email">E-posta</Label>
-              <Input id="contact-email" type="email" {...register('email')} />
-              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
+              <Input
+                id="contact-email"
+                type="email"
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? 'contact-email-error' : undefined}
+                {...register('email')}
+              />
+              {errors.email && (
+                <p id="contact-email-error" className="text-xs text-destructive">
+                  {errors.email.message}
+                </p>
+              )}
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="contact-phone">Telefon</Label>
-              <Input id="contact-phone" type="tel" placeholder="+90…" {...register('phone')} />
-              {errors.phone && <p className="text-xs text-destructive">{errors.phone.message}</p>}
+              <Input
+                id="contact-phone"
+                type="tel"
+                placeholder="+90…"
+                aria-invalid={!!errors.phone}
+                aria-describedby={errors.phone ? 'contact-phone-error' : undefined}
+                {...register('phone')}
+              />
+              {errors.phone && (
+                <p id="contact-phone-error" className="text-xs text-destructive">
+                  {errors.phone.message}
+                </p>
+              )}
             </div>
           </div>
         </section>
@@ -330,7 +392,14 @@ export function ReservationFormPage() {
           </p>
         )}
         <Button type="submit" disabled={preview.isPending}>
-          {preview.isPending ? 'Önizleme hazırlanıyor…' : 'Önizlemeye geç'}
+          {preview.isPending ? (
+            <>
+              <Spinner size={16} decorative className="text-primary-foreground" />
+              Önizleme hazırlanıyor…
+            </>
+          ) : (
+            'Önizlemeye geç'
+          )}
         </Button>
       </form>
     </div>

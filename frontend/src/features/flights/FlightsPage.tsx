@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
-import { Spinner } from '@/components/ui/spinner'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
+import { LoadingState } from '@/components/LoadingState'
 import { useAppSelector } from '@/app/hooks'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
@@ -138,26 +140,12 @@ export function FlightsPage() {
         <Button type="submit">Ara</Button>
       </form>
 
-      {!criteria && (
-        <p className="text-sm text-muted-foreground">
-          Sonuçları görmek için arama kriterlerini girin.
-        </p>
-      )}
+      {!criteria && <EmptyState>Sonuçları görmek için arama kriterlerini girin.</EmptyState>}
 
-      {query.isLoading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner size={16} />
-          Aranıyor…
-        </div>
-      )}
+      {query.isFetching && <LoadingState label="Aranıyor…" />}
 
-      {query.isError && (
-        <p role="alert" className="flex items-center gap-3 text-sm text-destructive">
-          {query.error.message}
-          <Button type="button" variant="outline" size="sm" onClick={() => query.refetch()}>
-            Tekrar dene
-          </Button>
-        </p>
+      {query.isError && !query.isFetching && (
+        <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
       )}
 
       {query.data && (

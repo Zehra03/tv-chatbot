@@ -91,7 +91,7 @@ describe('HotelsPage (MSW ile)', () => {
     await search(user, 'Antalya')
     expect(await screen.findByText('MOCK Grand Antalya Resort', {}, { timeout: 3000 })).toBeTruthy()
 
-    await user.click(screen.getByRole('button', { name: 'Seç' }))
+    await user.click(screen.getByRole('button', { name: /seç/i }))
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toMatchObject({
       productType: 'hotel',

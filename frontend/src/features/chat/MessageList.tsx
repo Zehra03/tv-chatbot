@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { Spinner } from '@/components/ui/spinner'
+import { ErrorState } from '@/components/ErrorState'
+import { LoadingState } from '@/components/LoadingState'
 import { ResultCards } from '@/features/chat/ResultCards'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
@@ -9,11 +10,12 @@ import { cn } from '@/lib/utils'
 /**
  * Sohbet thread'i — mesajları chatSlice'tan okur, kullanıcıyı sağda (primary),
  * asistanı solda (muted) balonlarla gösterir. `pending` iken "yazıyor" göstergesi,
- * `error` durumunda hata satırı render edilir. Yeni mesajda en alta kayar.
+ * `error` durumunda hata satırı + Tekrar dene render edilir. Yeni mesajda en alta kayar.
  */
 interface MessageListProps {
   pending: boolean
   error: ApiError | null
+  onRetry?: () => void
 }
 
 function Bubble({ message }: { message: ChatMessage }) {
@@ -22,17 +24,19 @@ function Bubble({ message }: { message: ChatMessage }) {
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[80%] whitespace-pre-wrap rounded-lg px-4 py-2 text-sm',
+          'max-w-[80%] whitespace-pre-wrap break-words rounded-lg px-4 py-2 text-sm',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
         )}
       >
+        {/* Ekran okuyucu için gönderen — görsel ayrım yalnızca hizalama/renkte. */}
+        <span className="sr-only">{isUser ? 'Siz: ' : 'Asistan: '}</span>
         {message.content}
       </div>
     </div>
   )
 }
 
-export function MessageList({ pending, error }: MessageListProps) {
+export function MessageList({ pending, error, onRetry }: MessageListProps) {
   const messages = useAppSelector((s) => s.chat.messages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -58,17 +62,8 @@ export function MessageList({ pending, error }: MessageListProps) {
           {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
         </div>
       ))}
-      {pending && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner size={16} />
-          Asistan yazıyor…
-        </div>
-      )}
-      {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error.message}
-        </p>
-      )}
+      {pending && <LoadingState label="Asistan yazıyor…" />}
+      {error && !pending && <ErrorState message={error.message} onRetry={onRetry} />}
       <div ref={bottomRef} />
     </div>
   )

@@ -1,7 +1,9 @@
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { EmptyState } from '@/components/EmptyState'
+import { ErrorState } from '@/components/ErrorState'
+import { LoadingState } from '@/components/LoadingState'
 import { useReservations } from '@/features/reservation/useReservations'
 import {
   RESERVATION_STATUS_LABELS,
@@ -15,8 +17,7 @@ import { formatDate, formatPrice } from '@/utils/format'
  * Veri React Query'den gelir; oluşturma sonrası invalidation ile tazelenir.
  */
 export function ReservationsPage() {
-  const { data, isLoading, isError, error, refetch } = useReservations()
-  const navigate = useNavigate()
+  const { data, isError, isFetching, error, refetch } = useReservations()
 
   return (
     <div className="space-y-6">
@@ -25,30 +26,20 @@ export function ReservationsPage() {
         <p className="text-sm text-muted-foreground">Geçmiş ve bekleyen rezervasyonlarınız.</p>
       </div>
 
-      {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner size={16} />
-          Yükleniyor…
-        </div>
-      )}
+      {isFetching && !data && <LoadingState label="Yükleniyor…" />}
 
-      {isError && (
-        <p role="alert" className="flex items-center gap-3 text-sm text-destructive">
-          {error.message}
-          <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
-            Tekrar dene
-          </Button>
-        </p>
+      {isError && !isFetching && (
+        <ErrorState message={error.message} onRetry={() => refetch()} />
       )}
 
       {data && data.length === 0 && (
-        <p className="text-sm text-muted-foreground">
+        <EmptyState>
           Henüz rezervasyonunuz yok —{' '}
           <Link to="/chat" className="text-primary underline-offset-2 hover:underline">
             sohbetten arama yaparak
           </Link>{' '}
           başlayabilirsiniz.
-        </p>
+        </EmptyState>
       )}
 
       {data && data.length > 0 && (
@@ -56,13 +47,16 @@ export function ReservationsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b bg-muted/50 text-left">
-                <th className="p-3 font-semibold">No</th>
-                <th className="p-3 font-semibold">Tip</th>
-                <th className="p-3 font-semibold">Tarih</th>
-                <th className="p-3 font-semibold">Misafir</th>
-                <th className="p-3 font-semibold">Toplam</th>
-                <th className="p-3 font-semibold">Durum</th>
-                <th className="p-3" />
+                <th scope="col" className="p-3 font-semibold">No</th>
+                <th scope="col" className="p-3 font-semibold">Tip</th>
+                <th scope="col" className="p-3 font-semibold">Tarih</th>
+                <th scope="col" className="p-3 font-semibold">Misafir</th>
+                <th scope="col" className="p-3 font-semibold">Toplam</th>
+                <th scope="col" className="p-3 font-semibold">Durum</th>
+                {/* relative: sr-only (absolute) hücre içinde kalsın, dokümanı genişletmesin. */}
+                <th scope="col" className="relative p-3">
+                  <span className="sr-only">İşlemler</span>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -79,12 +73,8 @@ export function ReservationsPage() {
                     </Badge>
                   </td>
                   <td className="p-3 text-right">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => navigate(`/reservations/${r.id}`)}
-                    >
-                      Detay
+                    <Button asChild size="sm" variant="outline">
+                      <Link to={`/reservations/${r.id}`}>Detay</Link>
                     </Button>
                   </td>
                 </tr>

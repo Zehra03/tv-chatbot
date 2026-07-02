@@ -15,11 +15,15 @@ export function ChatPage() {
   const pendingQuestion = useAppSelector((s) => s.chat.pendingQuestion)
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col gap-4">
-      <MessageList pending={sendMessage.isPending} error={sendMessage.error} />
+    <div className="mx-auto flex h-[calc(100vh-8rem)] max-w-3xl flex-col gap-4 supports-[height:100dvh]:h-[calc(100dvh-8rem)]">
+      <MessageList
+        pending={sendMessage.isPending}
+        error={sendMessage.error}
+        onRetry={sendMessage.retry}
+      />
       <CriteriaChips />
       <Composer
-        onSend={(text) => sendMessage.mutate(text)}
+        onSend={sendMessage.send}
         disabled={sendMessage.isPending}
         placeholder={pendingQuestion}
       />

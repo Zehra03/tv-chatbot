@@ -17,8 +17,8 @@ export function FlightCard({ product }: { product: FlightProduct }) {
     <Card>
       <CardContent className="flex items-center justify-between gap-4 p-4">
         <div className="min-w-0">
-          <p className="flex items-center gap-1.5 font-semibold">
-            <Plane className="h-4 w-4 text-primary" />
+          <p className="flex flex-wrap items-center gap-1.5 font-semibold">
+            <Plane className="h-4 w-4 text-primary" aria-hidden />
             {product.airline}
             <span className="font-normal text-muted-foreground">
               {product.origin} → {product.destination}
@@ -41,6 +41,7 @@ export function FlightCard({ product }: { product: FlightProduct }) {
           <p className="text-lg font-bold">{formatPrice(product.price, product.currency)}</p>
           <Button
             size="sm"
+            aria-label={`${product.airline} ${product.origin} ${product.destination} uçuşunu seç`}
             onClick={() =>
               select({
                 productType: 'flight',
