@@ -2,6 +2,8 @@ package com.paximum.paxassist.flight.service;
 
 import java.util.List;
 
+import feign.FeignException;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,6 +15,7 @@ import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.event.FlightSearchEvent;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioFlightClient;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioSearchException;
+import com.paximum.paxassist.flight.infrastructure.client.TourVisioTokenProvider;
 import com.paximum.paxassist.flight.infrastructure.dto.request.TourVisioPriceSearchRequest;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSearchResponse;
 import com.paximum.paxassist.flight.infrastructure.mapper.TourVisioFlightRequestMapper;
@@ -27,16 +30,19 @@ public class FlightSearchService {
     private final TourVisioFlightRequestMapper requestMapper;
     private final TourVisioFlightResponseMapper responseMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final TourVisioTokenProvider tokenProvider;
 
     public FlightSearchService(
             TourVisioFlightClient tourVisioFlightClient,
             TourVisioFlightRequestMapper requestMapper,
             TourVisioFlightResponseMapper responseMapper,
-            ApplicationEventPublisher eventPublisher) {
+            ApplicationEventPublisher eventPublisher,
+            TourVisioTokenProvider tokenProvider) {
         this.tourVisioFlightClient = tourVisioFlightClient;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.eventPublisher = eventPublisher;
+        this.tokenProvider = tokenProvider;
     }
 
     @Cacheable(value = "flightSearch", key = "#criteria.toCacheKey()")
@@ -51,7 +57,14 @@ public class FlightSearchService {
                 criteria.getOrigin(), criteria.getDestination(), criteria.getTripType());
 
         TourVisioPriceSearchRequest request = requestMapper.toRequest(criteria);
-        TourVisioPriceSearchResponse response = tourVisioFlightClient.priceSearch(request);
+        TourVisioPriceSearchResponse response;
+        try {
+            response = tourVisioFlightClient.priceSearch(request);
+        } catch (FeignException.Unauthorized e) {
+            log.warn("TourVisio rejected the cached token; re-logging in and retrying once");
+            tokenProvider.invalidate();
+            response = tourVisioFlightClient.priceSearch(request);
+        }
 
         if (response == null || response.header() == null || !response.header().success()) {
             eventPublisher.publishEvent(FlightSearchEvent.failure(criteria));

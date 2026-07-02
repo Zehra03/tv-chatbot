@@ -7,6 +7,8 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,11 +17,11 @@ import org.springframework.stereotype.Component;
 import com.paximum.paxassist.flight.config.TourVisioProperties;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.TripType;
+import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioBaggageInfo;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightItem;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightResult;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioOffer;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSearchResponse;
-import com.paximum.paxassist.flight.infrastructure.mapper.FlightNumberParser.ParsedFlightNumber;
 
 @Component
 public class TourVisioFlightResponseMapper {
@@ -40,7 +42,7 @@ public class TourVisioFlightResponseMapper {
         List<FlightProduct> products = new ArrayList<>();
         for (TourVisioFlightResult flight : response.body().flights()) {
             try {
-                products.addAll(toFlightProducts(flight, requestedTripType));
+                toFlightProduct(flight, requestedTripType).ifPresent(products::add);
             } catch (DateTimeException e) {
                 log.warn("Skipping flight result {} due to unparsable date/timezone data: {}",
                         flight.id(), e.getMessage());
@@ -49,14 +51,13 @@ public class TourVisioFlightResponseMapper {
         return products;
     }
 
-    private List<FlightProduct> toFlightProducts(TourVisioFlightResult flight, TripType requestedTripType) {
-        if (flight.items() == null || flight.items().isEmpty() || flight.offers() == null) {
-            return List.of();
+    private Optional<FlightProduct> toFlightProduct(TourVisioFlightResult flight, TripType requestedTripType) {
+        if (flight.items() == null || flight.items().isEmpty() || flight.offer() == null) {
+            return Optional.empty();
         }
 
-        TourVisioFlightItem firstLeg = flight.items().get(0);
-        TourVisioFlightItem lastLeg = flight.items().get(flight.items().size() - 1);
-        ParsedFlightNumber flightNumber = FlightNumberParser.parse(firstLeg.flightNo());
+        TourVisioFlightItem item = flight.items().get(0);
+        TourVisioOffer offer = flight.offer();
 
         if (requestedTripType == TripType.ROUND_TRIP) {
             // TourVisio's pricesearch response gives no signal (in the schema seen so far) for
@@ -66,26 +67,30 @@ public class TourVisioFlightResponseMapper {
                     + "mapping outbound data only", flight.id());
         }
 
-        List<FlightProduct> products = new ArrayList<>();
-        for (TourVisioOffer offer : flight.offers()) {
-            products.add(FlightProduct.builder()
-                    .id(offer.offerId())
-                    .airline(flightNumber.airlineCode())
-                    .flightNumber(flightNumber.number())
-                    .origin(firstLeg.departure().airport().id())
-                    .destination(lastLeg.arrival().airport().id())
-                    .departTime(toInstant(firstLeg.departure().date()))
-                    .arriveTime(toInstant(lastLeg.arrival().date()))
-                    .returnDepartTime(null)
-                    .returnArriveTime(null)
-                    .stops(flight.stopCount())
-                    // Not present anywhere in the TourVisio pricesearch response.
-                    .baggage(null)
-                    .price(offer.price() != null ? offer.price().amount() : null)
-                    .currency(offer.price() != null ? offer.price().currency() : null)
-                    .build());
+        return Optional.of(FlightProduct.builder()
+                .id(offer.offerId())
+                .airline(item.airline() != null ? item.airline().internationalCode() : null)
+                .flightNumber(FlightNumberParser.parse(item.flightNo()).number())
+                .origin(item.departure().airport().id())
+                .destination(item.arrival().airport().id())
+                .departTime(toInstant(item.departure().date()))
+                .arriveTime(toInstant(item.arrival().date()))
+                .returnDepartTime(null)
+                .returnArriveTime(null)
+                .stops(item.stopCount())
+                .baggage(summarizeBaggage(item.baggageInformations()))
+                .price(offer.price() != null ? offer.price().amount() : null)
+                .currency(offer.price() != null ? offer.price().currency() : null)
+                .build());
+    }
+
+    private String summarizeBaggage(List<TourVisioBaggageInfo> baggageInformations) {
+        if (baggageInformations == null || baggageInformations.isEmpty()) {
+            return null;
         }
-        return products;
+        return baggageInformations.stream()
+                .map(b -> b.piece() + "x" + b.weight() + "kg")
+                .collect(Collectors.joining(", "));
     }
 
     private Instant toInstant(String date) {
