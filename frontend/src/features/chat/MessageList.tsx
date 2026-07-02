@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Spinner } from '@/components/ui/spinner'
+import { ResultCards } from '@/features/chat/ResultCards'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
 import type { ChatMessage } from '@/types'
@@ -52,7 +53,10 @@ export function MessageList({ pending, error }: MessageListProps) {
         </div>
       )}
       {messages.map((m) => (
-        <Bubble key={m.id} message={m} />
+        <div key={m.id} className="space-y-2">
+          <Bubble message={m} />
+          {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
+        </div>
       ))}
       {pending && (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
