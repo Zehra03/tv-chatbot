@@ -12,7 +12,8 @@ import { BRAND, rgbTriplet, shade } from '@/lib/brand'
  */
 export function NightSkyBackground() {
   return (
-    <div aria-hidden="true" className="pointer-events-none fixed inset-0 -z-10 opacity-40">
+    // z-0: root'un opak zemin renginin ÜZERİNE, z-10 içeriğin altına boyanır.
+    <div aria-hidden="true" className="pointer-events-none fixed inset-0 z-0 opacity-40">
       <BackgroundGradientAnimation
         interactive={false}
         containerClassName="h-full w-full"
