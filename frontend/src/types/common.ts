@@ -1,25 +1,21 @@
 /**
- * Ortak domain primitifleri. Diğer tip dosyaları (search/product/reservation/chat)
- * bunlardan türer; backend domain katmanı (proje dokümanı §7.4) ile hizalıdır.
+ * Ortak domain primitifleri. Kaynak: V1 Flyway şeması
+ * (backend/src/main/resources/db/migration/V1__initial_schema.sql) ve backend
+ * record'ları (ör. hotel/HotelProduct.java). Fiyat DB'de düz `numeric + char(3)`
+ * taşınır — ayrı bir `Money` sarmalayıcı YOKTUR.
  */
 
-/** Ürün tipi — otel ya da uçuş. Arama, sonuç, taslak ve rezervasyon akışlarında ortak. */
+/** Ürün tipi. DB: reservations.product_type CHECK ('hotel','flight'). */
 export type ProductType = 'hotel' | 'flight'
 
-/** ISO 8601 gün (YYYY-MM-DD) — otel giriş/çıkış gibi gün bazlı alanlar. */
+/** ISO 8601 gün (YYYY-MM-DD). DB: `date` sütunları (check_in, check_out, reservation_date). */
 export type IsoDate = string
 
-/** ISO 8601 tarih-saat / instant (YYYY-MM-DDTHH:mm:ssZ) — uçuş kalkış/varış gibi an bazlı alanlar. */
+/** ISO 8601 instant (YYYY-MM-DDTHH:mm:ssZ). DB: `timestamptz` (depart_time, created_at…). */
 export type IsoDateTime = string
 
-/** ISO 4217 para birimi kodu (ör. "EUR", "TRY", "USD"). */
+/** ISO 4217 para birimi. DB: currency char(3) (ör. "EUR"). */
 export type CurrencyCode = string
 
-/**
- * Para tutarı. Fiyat asla salt sayı olarak taşınmaz; birimiyle birlikte gelir
- * (TourVisio tutarı + para birimi döndürür — CLAUDE.md: fiyat uydurma yok).
- */
-export interface Money {
-  amount: number
-  currency: CurrencyCode
-}
+/** ISO-3166 alpha-2 ülke kodu. DB: nationality varchar(2) (ör. "TR"). */
+export type CountryCode = string
