@@ -49,3 +49,11 @@ app:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
+
+tourvisio:
+  url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
+  culture: ${TOURVISIO_CULTURE:en-US}
+  timezone: ${TOURVISIO_TIMEZONE:Europe/Istanbul}
+  agency: ${TOURVISIO_AGENCY:}
+  user: ${TOURVISIO_USER:}
+  password: ${TOURVISIO_PASSWORD:}
