@@ -40,7 +40,13 @@ public class FlightSearchService {
     }
 
     @Cacheable(value = "flightSearch", key = "#criteria.toCacheKey()")
-    public List<FlightProduct> search(FlightSearchCriteria criteria) {
+    public FlightSearchOutcome search(FlightSearchCriteria criteria) {
+        List<String> missingFields = criteria.missingRequiredFields();
+        if (!missingFields.isEmpty()) {
+            log.info("Flight search incomplete: missingFields={}", missingFields);
+            return FlightSearchOutcome.incomplete(missingFields);
+        }
+
         log.info("Starting flight search: origin={}, destination={}, tripType={}",
                 criteria.getOrigin(), criteria.getDestination(), criteria.getTripType());
 
@@ -60,6 +66,6 @@ public class FlightSearchService {
         log.info("Flight search completed: origin={}, destination={}, resultCount={}",
                 criteria.getOrigin(), criteria.getDestination(), products.size());
 
-        return products;
+        return FlightSearchOutcome.complete(products);
     }
 }

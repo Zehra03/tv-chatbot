@@ -1,6 +1,8 @@
 package com.paximum.paxassist.flight.domain;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -29,5 +31,31 @@ public class FlightSearchCriteria {
                 String.valueOf(nonstop),
                 String.valueOf(preferredAirline),
                 passengers.getAdults() + "A" + passengers.getChildren() + "C" + passengers.getInfants() + "I");
+    }
+
+    public List<String> missingRequiredFields() {
+        List<String> missing = new ArrayList<>();
+        if (origin == null || origin.isBlank()) {
+            missing.add("origin");
+        }
+        if (destination == null || destination.isBlank()) {
+            missing.add("destination");
+        }
+        if (departDate == null) {
+            missing.add("departDate");
+        }
+        if (tripType == null) {
+            missing.add("tripType");
+        }
+        if (tripType == TripType.ROUND_TRIP && returnDate == null) {
+            missing.add("returnDate");
+        }
+        if (passengers == null || passengers.getAdults() < 1) {
+            missing.add("passengers");
+        }
+        if (currency == null || currency.isBlank()) {
+            missing.add("currency");
+        }
+        return missing;
     }
 }

@@ -10,7 +10,9 @@ import com.paximum.paxassist.flight.domain.PassengerCount;
 import com.paximum.paxassist.flight.dto.FlightProductDto;
 import com.paximum.paxassist.flight.dto.FlightSearchRequestDto;
 import com.paximum.paxassist.flight.dto.FlightSearchResponseDto;
+import com.paximum.paxassist.flight.dto.FlightSearchStatus;
 import com.paximum.paxassist.flight.dto.PassengerCountDto;
+import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 
 @Component
 public class FlightSearchMapper {
@@ -29,8 +31,12 @@ public class FlightSearchMapper {
                 .build();
     }
 
-    public FlightSearchResponseDto toResponse(FlightSearchRequestDto criteria, List<FlightProduct> products) {
-        return new FlightSearchResponseDto(criteria, products.stream().map(this::toDto).toList());
+    public FlightSearchResponseDto toResponse(FlightSearchOutcome outcome) {
+        if (!outcome.complete()) {
+            return new FlightSearchResponseDto(FlightSearchStatus.NEEDS_MORE_INFO, outcome.missingFields(), List.of());
+        }
+        List<FlightProductDto> results = outcome.results().stream().map(this::toDto).toList();
+        return new FlightSearchResponseDto(FlightSearchStatus.COMPLETE, List.of(), results);
     }
 
     private PassengerCount toDomain(PassengerCountDto dto) {
