@@ -1,3 +1,4 @@
+import { motion } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { useAppSelector } from '@/app/hooks'
 
@@ -51,11 +52,20 @@ export function CriteriaChips() {
       aria-label="Biriken arama kriterleri"
       className="flex flex-wrap items-center gap-2"
     >
-      <Badge>{INTENT_LABELS[criteria.intent]}</Badge>
+      <motion.div layout initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}>
+        <Badge variant="glassAccent">{INTENT_LABELS[criteria.intent]}</Badge>
+      </motion.div>
       {entries.map(([key, value]) => (
-        <Badge key={key} variant="secondary">
-          {FIELD_LABELS[key] ?? key}: {VALUE_LABELS[String(value)] ?? String(value)}
-        </Badge>
+        <motion.div
+          key={key}
+          layout
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+        >
+          <Badge variant="glass">
+            {FIELD_LABELS[key] ?? key}: {VALUE_LABELS[String(value)] ?? String(value)}
+          </Badge>
+        </motion.div>
       ))}
     </div>
   )

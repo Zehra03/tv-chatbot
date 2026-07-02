@@ -1,21 +1,33 @@
 import { useEffect, useRef } from 'react'
+import { motion, type Variants } from 'framer-motion'
 import { ErrorState } from '@/components/ErrorState'
-import { LoadingState } from '@/components/LoadingState'
 import { ResultCards } from '@/features/chat/ResultCards'
+import { TypingIndicator } from '@/features/chat/TypingIndicator'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
 import type { ChatMessage } from '@/types'
 import { cn } from '@/lib/utils'
 
 /**
- * Sohbet thread'i — mesajları chatSlice'tan okur, kullanıcıyı sağda (primary),
- * asistanı solda (muted) balonlarla gösterir. `pending` iken "yazıyor" göstergesi,
- * `error` durumunda hata satırı + Tekrar dene render edilir. Yeni mesajda en alta kayar.
+ * Sohbet thread'i — mesajları chatSlice'tan okur; gece uçuşu yüzeyinde
+ * kullanıcıyı sağda (mavi→teal gradyan), asistanı solda (cam balon) gösterir.
+ * `pending` iken yazıyor göstergesi, `error` durumunda hata satırı + Tekrar
+ * dene render edilir. Yeni mesajda en alta kayar; girişler stagger ile belirir.
  */
 interface MessageListProps {
   pending: boolean
   error: ApiError | null
   onRetry?: () => void
+}
+
+const listVariants: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.06 } },
+}
+
+const itemVariants: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.25, ease: 'easeOut' } },
 }
 
 function Bubble({ message }: { message: ChatMessage }) {
@@ -24,8 +36,10 @@ function Bubble({ message }: { message: ChatMessage }) {
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[80%] whitespace-pre-wrap break-words rounded-lg px-4 py-2 text-sm',
-          isUser ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground',
+          'max-w-[80%] whitespace-pre-wrap break-words px-4 py-2.5 text-sm text-white',
+          isUser
+            ? 'rounded-2xl rounded-br-md bg-gradient-to-br from-brand-blue to-brand-teal shadow-[0_4px_20px_theme(colors.brand.blue/25%)]'
+            : 'glass-card rounded-bl-md',
         )}
       >
         {/* Ekran okuyucu için gönderen — görsel ayrım yalnızca hizalama/renkte. */}
@@ -46,23 +60,31 @@ export function MessageList({ pending, error, onRetry }: MessageListProps) {
   }, [messages.length, pending])
 
   return (
-    <div role="log" aria-label="Sohbet mesajları" className="flex-1 space-y-3 overflow-y-auto pr-1">
+    <div
+      role="log"
+      aria-label="Sohbet mesajları"
+      className="flex-1 space-y-3 overflow-y-auto pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
+    >
       {messages.length === 0 && (
-        <div className="flex h-full flex-col items-center justify-center gap-1 text-center">
-          <p className="font-semibold">Merhaba! Size nasıl yardımcı olabilirim?</p>
-          <p className="max-w-sm text-sm text-muted-foreground">
+        <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
+          <p className="text-gradient-brand text-2xl font-bold tracking-tight">
+            Merhaba! Size nasıl yardımcı olabilirim?
+          </p>
+          <p className="max-w-sm text-sm text-brand-ice/70">
             Otel veya uçuş aramak için yazın — örn. &quot;Antalya&apos;da 2026-08-01 /
             2026-08-05 arası 2 kişilik otel&quot;.
           </p>
         </div>
       )}
-      {messages.map((m) => (
-        <div key={m.id} className="space-y-2">
-          <Bubble message={m} />
-          {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
-        </div>
-      ))}
-      {pending && <LoadingState label="Asistan yazıyor…" />}
+      <motion.div variants={listVariants} initial="hidden" animate="show" className="space-y-3">
+        {messages.map((m) => (
+          <motion.div key={m.id} variants={itemVariants} className="space-y-2">
+            <Bubble message={m} />
+            {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
+          </motion.div>
+        ))}
+      </motion.div>
+      {pending && <TypingIndicator />}
       {error && !pending && <ErrorState message={error.message} onRetry={onRetry} />}
       <div ref={bottomRef} />
     </div>
