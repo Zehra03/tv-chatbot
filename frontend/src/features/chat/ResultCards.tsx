@@ -1,17 +1,32 @@
+import { useNavigate } from 'react-router-dom'
 import { MapPin, Plane, Star } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { useAppDispatch } from '@/app/hooks'
+import { setDraft, type ReservationDraft } from '@/features/reservation/reservationDraftSlice'
 import { formatDateTime, formatPrice } from '@/utils/format'
 import type { FlightProduct, HotelProduct, ResultCard } from '@/types'
 
 /**
  * Thread içi sonuç kartları — asistan mesajındaki `cards` alanını render eder
  * (docs/frontend-architecture.md §8). Fiyat/uygunluk backend'den (mock'ta
- * fixture) geldiği gibi gösterilir. Seçim aksiyonu kontrollü rezervasyon
- * akışına yönlendirir; chatbot booking yapmaz.
+ * fixture) geldiği gibi gösterilir. "Seç" ürünü reservationDraft'a yazıp
+ * kontrollü rezervasyon formuna yönlendirir; chatbot booking YAPMAZ (§9).
  */
 
+/** Seçilen ürünü taslağa yazar ve forma geçer — tek kontrollü çıkış noktası. */
+function useSelectProduct() {
+  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  return (draft: ReservationDraft) => {
+    dispatch(setDraft(draft))
+    navigate('/reservation/new')
+  }
+}
+
 function HotelResultCard({ product }: { product: HotelProduct }) {
+  const select = useSelectProduct()
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-4 p-4">
@@ -30,8 +45,24 @@ function HotelResultCard({ product }: { product: HotelProduct }) {
             {!product.availability && <Badge variant="destructive">Müsait değil</Badge>}
           </div>
         </div>
-        <div className="shrink-0 text-right">
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <p className="text-lg font-bold">{formatPrice(product.price, product.currency)}</p>
+          <Button
+            size="sm"
+            disabled={!product.availability}
+            onClick={() =>
+              select({
+                productType: 'hotel',
+                productId: product.id,
+                title: product.hotelName,
+                summary: `${product.region} · ${product.stars}★ · ${product.boardType}`,
+                price: product.price,
+                currency: product.currency,
+              })
+            }
+          >
+            Seç
+          </Button>
         </div>
       </CardContent>
     </Card>
@@ -39,6 +70,7 @@ function HotelResultCard({ product }: { product: HotelProduct }) {
 }
 
 function FlightResultCard({ product }: { product: FlightProduct }) {
+  const select = useSelectProduct()
   return (
     <Card>
       <CardContent className="flex items-center justify-between gap-4 p-4">
@@ -63,8 +95,25 @@ function FlightResultCard({ product }: { product: FlightProduct }) {
             <Badge variant="secondary">Bagaj: {product.baggage}</Badge>
           </div>
         </div>
-        <div className="shrink-0 text-right">
+        <div className="flex shrink-0 flex-col items-end gap-2">
           <p className="text-lg font-bold">{formatPrice(product.price, product.currency)}</p>
+          <Button
+            size="sm"
+            onClick={() =>
+              select({
+                productType: 'flight',
+                productId: product.id,
+                title: `${product.airline} ${product.origin} → ${product.destination}`,
+                summary: `${formatDateTime(product.departTime)} · ${
+                  product.stops === 0 ? 'Direkt' : `${product.stops} aktarma`
+                } · Bagaj: ${product.baggage}`,
+                price: product.price,
+                currency: product.currency,
+              })
+            }
+          >
+            Seç
+          </Button>
         </div>
       </CardContent>
     </Card>
