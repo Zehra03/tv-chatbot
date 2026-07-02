@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { Hotel } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -134,11 +135,15 @@ export function HotelsPage() {
         </Button>
       </form>
 
-      {!criteria && <EmptyState>Sonuçları görmek için arama kriterlerini girin.</EmptyState>}
+      {!criteria && (
+        <EmptyState tone="dark" title="Aramaya hazır" icon={<Hotel className="h-5 w-5" />}>
+          Sonuçları görmek için arama kriterlerini girin.
+        </EmptyState>
+      )}
 
       {query.isFetching && (
         <div className="space-y-3">
-          <LoadingState label="Aranıyor…" />
+          <LoadingState label="Aranıyor…" className="text-brand-ice/70" />
           {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
           <div aria-hidden="true" className="grid gap-3">
             <Skeleton className="h-32" />
