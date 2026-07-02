@@ -3,6 +3,7 @@ package com.paximum.paxassist.chat.service;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -19,6 +20,11 @@ public class InMemoryChatSessionStore implements ChatSessionStore {
         ChatSession session = new ChatSession(UUID.randomUUID().toString());
         store.put(session.getId(), session);
         return session;
+    }
+
+    @Override
+    public Optional<ChatSession> findById(String sessionId) {
+        return Optional.ofNullable(store.get(sessionId));
     }
 
     @Override

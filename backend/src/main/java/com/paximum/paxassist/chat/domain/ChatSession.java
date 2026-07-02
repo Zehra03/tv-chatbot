@@ -16,6 +16,7 @@ public class ChatSession {
     private String flowState;
     private String pendingQuestion;
     private List<Object> lastResultCards;
+    private List<ChatMessage> messages;
 
     public ChatSession(String id) {
         this.id = id;
@@ -23,6 +24,7 @@ public class ChatSession {
         this.flowState = "IDLE";
         this.pendingQuestion = null;
         this.lastResultCards = new ArrayList<>();
+        this.messages = new ArrayList<>();
     }
 
     public String getId() { return id; }
@@ -40,4 +42,8 @@ public class ChatSession {
 
     public List<Object> getLastResultCards() { return lastResultCards; }
     public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }
+
+    public List<ChatMessage> getMessages() { return messages; }
+
+    public void addMessage(ChatMessage message) { this.messages.add(message); }
 }
