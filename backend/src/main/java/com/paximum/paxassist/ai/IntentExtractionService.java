@@ -12,30 +12,72 @@ import java.util.List;
 public class IntentExtractionService {
 
     private static final String EXTRACTION_SYSTEM_PROMPT = """
-            Sen bir seyahat chatbotu için niyet ve parametre analizi yapan teknik bir AI modülüsün.
-            Kullanıcının son mesajını ve sohbet geçmişini analiz et.
-            Yalnızca geçerli JSON döndür, hiçbir ek açıklama veya markdown ekleme.
+            Sen bir seyahat asistanı için niyet ve parametre analizi yapan teknik bir AI modülüsün.
+            Görevin: kullanıcının son mesajını ve sohbet geçmişini analiz edip yalnızca geçerli JSON döndürmek.
+            Hiçbir açıklama, yorum veya markdown ekleme. Sadece JSON.
 
-            intent değerleri (biri zorunlu):
-            - HOTEL  : kullanıcı otel arıyor, otel hakkında soru soruyor
-            - FLIGHT : kullanıcı uçuş arıyor, uçuş hakkında soru soruyor
-            - FILTER : daha önce listelenen sonuçları filtrelemek istiyor (daha ucuz, 5 yıldız vb.)
-            - SELECT : listeden belirli bir ürünü seçmek istiyor ("1. oteli istiyorum", "ilkini al" vb.)
-            - OTHER  : yukarıdakilerden hiçbiri (selamlama, genel soru vb.)
+            ── INTENT DEĞERLERİ ─────────────────────────────────────────────────
+            HOTEL  : Kullanıcı otel arıyor veya otel hakkında soru soruyor.
+            FLIGHT : Kullanıcı uçuş arıyor veya uçuş hakkında soru soruyor.
+            FILTER : Daha önce listelenen sonuçları filtrelemek veya sıralamak istiyor.
+            SELECT : Listeden belirli bir ürünü seçmek istiyor.
+            OTHER  : Yukarıdakilerden hiçbiri (selamlama, genel soru, kapsam dışı).
 
-            criteria alanları (yalnızca mesajda geçen bilgileri doldur, gerisini null bırak):
-            - location    : otel konumu veya şehir (string)
-            - checkIn     : giriş tarihi (YYYY-MM-DD)
-            - checkOut    : çıkış tarihi (YYYY-MM-DD)
-            - adults      : yetişkin sayısı (integer)
-            - children    : çocuk sayısı (integer)
-            - childAges   : çocuk yaşları listesi (integer[])
-            - nationality : misafir milliyeti, ISO-3166 alpha-2 (string)
-            - currency    : para birimi, ISO-4217 (string)
-            - rooms       : oda sayısı (integer)
-            - stars       : minimum yıldız sayısı (integer, 1-5)
-            - boardType   : pansiyon tipi (AI/HB/BB/RO) (string)
-            - sortBy      : sıralama tercihi: price_asc | price_desc | stars_desc (string)
+            ── HOTEL KRİTERLERİ ─────────────────────────────────────────────────
+            location    : Otel şehri veya bölgesi (string)
+            checkIn     : Giriş tarihi YYYY-MM-DD (string)
+            checkOut    : Çıkış tarihi YYYY-MM-DD (string)
+            rooms       : Oda sayısı (integer)
+            stars       : Minimum yıldız sayısı 1-5 (integer)
+            boardType   : Pansiyon tipi — AI | HB | BB | RO (string)
+
+            ── FLIGHT KRİTERLERİ ────────────────────────────────────────────────
+            origin        : Kalkış şehri veya havalimanı (string)
+            destination   : Varış şehri veya havalimanı (string)
+            departureDate : Kalkış tarihi YYYY-MM-DD (string)
+            returnDate    : Dönüş tarihi YYYY-MM-DD — tek yön ise null (string)
+            cabinClass    : ECONOMY | BUSINESS | FIRST (string)
+
+            ── ORTAK KRİTERLER (hotel + flight) ─────────────────────────────────
+            adults      : Yetişkin sayısı (integer)
+            children    : Çocuk sayısı (integer)
+            childAges   : Çocuk yaşları listesi (integer[])
+            nationality : Misafir milliyeti ISO-3166 alpha-2, örn. "TR" (string)
+            currency    : Para birimi ISO-4217, örn. "TRY" (string)
+
+            ── FILTER KRİTERLERİ ────────────────────────────────────────────────
+            sortBy      : price_asc | price_desc | stars_desc (string)
+            stars       : Minimum yıldız filtresi (integer)
+            boardType   : Pansiyon tipi filtresi (string)
+
+            ── SELECT KRİTERİ ───────────────────────────────────────────────────
+            selectionReference : Kullanıcının seçim ifadesi ham metin — "1", "ilk", "en ucuz olan" (string)
+
+            ── KURALLAR ─────────────────────────────────────────────────────────
+            - Yalnızca kullanıcının mesajında açıkça geçen alanları doldur.
+            - Mesajda geçmeyen her alan null olmalı.
+            - Tarih formatı her zaman YYYY-MM-DD.
+            - intent alanı her zaman dolu olmalı.
+            - criteria tamamen boşsa null döndür.
+
+            ── ÖRNEKLER ─────────────────────────────────────────────────────────
+            Mesaj: "Antalya'da 2 yetişkin otel bak"
+            Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":2}}
+
+            Mesaj: "İstanbul'dan Paris'e önümüzdeki cuma uçuş var mı"
+            Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"Paris","departureDate":"<cuma YYYY-MM-DD>"}}
+
+            Mesaj: "En ucuzdan sırala"
+            Çıktı: {"intent":"FILTER","criteria":{"sortBy":"price_asc"}}
+
+            Mesaj: "Sadece 5 yıldızlı otelleri göster"
+            Çıktı: {"intent":"FILTER","criteria":{"stars":5}}
+
+            Mesaj: "İlk oteli istiyorum"
+            Çıktı: {"intent":"SELECT","criteria":{"selectionReference":"1"}}
+
+            Mesaj: "Merhaba"
+            Çıktı: {"intent":"OTHER","criteria":null}
             """;
 
     private final ChatClient chatClient;
@@ -68,6 +110,9 @@ public class IntentExtractionService {
         } catch (AiClientException e) {
             throw e;
         } catch (RuntimeException e) {
+            if (isParseFailure(e)) {
+                return new IntentExtractionResult(IntentType.OTHER, null);
+            }
             throw new AiClientException(AiClientException.Code.UNKNOWN,
                     "Niyet analizi sırasında hata oluştu", e);
         }
@@ -75,16 +120,30 @@ public class IntentExtractionService {
 
     private String buildPrompt(String userMessage, List<ChatHistoryEntry> history) {
         StringBuilder sb = new StringBuilder();
-
         if (!history.isEmpty()) {
             sb.append("Sohbet Geçmişi:\n");
-            history.forEach(entry ->
-                    sb.append(entry.role()).append(": ").append(entry.content()).append("\n")
-            );
+            history.forEach(e -> sb.append(e.role()).append(": ").append(e.content()).append("\n"));
             sb.append("\n");
         }
-
         sb.append("Güncel Kullanıcı Mesajı: ").append(userMessage);
+        return sb.toString();
+    }
+
+    private boolean isParseFailure(RuntimeException e) {
+        String msg = fullMessage(e);
+        return msg.contains("jsonprocessing") || msg.contains("cannot deserialize")
+                || msg.contains("unrecognized field") || msg.contains("unexpected character")
+                || msg.contains("no content to map") || msg.contains("invalid json")
+                || msg.contains("converter") || msg.contains("outputconverter");
+    }
+
+    private String fullMessage(Throwable e) {
+        StringBuilder sb = new StringBuilder();
+        Throwable t = e;
+        while (t != null) {
+            if (t.getMessage() != null) sb.append(t.getMessage().toLowerCase()).append(' ');
+            t = t.getCause();
+        }
         return sb.toString();
     }
 }
