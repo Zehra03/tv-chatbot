@@ -49,3 +49,8 @@ app:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
+  tourvisio:
+    url: ${TOURVISIO_API_URL}
+    agency: ${TOURVISIO_API_AGENCY}
+    user: ${TOURVISIO_API_USER}
+    password: ${TOURVISIO_API_PASSWORD}

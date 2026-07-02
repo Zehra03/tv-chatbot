@@ -145,4 +145,20 @@ public class AiConfig {
                 .defaultSystem(HOTEL_ONLY_SYSTEM_PROMPT)
                 .build();
     }
+
+    @Bean
+    @org.springframework.context.annotation.Profile({"mock", "mock-ai"})
+    ChatModel mockChatModel() {
+        return new ChatModel() {
+            @Override
+            public org.springframework.ai.chat.model.ChatResponse call(org.springframework.ai.chat.prompt.Prompt prompt) {
+                return new org.springframework.ai.chat.model.ChatResponse(java.util.List.of());
+            }
+
+            @Override
+            public org.springframework.ai.chat.prompt.ChatOptions getDefaultOptions() {
+                return null;
+            }
+        };
+    }
 }
