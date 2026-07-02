@@ -1,6 +1,7 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import type { ProductType } from '@/types'
 
-export type ProductType = 'hotel' | 'flight'
+export type { ProductType }
 
 /**
  * Rezervasyon taslağı — chat/otel/uçuş sonuçlarından "Seç" ile seçilen ürünün,
