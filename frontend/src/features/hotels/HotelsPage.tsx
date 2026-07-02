@@ -5,7 +5,9 @@ import { Label } from '@/components/ui/label'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
+import { Skeleton } from '@/components/ui/skeleton'
 import { useAppSelector } from '@/app/hooks'
+import { darkFieldClass, darkPrimaryButtonClass } from '@/lib/field-styles'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
 import { HotelFilters } from '@/features/hotels/HotelFilters'
 import { HotelList } from '@/features/hotels/HotelList'
@@ -66,8 +68,8 @@ export function HotelsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Oteller</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-bold text-white">Oteller</h1>
+        <p className="text-sm text-brand-ice/70">
           Kriterlere göre ara; sonuçları yıldız, pansiyon ve fiyata göre daralt.
         </p>
       </div>
@@ -81,6 +83,7 @@ export function HotelsPage() {
             onChange={(e) => setDestination(e.target.value)}
             placeholder="Şehir veya bölge"
             required
+            className={darkFieldClass}
           />
         </div>
         <div className="grid gap-1.5">
@@ -91,6 +94,7 @@ export function HotelsPage() {
             value={checkIn}
             onChange={(e) => setCheckIn(e.target.value)}
             required
+            className={darkFieldClass}
           />
         </div>
         <div className="grid gap-1.5">
@@ -101,6 +105,7 @@ export function HotelsPage() {
             value={checkOut}
             onChange={(e) => setCheckOut(e.target.value)}
             required
+            className={darkFieldClass}
           />
         </div>
         <div className="grid gap-1.5">
@@ -109,17 +114,29 @@ export function HotelsPage() {
             id="hotel-adults"
             type="number"
             min={1}
-            className="w-24"
+            className={`w-24 ${darkFieldClass}`}
             value={adults}
             onChange={(e) => setAdults(Math.max(1, Number(e.target.value)))}
           />
         </div>
-        <Button type="submit">Ara</Button>
+        <Button type="submit" className={darkPrimaryButtonClass}>
+          Ara
+        </Button>
       </form>
 
       {!criteria && <EmptyState>Sonuçları görmek için arama kriterlerini girin.</EmptyState>}
 
-      {query.isFetching && <LoadingState label="Aranıyor…" />}
+      {query.isFetching && (
+        <div className="space-y-3">
+          <LoadingState label="Aranıyor…" />
+          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          <div aria-hidden="true" className="grid gap-3">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
+      )}
 
       {query.isError && !query.isFetching && (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
@@ -128,7 +145,7 @@ export function HotelsPage() {
       {query.data && (
         <>
           <HotelFilters boardTypes={boardTypes} />
-          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
+          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
           <HotelList products={visible} />
         </>
       )}

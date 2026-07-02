@@ -33,16 +33,23 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Navigate to="/chat" replace /> },
-          // Bölge işaretleri (src/app/zones.ts): 'ai' = koyu gece uçuşu yüzeyi,
-          // 'controlled' = açık rezervasyon yüzeyi. hotels/flights içerikleri
-          // koyu yüzeye taşınana dek (Faz 3) işaretsiz → açık kalır.
+          // Bölge işaretleri (src/app/zones.ts): 'ai' = koyu gece uçuşu yüzeyi
+          // (chat + arama sonuçları), 'controlled' = açık rezervasyon yüzeyi.
           {
             path: '/chat',
             element: <ChatPage />,
             handle: { zone: 'ai' } satisfies ZoneHandle,
           },
-          { path: '/hotels', element: <HotelsPage /> },
-          { path: '/flights', element: <FlightsPage /> },
+          {
+            path: '/hotels',
+            element: <HotelsPage />,
+            handle: { zone: 'ai' } satisfies ZoneHandle,
+          },
+          {
+            path: '/flights',
+            element: <FlightsPage />,
+            handle: { zone: 'ai' } satisfies ZoneHandle,
+          },
           {
             path: '/reservation/new',
             element: <ReservationFormPage />,
