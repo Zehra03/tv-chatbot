@@ -13,6 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import java.util.Map;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -55,5 +56,14 @@ public class AuthController {
     @PostMapping("/login")
     public LoginResponse login(@RequestBody @Valid LoginRequest request) {
         return authService.login(request);
+    }
+
+    @Operation(summary = "Çıkış",
+               description = "JWT stateless olduğundan sunucu tarafında işlem yapılmaz. " +
+                             "İstemci tarafında token silinmelidir.")
+    @ApiResponse(responseCode = "200", description = "Çıkış başarılı")
+    @PostMapping("/logout")
+    public Map<String, String> logout() {
+        return Map.of("message", "Çıkış başarılı");
     }
 }
