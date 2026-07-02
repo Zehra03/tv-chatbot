@@ -1,73 +1,65 @@
-import type { IsoDate, CurrencyCode } from './common'
+import type { IsoDate, CurrencyCode, CountryCode } from './common'
 
 /**
- * Arama kriterleri (docs/frontend-architecture.md §7). Chat slot-filling sırasında
- * kademeli dolduğundan, kısmi kriter için `Partial<HotelSearchCriteria>` /
- * `Partial<FlightSearchCriteria>` kullanılır (bkz. chat.ts `PartialCriteria`).
+ * Arama kriterleri — KALICI DEĞİL. chat_sessions.accumulated_criteria (jsonb) içinde
+ * geçici tutulur; V1 şeması alan adlarını sabitlemez. Aşağıdaki alanlar kalıcı snapshot
+ * sütunları (hotel/flight_reservation_details) ve backend record'larıyla hizalıdır.
+ * Chat slot-filling'de `Partial<...>` kullanılır (bkz. chat.ts `PartialCriteria`).
  */
 
-/** Otel pansiyon tipi: RO=sadece oda, BB=kahvaltı, HB=yarım, FB=tam, AI=her şey dahil, UAI=ultra. */
-export type BoardType = 'RO' | 'BB' | 'HB' | 'FB' | 'AI' | 'UAI'
+/** Uçuş yön tipi. DB: flight_reservation_details.trip_type CHECK ('one_way','round_trip'). */
+export type TripType = 'one_way' | 'round_trip'
 
-/** Otel sonuç sıralaması. */
-export type HotelSort = 'price-asc' | 'price-desc' | 'stars-desc'
-
-/** Fiyat aralığı filtresi; uçları opsiyonel (tek taraflı aralık mümkün). */
+/** Fiyat aralığı filtresi (frontend-only). */
 export interface PriceRange {
   min?: number
   max?: number
 }
 
-/** "HH:mm" (24s) zaman aralığı — uçuş kalkış saatini daraltmak için. */
+/** "HH:mm" (24s) zaman aralığı — kalkış saatini daraltmak için (frontend-only). */
 export interface TimeRange {
   from?: string
   to?: string
 }
 
-/** Otel arama kriterleri. `location` (şehir/bölge) veya `hotelName` ile arama yapılır. */
+/** Otel arama kriteri. `destination` = backend HotelSearchCriteria record'undaki alan. */
 export interface HotelSearchCriteria {
-  location?: string
+  destination: string
   hotelName?: string
-  checkIn: IsoDate
-  checkOut: IsoDate
-  adults: number
-  children: number
-  /** Çocuk yaşları; uzunluğu `children` ile tutarlı olmalı (yaşa bağlı fiyatlama). */
+  checkIn: IsoDate // DB: check_in date
+  checkOut: IsoDate // DB: check_out date
+  adults: number // DB: adults smallint (>=1)
+  children: number // DB: children smallint (>=0)
+  /** Frontend-only: yaşa bağlı fiyatlama; DB'de saklanmaz. Uzunluğu `children` ile tutarlı. */
   childAges: number[]
-  rooms: number
-  nationality: string
+  rooms: number // DB: rooms smallint (>=1)
+  nationality: CountryCode
   currency: CurrencyCode
-  // — opsiyonel filtreler —
+  // — frontend filtreleri (DB'de karşılığı yok) —
   stars?: number[]
-  boardType?: BoardType
+  /** DB board_type serbest metin; UI filtresinde bilinen kodlar (RO/BB/HB/FB/AI/UAI). */
+  boardType?: string
   priceRange?: PriceRange
   region?: string
-  sort?: HotelSort
+  sort?: 'price-asc' | 'price-desc' | 'stars-desc'
 }
 
-/** Uçuş yön tipi. */
-export type TripType = 'one-way' | 'round-trip'
-
-/** Uçuş yolcu dağılımı. */
-export interface FlightPassengers {
-  adults: number
-  children: number
-  infants: number
-}
-
-/** Uçuş arama kriterleri. `from`/`to` havalimanı ya da şehir kodu. */
+/** Uçuş arama kriteri. origin/destination + passengers(count) DB alanlarıyla hizalı. */
 export interface FlightSearchCriteria {
-  from: string
-  to: string
+  origin: string // DB: origin varchar(100)
+  destination: string // DB: destination varchar(100)
+  /** Kullanıcının seçtiği gün; kalıcı biçimde depart_time (instant) olarak saklanır. */
   departDate: IsoDate
-  passengers: FlightPassengers
+  /** Yolcu SAYISI. DB: passenger_count smallint (>=1). */
+  passengers: number
   currency: CurrencyCode
   tripType: TripType
-  // — opsiyonel —
-  /** `tripType === 'round-trip'` iken dolu. */
+  /** `tripType === 'round_trip'` iken. DB: return_depart_time. */
   returnDate?: IsoDate
+  /** frontend filtre; DB `stops` ile eşlenir (nonstop → stops = 0). */
   nonstop?: boolean
   airline?: string
   departTimeRange?: TimeRange
-  baggageIncluded?: boolean
+  /** frontend filtre; DB baggage serbest metin. */
+  baggage?: string
 }
