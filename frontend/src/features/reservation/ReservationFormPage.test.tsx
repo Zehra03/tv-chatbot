@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -90,5 +90,36 @@ describe('ReservationFormPage', () => {
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
     expect(await screen.findByText('Geçerli bir yaş girin (0–120)')).toBeTruthy()
     expect(screen.getByText('İki harfli ülke kodu girin (ör. TR)')).toBeTruthy()
+  })
+
+  it('geçerli form → önizleme; onay checkbox işaretlenmeden gönderilemez, işaretlenince POST atılır', async () => {
+    const requests: string[] = []
+    server.events.on('request:start', ({ request }) => {
+      requests.push(`${request.method} ${new URL(request.url).pathname}`)
+    })
+
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Ad'), 'Zehra')
+    await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
+    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+
+    // Önizleme: backend'in hesapladığı toplam + misafir listesi.
+    expect(await screen.findByText(/Toplam:/, {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText(/1\.200/)).toBeTruthy()
+    expect(screen.getByText(/Zehra Yılmaz — Yetişkin/)).toBeTruthy()
+
+    // Açık onay: checkbox işaretlenmeden buton devre dışı.
+    const submit = screen.getByRole('button', { name: 'Rezervasyonu onayla' })
+    expect((submit as HTMLButtonElement).disabled).toBe(true)
+    await user.click(screen.getByRole('checkbox'))
+    expect((submit as HTMLButtonElement).disabled).toBe(false)
+
+    await user.click(submit)
+    await waitFor(() => expect(requests).toContain('POST /api/v1/reservations'))
+    server.events.removeAllListeners()
   })
 })

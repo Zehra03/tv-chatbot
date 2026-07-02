@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -6,12 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
+import { Spinner } from '@/components/ui/spinner'
 import { useAppSelector } from '@/app/hooks'
 import {
   emptyPassenger,
   reservationFormSchema,
+  toCreateRequest,
   type ReservationFormValues,
 } from '@/features/reservation/reservationFormSchema'
+import { useReservationPreview } from '@/features/reservation/useReservationPreview'
+import { useCreateReservation } from '@/features/reservation/useCreateReservation'
+import type { CreateReservationRequest } from '@/api'
 import { formatPrice } from '@/utils/format'
 
 /**
@@ -22,6 +28,10 @@ import { formatPrice } from '@/utils/format'
  */
 export function ReservationFormPage() {
   const draft = useAppSelector((s) => s.reservationDraft.draft)
+  const preview = useReservationPreview()
+  const create = useCreateReservation()
+  const [request, setRequest] = useState<CreateReservationRequest | null>(null)
+  const [confirmed, setConfirmed] = useState(false)
 
   const {
     register,
@@ -57,8 +67,87 @@ export function ReservationFormPage() {
     )
   }
 
-  // Önizleme + onay + gönderim bir sonraki adımda bağlanır.
-  const onValid = (_values: ReservationFormValues) => {}
+  const onValid = (values: ReservationFormValues) => {
+    const req = toCreateRequest(draft, values)
+    setRequest(req)
+    setConfirmed(false)
+    create.reset()
+    preview.mutate(req)
+  }
+
+  // Adım 2 — önizleme + açık onay ("kontrollü rezervasyon"): checkbox
+  // işaretlenmeden gönderim yapılamaz. Toplam tutar backend'in hesabıdır.
+  if (preview.data && request) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <h1 className="text-2xl font-bold">Rezervasyon önizleme</h1>
+        <Card>
+          <CardHeader>
+            <CardTitle>{preview.data.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">{preview.data.summary}</p>
+            <div>
+              <p className="mb-1 text-sm font-semibold">Misafirler</p>
+              <ul className="space-y-1 text-sm text-muted-foreground">
+                {preview.data.passengers.map((p, i) => (
+                  <li key={`${p.firstName}-${p.lastName}-${i}`}>
+                    {p.firstName} {p.lastName} —{' '}
+                    {p.passengerType === 'adult' ? 'Yetişkin' : 'Çocuk'}
+                    {p.email ? ` · ${p.email}` : ''}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="text-lg font-bold">
+              Toplam: {formatPrice(preview.data.totalAmount, preview.data.currency)}
+            </p>
+
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(e) => setConfirmed(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+              />
+              Bilgilerimi kontrol ettim, rezervasyonu onaylıyorum.
+            </label>
+
+            {create.isError && (
+              <p role="alert" className="text-sm text-destructive">
+                {create.error.message}
+              </p>
+            )}
+
+            <div className="flex gap-3">
+              <Button
+                disabled={!confirmed || create.isPending}
+                onClick={() => create.mutate(request)}
+              >
+                {create.isPending ? (
+                  <>
+                    <Spinner size={16} className="text-primary-foreground" />
+                    Gönderiliyor…
+                  </>
+                ) : (
+                  'Rezervasyonu onayla'
+                )}
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  preview.reset()
+                  create.reset()
+                }}
+              >
+                Forma dön
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -171,7 +260,14 @@ export function ReservationFormPage() {
           </div>
         </section>
 
-        <Button type="submit">Önizlemeye geç</Button>
+        {preview.isError && (
+          <p role="alert" className="text-sm text-destructive">
+            {preview.error.message}
+          </p>
+        )}
+        <Button type="submit" disabled={preview.isPending}>
+          {preview.isPending ? 'Önizleme hazırlanıyor…' : 'Önizlemeye geç'}
+        </Button>
       </form>
     </div>
   )
