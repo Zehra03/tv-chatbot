@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-PaxAssist — an AI-assisted hotel & flight search/reservation app built as a **modular monolith** (Spring Boot + PostgreSQL + React) for the SAN TSG internship. The repo is currently a **scaffold**: backend module packages are empty `.gitkeep` placeholders and the `frontend/` app has not been generated yet. Treat the `docs/` files as the spec to implement against, not as descriptions of existing code.
+PaxAssist — an AI-assisted hotel & flight search/reservation app built as a **modular monolith** (Spring Boot + PostgreSQL + React) for the SAN TSG internship. Both sides are implemented and evolving: the backend has its module pipeline, profiles and Flyway migrations in place, and `frontend/` is a working React app (chat, results, controlled reservation flow) developed against MSW. The `docs/` files remain the spec to align with when extending either side.
 
 ## Commands
 
@@ -32,9 +32,9 @@ docker compose up --build
 # Swagger:  http://localhost:8080/swagger-ui/index.html
 ```
 
-Frontend commands (`npm install`, `npm run dev`, `npm run build`) apply **once `frontend/` is scaffolded** — CI already expects them.
+Frontend commands (in `frontend/`): `npm install`, `npm run dev`, `npm run test` (Vitest + RTL + MSW), `npm run lint`, `npm run build` (CI runs the build).
 
-> **Tests need a database.** The only test today, `PaxAssistApplicationTests.contextLoads`, is a `@SpringBootTest` that boots the *full* Spring context — which builds the datasource and runs Flyway. With no slice/mocking and no H2 fallback, `mvn -B test` **fails unless a PostgreSQL matching `SPRING_DATASOURCE_*` is reachable** (default `jdbc:postgresql://localhost:5432/paxassist`). The CI backend job does not provision one yet, so it will fail until either a DB service or a sliced/`@DataJpaTest`-style setup is added. Start Postgres (`docker compose up postgres`) before running backend tests locally.
+> **Backend tests need services.** `@SpringBootTest`-style tests boot the full Spring context — datasource + Flyway. `mvn -B test` **fails unless PostgreSQL and Redis matching the `SPRING_*` env vars are reachable**. CI provisions Postgres and Redis service containers; locally start them first (`docker compose up -d postgres redis`).
 >
 > Note: `make test-docker` / `make test-backend-docker` and the README's Docker-test instructions reference a `docker-compose.test.yml` that **does not exist yet**. Until it's added, run tests with `mvn -B test` directly. Don't assume the Make targets work.
 
