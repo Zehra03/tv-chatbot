@@ -174,30 +174,41 @@ COMMENT ON TABLE hotel_reservation_details IS 'Snapshot of the booked hotel prod
 -- flight_reservation_details - 1:0..1 booked flight snapshot (shared PK)
 -- ============================================================
 CREATE TABLE flight_reservation_details (
-    reservation_id  bigint        PRIMARY KEY,
-    origin          varchar(100)  NOT NULL,
-    destination     varchar(100)  NOT NULL,
-    airline         varchar(100),
-    trip_type       varchar(10)   NOT NULL,
-    depart_date     date          NOT NULL,
-    return_date     date,
-    depart_time     timestamptz,
-    arrive_time     timestamptz,
-    stops           smallint      NOT NULL DEFAULT 0,
-    baggage         varchar(50),
-    passenger_count smallint      NOT NULL,
-    price           numeric(12,2) NOT NULL,
-    currency        char(3)       NOT NULL,
-    created_at      timestamptz   NOT NULL DEFAULT now(),
+    reservation_id     bigint        PRIMARY KEY,
+    origin             varchar(100)  NOT NULL,
+    destination        varchar(100)  NOT NULL,
+    airline            varchar(100),
+    trip_type          varchar(10)   NOT NULL,
+    depart_time        timestamptz   NOT NULL,   -- outbound departure instant (calendar date is contained here)
+    arrive_time        timestamptz,              -- outbound arrival instant
+    return_depart_time timestamptz,              -- return departure instant (NULL for one_way)
+    return_arrive_time timestamptz,              -- return arrival instant   (NULL for one_way)
+    stops              smallint      NOT NULL DEFAULT 0,
+    baggage            varchar(50),
+    passenger_count    smallint      NOT NULL,
+    price              numeric(12,2) NOT NULL,
+    currency           char(3)       NOT NULL,
+    created_at         timestamptz   NOT NULL DEFAULT now(),
     CONSTRAINT fk_flight_details_reservation FOREIGN KEY (reservation_id) REFERENCES reservations (id) ON DELETE CASCADE,
-    CONSTRAINT ck_flight_trip_type       CHECK (trip_type IN ('one_way', 'round_trip')),
-    CONSTRAINT ck_flight_return_date     CHECK (return_date IS NULL OR return_date >= depart_date),
-    CONSTRAINT ck_flight_stops           CHECK (stops >= 0),
-    CONSTRAINT ck_flight_passenger_count CHECK (passenger_count >= 1),
-    CONSTRAINT ck_flight_price           CHECK (price >= 0)
+    CONSTRAINT ck_flight_trip_type        CHECK (trip_type IN ('one_way', 'round_trip')),
+    CONSTRAINT ck_flight_arrive_order     CHECK (arrive_time IS NULL OR arrive_time >= depart_time),
+    CONSTRAINT ck_flight_return_legs      CHECK (
+        (trip_type = 'one_way'    AND return_depart_time IS NULL AND return_arrive_time IS NULL)
+     OR (trip_type = 'round_trip' AND return_depart_time IS NOT NULL)
+    ),
+    CONSTRAINT ck_flight_return_order     CHECK (return_depart_time IS NULL OR return_depart_time >= depart_time),
+    CONSTRAINT ck_flight_return_arrive    CHECK (
+        return_arrive_time IS NULL
+     OR (return_depart_time IS NOT NULL AND return_arrive_time >= return_depart_time)
+    ),
+    CONSTRAINT ck_flight_stops            CHECK (stops >= 0),
+    CONSTRAINT ck_flight_passenger_count  CHECK (passenger_count >= 1),
+    CONSTRAINT ck_flight_price            CHECK (price >= 0)
 );
 
-COMMENT ON TABLE flight_reservation_details IS 'Snapshot of the booked flight product + itinerary (1:0..1 with reservations).';
+COMMENT ON TABLE  flight_reservation_details                    IS 'Snapshot of the booked flight product + itinerary (1:0..1 with reservations).';
+COMMENT ON COLUMN flight_reservation_details.depart_time        IS 'Outbound departure instant; the calendar date is contained here (no separate depart_date column).';
+COMMENT ON COLUMN flight_reservation_details.return_depart_time IS 'Return departure instant; NULL for one_way trips.';
 
 -- ============================================================
 -- logging.app_logs - asynchronous system & error logs (Log DB, separate schema, PII-free)

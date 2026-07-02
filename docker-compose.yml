@@ -21,6 +21,15 @@ services:
       timeout: 5s
       retries: 5
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: paxassist-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
   backend:
     build:
       context: ./backend
@@ -35,13 +44,14 @@ services:
       SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
       SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
       SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
-      AI_PROVIDER_URL: ${AI_PROVIDER_URL}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
       AI_PROVIDER_MODEL: ${AI_PROVIDER_MODEL}
-      AI_PROVIDER_API_KEY: ${AI_PROVIDER_API_KEY}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
     depends_on:
       postgres:
         condition: service_healthy
+      ollama:
+        condition: service_started
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
   # frontend:
@@ -59,3 +69,4 @@ services:
 
 volumes:
   postgres-data:
+  ollama-data:

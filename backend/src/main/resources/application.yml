@@ -12,7 +12,19 @@ spring:
       "[hibernate.format_sql]": true
     open-in-view: false
   flyway:
-    enabled: true
+    enabled: false
+  ai:
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
+      init:
+        pull-model-strategy: when_missing
+        embedding:
+          include: false
+      chat:
+        model: ${AI_PROVIDER_MODEL:gemma3:4b}
+        options:
+          temperature: 0.0
+          num-predict: 1024
 
 server:
   port: ${SERVER_PORT:${BACKEND_PORT:8080}}
@@ -29,7 +41,3 @@ app:
   rate-limit:
     max-requests: 60
     window-seconds: 60
-  ai:
-    provider-url: ${AI_PROVIDER_URL:https://api.openai.com/v1}
-    model: ${AI_PROVIDER_MODEL:gpt-4.1-mini}
-    api-key: ${AI_PROVIDER_API_KEY:replace-me}

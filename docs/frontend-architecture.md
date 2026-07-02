@@ -224,6 +224,8 @@ The explicit confirmation checkbox enforces the "controlled reservation" rule.
 ### Styling
 Tailwind CSS utility classes with a small set of shared component primitives (`Button`, `Input`, `Card`, `Badge`, `Spinner`, `Modal`, `Layout`). Responsive chat layout (message thread + composer).
 
+Two color systems coexist, both consumed as Tailwind classes (never raw hex in components): the **semantic shadcn tokens** (`primary`, `muted`, `card`, `background`, … — HSL CSS variables, theme-aware) for general surfaces, and a **fixed brand palette** (`brand-navy/blue/teal/iris/ice`, defined in `tailwind.config.js`) for the dark auth/hero surfaces. The **login** (`/login`) is the reference brand surface: a dark navy background, a glass card, and an animated gooey "mercury blob" field. A `BackgroundGradientAnimation` primitive (`components/ui/background-gradient-animation.tsx`, a blue→teal gooey gradient) is also available for hero surfaces. See `frontend/CLAUDE.md` for the palette and design-system rules.
+
 ### Environment variables
 | Variable | Purpose |
 |----------|---------|
