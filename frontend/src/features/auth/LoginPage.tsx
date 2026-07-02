@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { ArrowRight, Eye, EyeOff, MapPin, Plane, Star, Wifi } from 'lucide-react'
 import heroImage from '@/assets/travel-hero.png'
 import hotelImage from '@/assets/hotel-room.png'
+import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { login } from '@/features/auth/authSlice'
 import { cn } from '@/lib/utils'
 
 type AuthMode = 'login' | 'register'
@@ -490,17 +493,35 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
 }
 
 /**
- * Default export wires the screen with mock handlers for the current preview phase.
- * Auth is not yet connected to Redux / React Router (see docs/frontend-architecture.md
- * §3, §5) — swap these for the auth slice + navigation when that lands.
+ * Mock kimlik doğrulama akışını bağlar (docs/frontend-architecture.md §3, §5):
+ * giriş / kayıt / misafir → kullanıcıyı Redux'a yazar ve /chat'e yönlendirir.
+ * Zaten oturum açıksa doğrudan /chat'e gider. Gerçek doğrulama backend'de;
+ * şifre burada doğrulanmaz (mock) ve hiçbir sır saklanmaz.
  */
 export default function LoginPage() {
+  const dispatch = useAppDispatch()
+  const navigate = useNavigate()
+  const user = useAppSelector((s) => s.auth.user)
+
+  // Oturum açıkken /login'e gelinirse uygulamaya geri dön.
+  if (user) return <Navigate to="/chat" replace />
+
+  const goToApp = () => navigate('/chat', { replace: true })
+
   return (
     <AuthScreen
-      onLogin={(email, password) => console.log('Login:', email, password)}
-      onRegister={(data) => console.log('Register:', data)}
-      onGuestContinue={() => console.log('Guest continue')}
-      onForgotPassword={() => console.log('Forgot password')}
+      onLogin={(email) => {
+        dispatch(login({ email }))
+        goToApp()
+      }}
+      onRegister={({ email, fullName }) => {
+        dispatch(login({ email, name: fullName }))
+        goToApp()
+      }}
+      onGuestContinue={() => {
+        dispatch(login({ email: '', name: 'Misafir', guest: true }))
+        goToApp()
+      }}
     />
   )
 }
