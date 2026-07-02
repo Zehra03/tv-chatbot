@@ -31,4 +31,10 @@ public class InMemoryChatSessionStore implements ChatSessionStore {
     public void save(ChatSession session) {
         store.put(session.getId(), session);
     }
+
+    @Override
+    public void deleteById(String sessionId, ChatSession session) {
+        // remove(key, value) is an atomic CAS: only removes if the entry still matches
+        store.remove(sessionId, session);
+    }
 }

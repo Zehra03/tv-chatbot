@@ -11,4 +11,7 @@ public interface ChatSessionStore {
     Optional<ChatSession> findById(String sessionId);
 
     void save(ChatSession session);
+
+    // Passes the found session so the implementation can do a CAS remove (key + value match)
+    void deleteById(String sessionId, ChatSession session);
 }

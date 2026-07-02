@@ -6,6 +6,7 @@ public record ChatResponse(
         String reply,
         String sessionId,
         List<Object> hotels,
+        List<Object> flights,
         boolean redirectToReservation,
         Object selectedProduct
 ) {

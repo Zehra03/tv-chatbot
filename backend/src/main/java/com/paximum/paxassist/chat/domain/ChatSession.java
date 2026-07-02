@@ -5,13 +5,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * In-memory session state. Swapped for a JPA entity once the DB teammate
- * delivers the chat_sessions entity + repository (Zehra koordinasyonu).
- */
+
 public class ChatSession {
 
     private final String id;
+    private Long userId;
     private Map<String, Object> accumulatedCriteria;
     private String flowState;
     private String pendingQuestion;
@@ -28,6 +26,9 @@ public class ChatSession {
     }
 
     public String getId() { return id; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public Map<String, Object> getAccumulatedCriteria() { return accumulatedCriteria; }
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
