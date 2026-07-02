@@ -1,10 +1,11 @@
+import { EmptyState } from '@/components/EmptyState'
 import { FlightCard } from '@/features/flights/FlightCard'
 import type { FlightProduct } from '@/types'
 
 /** Filtre uygulanmış uçuş sonuç listesi; boş listede açıklayıcı mesaj gösterir. */
 export function FlightList({ products }: { products: FlightProduct[] }) {
   if (products.length === 0) {
-    return <p className="text-sm text-muted-foreground">Kriterlere uyan uçuş bulunamadı.</p>
+    return <EmptyState>Kriterlere uyan uçuş bulunamadı.</EmptyState>
   }
   return (
     <div className="grid gap-3">

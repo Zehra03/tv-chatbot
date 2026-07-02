@@ -3,7 +3,8 @@ import { ArrowLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Spinner } from '@/components/ui/spinner'
+import { ErrorState } from '@/components/ErrorState'
+import { LoadingState } from '@/components/LoadingState'
 import { useReservation } from '@/features/reservation/useReservation'
 import {
   RESERVATION_STATUS_LABELS,
@@ -18,7 +19,7 @@ import { formatDate, formatDateTime, formatPrice } from '@/utils/format'
  */
 export function ReservationDetailPage() {
   const { id } = useParams()
-  const { data, isLoading, isError, error, refetch } = useReservation(id)
+  const { data, isError, isFetching, error, refetch } = useReservation(id)
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -29,27 +30,17 @@ export function ReservationDetailPage() {
         </Link>
       </Button>
 
-      {isLoading && (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Spinner size={16} />
-          Yükleniyor…
-        </div>
-      )}
+      {isFetching && !data && <LoadingState label="Yükleniyor…" />}
 
-      {isError && (
-        <p role="alert" className="flex items-center gap-3 text-sm text-destructive">
-          {error.message}
-          <Button type="button" variant="outline" size="sm" onClick={() => refetch()}>
-            Tekrar dene
-          </Button>
-        </p>
+      {isError && !isFetching && (
+        <ErrorState message={error.message} onRetry={() => refetch()} />
       )}
 
       {data && (
         <Card>
-          <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="font-mono">{data.reservationNumber}</CardTitle>
-            <Badge variant={reservationStatusVariant(data.status)}>
+          <CardHeader className="flex-row items-center justify-between space-y-0 gap-3">
+            <CardTitle className="min-w-0 break-all font-mono">{data.reservationNumber}</CardTitle>
+            <Badge className="shrink-0" variant={reservationStatusVariant(data.status)}>
               {RESERVATION_STATUS_LABELS[data.status]}
             </Badge>
           </CardHeader>
@@ -97,7 +88,7 @@ export function ReservationDetailPage() {
                         </span>
                       </p>
                       {(p.email || p.phone) && (
-                        <p className="mt-1 text-muted-foreground">
+                        <p className="mt-1 break-words text-muted-foreground">
                           {[p.email, p.phone].filter(Boolean).join(' · ')}
                         </p>
                       )}

@@ -49,14 +49,14 @@ describe('HotelCard', () => {
   it('müsait olmayan otelde rozet gösterir ve Seç devre dışıdır', () => {
     renderCard({ ...hotel, availability: false })
     expect(screen.getByText('Müsait değil')).toBeTruthy()
-    expect((screen.getByRole('button', { name: 'Seç' }) as HTMLButtonElement).disabled).toBe(true)
+    expect((screen.getByRole('button', { name: /seç/i }) as HTMLButtonElement).disabled).toBe(true)
   })
 
   it('Seç, normalize taslağı yazar ve rezervasyon formuna yönlendirir', async () => {
     const user = userEvent.setup()
     const { store } = renderCard(hotel)
 
-    await user.click(screen.getByRole('button', { name: 'Seç' }))
+    await user.click(screen.getByRole('button', { name: /seç/i }))
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toEqual({
       productType: 'hotel',

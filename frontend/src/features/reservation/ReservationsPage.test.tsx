@@ -66,12 +66,13 @@ describe('ReservationsPage (MSW ile)', () => {
     expect(screen.getByText('İptal edildi')).toBeTruthy()
   })
 
-  it('Detay butonu ilgili rezervasyonun detayına gider', async () => {
+  it('Detay bağlantısı ilgili rezervasyonun detayına gider', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })
-    await user.click(screen.getAllByRole('button', { name: 'Detay' })[0])
+    // Detay gerçek bir bağlantıdır (yeni sekmede açılabilir, link semantiği).
+    await user.click(screen.getAllByRole('link', { name: 'Detay' })[0])
     expect(await screen.findByText('DETAY STUB')).toBeTruthy()
   })
 })

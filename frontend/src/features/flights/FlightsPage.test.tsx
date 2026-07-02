@@ -87,7 +87,7 @@ describe('FlightsPage (MSW ile)', () => {
 
     // En ucuz uçuşu öne al, ilk Seç ona ait olsun.
     await user.selectOptions(screen.getByLabelText('Sıralama'), 'price-asc')
-    await user.click(screen.getAllByRole('button', { name: 'Seç' })[0])
+    await user.click(screen.getAllByRole('button', { name: /seç/i })[0])
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toMatchObject({
       productType: 'flight',

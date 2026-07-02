@@ -38,7 +38,7 @@ export function Layout() {
 
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b">
+      <header className="relative border-b">
         <div className="container flex h-16 items-center justify-between gap-4">
           <div className="flex items-center gap-8">
             <NavLink to="/chat" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
@@ -55,7 +55,7 @@ export function Layout() {
           </div>
           <div className="flex items-center gap-3">
             {user && (
-              <span className="hidden text-sm text-muted-foreground md:inline">
+              <span className="hidden max-w-[16rem] truncate text-sm text-muted-foreground md:inline">
                 {user.name ?? user.email}
               </span>
             )}
@@ -81,9 +81,10 @@ export function Layout() {
           </div>
         </div>
 
-        {/* Mobil panel — linke tıklayınca kapanır. */}
+        {/* Mobil panel — overlay olarak açılır (header yüksekliği sabit kalır,
+            /chat'in 100vh hesabı bozulmaz); linke tıklayınca kapanır. */}
         {menuOpen && (
-          <div className="border-t md:hidden">
+          <div className="absolute inset-x-0 top-full z-50 border-b border-t bg-background shadow-md md:hidden">
             <nav className="container flex flex-col gap-1 py-3">
               {NAV.map((item) => (
                 <NavLink
@@ -95,13 +96,13 @@ export function Layout() {
                   {item.label}
                 </NavLink>
               ))}
-              <div className="mt-2 flex items-center justify-between border-t pt-3">
+              <div className="mt-2 flex items-center justify-between gap-2 border-t pt-3">
                 {user && (
-                  <span className="px-3 text-sm text-muted-foreground">
+                  <span className="min-w-0 truncate px-3 text-sm text-muted-foreground">
                     {user.name ?? user.email}
                   </span>
                 )}
-                <Button variant="outline" size="sm" onClick={handleLogout}>
+                <Button variant="outline" size="sm" className="shrink-0" onClick={handleLogout}>
                   Çıkış
                 </Button>
               </div>
