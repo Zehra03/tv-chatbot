@@ -1,5 +1,7 @@
 package com.paximum.paxassist.hotel;
 
+import com.paximum.paxassist.hotel.dto.AutocompleteResponse;
+import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
@@ -20,5 +22,29 @@ public class MockTourVisioHotelApiClient implements TourVisioHotelApiClient {
             new HotelProduct("H5", "Hilton Bosphorus", "Istanbul", 5, new BigDecimal("350.00"), "EUR", "Bed & Breakfast", true),
             new HotelProduct("H6", "Swissotel The Bosphorus", "Istanbul", 5, new BigDecimal("400.00"), "EUR", "Bed & Breakfast", true)
         );
+    }
+
+    @Override
+    public String authenticate() {
+        return "mock-token";
+    }
+
+    @Override
+    public AutocompleteResponse getArrivalAutocomplete(String query) {
+        return new AutocompleteResponse(
+            new AutocompleteResponse.Header(true),
+            new AutocompleteResponse.Body(List.of(
+                new AutocompleteResponse.Item(
+                    1,
+                    new AutocompleteResponse.City("23494", "Antalya"),
+                    null
+                )
+            ))
+        );
+    }
+
+    @Override
+    public Object priceSearch(HotelSearchRequest criteria, String locationId) {
+        return List.of();
     }
 }
