@@ -3,13 +3,15 @@ import type { HotelSearchCriteria, FlightSearchCriteria } from './search'
 import type { HotelProduct, FlightProduct } from './product'
 
 /**
- * Sohbet domaini (docs/frontend-architecture.md §5, §8). `chatSlice` mesaj thread'ini,
- * biriken arama kriterini (slot-filling) ve bekleyen açık soruyu tutar.
+ * Sohbet domaini. DB: `chat_sessions` + `chat_messages`. Not: `accumulated_criteria` ve
+ * `result_cards` DB'de jsonb'dir (şema iç yapılarını tiplemez) — aşağıdaki
+ * `PartialCriteria` / `ResultCard` bu jsonb blob'larının frontend tiplemesidir.
  */
 
-export type ChatRole = 'user' | 'assistant'
+/** DB: chat_messages.role CHECK ('user','assistant','system'). */
+export type ChatRole = 'user' | 'assistant' | 'system'
 
-/** Asistan mesajına iliştirilen inline sonuç kartı (thread içinde render edilir). */
+/** `result_cards` (jsonb) içindeki inline sonuç kartı (thread'de render edilir). */
 export type ResultCard =
   | { productType: 'hotel'; product: HotelProduct }
   | { productType: 'flight'; product: FlightProduct }
@@ -17,14 +19,14 @@ export type ResultCard =
 export interface ChatMessage {
   id: string
   role: ChatRole
-  content: string
+  content: string // DB: content text
   createdAt: IsoDateTime
-  /** Yalnızca asistan mesajlarında bulunur; arama sonucu kartları. */
+  /** DB: result_cards jsonb (asistan mesajlarında dolu olabilir). */
   cards?: ResultCard[]
 }
 
 /**
- * Slot-filling boyunca kademeli dolan kriter. `intent` hangi aramanın yapıldığını,
+ * `accumulated_criteria` (jsonb) frontend tiplemesi. `intent` hangi aramanın yapıldığını,
  * `criteria` o ana dek toplanmış (eksik olabilen) alanları taşır.
  */
 export type PartialCriteria =
@@ -33,9 +35,10 @@ export type PartialCriteria =
 
 export interface ChatSession {
   id: string
-  messages: ChatMessage[]
-  /** Sohbet boyunca biriken arama kriteri (henüz tamamlanmamış olabilir). */
-  draftCriteria?: PartialCriteria
-  /** Asistanın eksik kriter için sorduğu, yanıt bekleyen açık soru. */
+  title?: string // DB: title varchar(200)
+  messages: ChatMessage[] // DB: chat_messages (1:N)
+  /** DB: accumulated_criteria jsonb (henüz tamamlanmamış olabilir). */
+  accumulatedCriteria?: PartialCriteria
+  /** Slot-filling'de yanıt bekleyen açık soru (backend in-memory ChatSession.pendingQuestion; transient). */
   pendingQuestion?: string
 }

@@ -1,31 +1,43 @@
-import type { IsoDateTime, Money } from './common'
-import type { BoardType } from './search'
+import type { CurrencyCode, IsoDateTime } from './common'
+import type { TripType } from './search'
 
 /**
- * Arama sonucu ürünleri (docs/frontend-architecture.md §7). Backend/MSW'den gelir;
- * fiyat/müsaitlik yalnızca sunucudan doldurulur — frontend değer uydurmaz (CLAUDE.md).
+ * Arama sonucu ürünleri — KALICI DEĞİL. TourVisio'dan gelen geçici sonuçlar
+ * (V1 şema notu: yalnızca rezerve edilen snapshot saklanır). Fiyat düz `price + currency`.
+ *
+ * `HotelProduct` backend `hotel/HotelProduct.java` record'unun wire şekliyle BİREBİR.
+ * `FlightProduct` için backend record'u HENÜZ YOK → flight_reservation_details
+ * sütunlarından türetildi (provisional; backend record'u gelince sabitlenecek).
  */
 
 export interface HotelProduct {
   id: string
-  name: string
+  hotelName: string
   region: string
-  /** Yıldız sayısı (1–5). */
+  /** 1–5. DB: stars smallint. */
   stars: number
-  boardType: BoardType
-  price: Money
-  /** Seçilen kriter için rezerve edilebilir mi. */
-  available: boolean
+  price: number
+  currency: CurrencyCode
+  /** DB: board_type varchar(50) — serbest metin (ör. "BB", "AI"). */
+  boardType: string
+  availability: boolean
 }
 
 export interface FlightProduct {
   id: string
   airline: string
+  origin: string
+  destination: string
   departTime: IsoDateTime
-  arriveTime: IsoDateTime
-  /** Aktarma sayısı (0 = direkt). */
+  arriveTime: IsoDateTime | null
+  tripType: TripType
+  /** round_trip iken dolu; one_way'de null. */
+  returnDepartTime?: IsoDateTime | null
+  returnArriveTime?: IsoDateTime | null
+  /** Aktarma sayısı (0 = direkt). DB: stops smallint. */
   stops: number
-  /** Fiyata bagaj dahil mi. */
-  baggageIncluded: boolean
-  price: Money
+  /** DB: baggage varchar(50) — serbest metin (ör. "20kg"), boolean DEĞİL. */
+  baggage: string
+  price: number
+  currency: CurrencyCode
 }
