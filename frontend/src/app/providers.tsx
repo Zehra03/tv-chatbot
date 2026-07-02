@@ -2,6 +2,7 @@ import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
+import { Toaster } from 'sonner'
 import { store } from '@/app/store'
 import { router } from '@/app/router'
 
@@ -26,6 +27,8 @@ export function Providers() {
       <QueryClientProvider client={queryClient}>
         <MotionConfig reducedMotion="user">
           <RouterProvider router={router} />
+          {/* Marka toast'ları — inline role="alert" mesajlarının yerine değil, yanına. */}
+          <Toaster richColors position="top-center" />
         </MotionConfig>
       </QueryClientProvider>
     </Provider>
