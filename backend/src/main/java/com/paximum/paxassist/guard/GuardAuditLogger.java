@@ -20,6 +20,15 @@ public class GuardAuditLogger {
     public void logBlockedRequestAsync(String originalInput, String reason) {
         String maskedInput = SensitiveDataMasker.mask(originalInput, reason);
         auditLogModule.logSecurityEventAsync(
-                "Blocked request: reason=%s, input=%s".formatted(reason, maskedInput));
+                "Blocked request: reason=%s, input=%s".formatted(sanitize(reason), sanitize(maskedInput)));
+    }
+
+    // Strips CR/LF from user-derived values before they reach the log sink, so a malicious
+    // input can't forge extra log lines (log injection / CRLF injection into the audit log).
+    private static String sanitize(String value) {
+        if (value == null) {
+            return null;
+        }
+        return value.replaceAll("[\\r\\n]", "_");
     }
 }

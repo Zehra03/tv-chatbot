@@ -17,6 +17,10 @@ public class Slf4jAuditLogModule implements AuditLogModule {
 
     @Override
     public void logSecurityEventAsync(String message) {
-        CompletableFuture.runAsync(() -> log.warn(message));
+        CompletableFuture.runAsync(() -> log.warn(message))
+                .exceptionally(ex -> {
+                    log.error("Failed to write security audit log entry", ex);
+                    return null;
+                });
     }
 }

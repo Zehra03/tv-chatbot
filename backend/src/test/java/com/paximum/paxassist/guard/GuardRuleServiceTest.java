@@ -1,6 +1,5 @@
 package com.paximum.paxassist.guard;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -11,14 +10,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ExtendWith(MockitoExtension.class)
 class GuardRuleServiceTest {
 
-    // Assuming the friend will create GuardRuleService implementation
     @InjectMocks
     private GuardRuleService guardRuleService;
-
-    @BeforeEach
-    void setUp() {
-        // Any setup if required
-    }
 
     @Test
     void shouldBlockCreditCardNumber() {
