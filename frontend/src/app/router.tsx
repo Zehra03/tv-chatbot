@@ -1,5 +1,6 @@
 import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
+import type { ZoneHandle } from '@/app/zones'
 import { Layout } from '@/components/Layout'
 import LoginPage from '@/features/auth/LoginPage'
 import Design from '@/pages/Design'
@@ -32,12 +33,31 @@ export const router = createBrowserRouter([
         element: <Layout />,
         children: [
           { index: true, element: <Navigate to="/chat" replace /> },
-          { path: '/chat', element: <ChatPage /> },
+          // Bölge işaretleri (src/app/zones.ts): 'ai' = koyu gece uçuşu yüzeyi,
+          // 'controlled' = açık rezervasyon yüzeyi. hotels/flights içerikleri
+          // koyu yüzeye taşınana dek (Faz 3) işaretsiz → açık kalır.
+          {
+            path: '/chat',
+            element: <ChatPage />,
+            handle: { zone: 'ai' } satisfies ZoneHandle,
+          },
           { path: '/hotels', element: <HotelsPage /> },
           { path: '/flights', element: <FlightsPage /> },
-          { path: '/reservation/new', element: <ReservationFormPage /> },
-          { path: '/reservations', element: <ReservationsPage /> },
-          { path: '/reservations/:id', element: <ReservationDetailPage /> },
+          {
+            path: '/reservation/new',
+            element: <ReservationFormPage />,
+            handle: { zone: 'controlled' } satisfies ZoneHandle,
+          },
+          {
+            path: '/reservations',
+            element: <ReservationsPage />,
+            handle: { zone: 'controlled' } satisfies ZoneHandle,
+          },
+          {
+            path: '/reservations/:id',
+            element: <ReservationDetailPage />,
+            handle: { zone: 'controlled' } satisfies ZoneHandle,
+          },
         ],
       },
     ],
