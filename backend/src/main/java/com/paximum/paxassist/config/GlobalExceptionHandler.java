@@ -3,6 +3,7 @@ package com.paximum.paxassist.config;
 import com.paximum.paxassist.auth.exception.ConflictException;
 import com.paximum.paxassist.auth.exception.InvalidCredentialsException;
 import com.paximum.paxassist.chat.dto.ErrorResponse;
+import com.paximum.paxassist.common.exception.ResourceNotFoundException;
 import com.paximum.paxassist.chat.exception.AiClientException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -34,6 +35,12 @@ public class GlobalExceptionHandler {
     ResponseEntity<ErrorResponse> handleInvalidCredentials(InvalidCredentialsException e) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse("UNAUTHORIZED", e.getMessage()));
+    }
+
+    @ExceptionHandler(ResourceNotFoundException.class)
+    ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse("NOT_FOUND", e.getMessage()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

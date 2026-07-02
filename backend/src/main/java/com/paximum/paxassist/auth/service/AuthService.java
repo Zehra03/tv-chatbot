@@ -8,6 +8,8 @@ import com.paximum.paxassist.auth.dto.UserResponse;
 import com.paximum.paxassist.auth.exception.ConflictException;
 import com.paximum.paxassist.auth.exception.InvalidCredentialsException;
 import com.paximum.paxassist.auth.repository.UserRepository;
+import com.paximum.paxassist.common.exception.ResourceNotFoundException;
+import org.springframework.lang.NonNull;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,5 +54,12 @@ public class AuthService {
 
         String token = jwtService.generateToken(user.getId(), user.getEmail(), user.getRole());
         return LoginResponse.of(token, user);
+    }
+
+    @Transactional(readOnly = true)
+    public UserResponse me(@NonNull Long userId) {
+        return userRepository.findById(userId)
+                .map(UserResponse::from)
+                .orElseThrow(() -> new ResourceNotFoundException("Kullanıcı bulunamadı"));
     }
 }

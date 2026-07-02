@@ -4,6 +4,7 @@ import com.paximum.paxassist.auth.dto.LoginRequest;
 import com.paximum.paxassist.auth.dto.LoginResponse;
 import com.paximum.paxassist.auth.dto.RegisterRequest;
 import com.paximum.paxassist.auth.dto.UserResponse;
+import com.paximum.paxassist.auth.exception.InvalidCredentialsException;
 import com.paximum.paxassist.auth.service.AuthService;
 import com.paximum.paxassist.chat.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,12 +14,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
-import java.util.Map;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @Tag(name = "Auth", description = "Kimlik doğrulama işlemleri")
 @RestController
@@ -65,5 +70,23 @@ public class AuthController {
     @PostMapping("/logout")
     public Map<String, String> logout() {
         return Map.of("message", "Çıkış başarılı");
+    }
+
+    @Operation(summary = "Mevcut kullanıcı bilgileri",
+               description = "Authorization: Bearer <token> header'ından kimlik doğrulanır, " +
+                             "kullanıcı bilgileri döner.")
+    @ApiResponse(responseCode = "200", description = "Kullanıcı bilgileri",
+            content = @Content(schema = @Schema(implementation = UserResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Token geçersiz veya eksik",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Kullanıcı bulunamadı",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @GetMapping("/me")
+    public UserResponse me() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Long userId)) {
+            throw new InvalidCredentialsException();
+        }
+        return authService.me(userId);
     }
 }
