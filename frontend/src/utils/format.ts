@@ -22,3 +22,10 @@ export function formatDateTime(iso: string): string {
   if (Number.isNaN(date.getTime())) return iso
   return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
 }
+
+/** ISO gün (YYYY-MM-DD) → "1 Ağu 2026" (tr-TR). Geçersiz girdi olduğu gibi döner. */
+export function formatDate(iso: string): string {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return iso
+  return new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium' }).format(date)
+}
