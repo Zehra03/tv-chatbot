@@ -15,7 +15,7 @@ import type { HotelProduct } from '@/types'
 export function HotelCard({ product }: { product: HotelProduct }) {
   const select = useSelectProduct()
   return (
-    <div className="glass-card flex items-center justify-between gap-4 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]">
+    <div className="glass-card flex flex-col gap-3 p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <p className="flex items-center gap-1 text-xs text-white/70">
           <MapPin className="h-3 w-3 shrink-0" aria-hidden />
@@ -32,7 +32,8 @@ export function HotelCard({ product }: { product: HotelProduct }) {
           {!product.availability && <Badge variant="destructive">Müsait değil</Badge>}
         </div>
       </div>
-      <div className="flex shrink-0 flex-col items-end gap-2">
+      {/* Mobilde fiyat solda / Seç sağda tek satır; sm+ sağa yaslı sütun. */}
+      <div className="flex shrink-0 items-center justify-between gap-2 sm:flex-col sm:items-end">
         <AnimatedPrice
           amount={product.price}
           currency={product.currency}
