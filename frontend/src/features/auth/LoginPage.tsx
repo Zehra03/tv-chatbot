@@ -5,6 +5,7 @@ import heroImage from '@/assets/travel-hero.png'
 import hotelImage from '@/assets/hotel-room.png'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { login } from '@/features/auth/authSlice'
+import { FloatingInput } from '@/components/ui/floating-input'
 import { cn } from '@/lib/utils'
 
 type AuthMode = 'login' | 'register'
@@ -21,40 +22,6 @@ interface AuthScreenProps {
   onRegister?: (data: RegisterData) => void
   onGuestContinue?: () => void
   onForgotPassword?: () => void
-}
-
-/** Shared floating-label input — keeps the login/register fields visually identical. */
-interface FloatingInputProps {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
-  trailing?: React.ReactNode
-}
-
-function FloatingInput({ id, label, value, onChange, type = 'text', trailing }: FloatingInputProps) {
-  return (
-    <div className="relative z-0 form-group-animated">
-      <input
-        type={type}
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`block py-2.5 px-0 w-full text-sm text-white bg-transparent border-0 border-b-2 border-brand-ice/30 appearance-none focus:outline-none focus:ring-0 focus:border-brand-teal peer${trailing ? ' pr-8' : ''}`}
-        placeholder=" "
-        required
-      />
-      <label
-        htmlFor={id}
-        className="absolute text-xs text-brand-ice/60 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-brand-teal peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 uppercase tracking-wider font-mono"
-      >
-        {label}
-      </label>
-      <div className="input-glow-bar"></div>
-      {trailing}
-    </div>
-  )
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -138,60 +105,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
 
   return (
     <div className="min-h-screen lg:h-screen w-full flex overflow-hidden bg-brand-navy">
-      <style>{`
-        @keyframes mercuryFloat {
-          0% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(10vw, 20vh) scale(1.2); }
-          66% { transform: translate(-5vw, 10vh) scale(0.8); }
-          100% { transform: translate(5vw, -10vh) scale(1.1); }
-        }
-
-        .mercury-blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(40px);
-          animation: mercuryFloat 20s infinite alternate ease-in-out;
-          transition: margin 0.1s ease-out;
-          opacity: 0.3;
-        }
-
-        .gooey-filter {
-          filter: url(#gooey);
-        }
-
-        .form-group-animated {
-          transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-
-        .form-group-animated:focus-within {
-          transform: translateX(8px);
-        }
-
-        .input-glow-bar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 0%;
-          height: 2px;
-          background: linear-gradient(90deg, #17D6C3, #2E8FFF);
-          transition: width 0.6s cubic-bezier(0.2, 1, 0.3, 1);
-          box-shadow: 0 0 15px #17D6C3;
-        }
-
-        .form-group-animated:focus-within .input-glow-bar {
-          width: 100%;
-        }
-
-        /* Sağ kart içeriği mod değişince yumuşakça belirir. */
-        @keyframes authPanelFade {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .auth-panel-anim {
-          animation: authPanelFade 0.5s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-      `}</style>
-
       <svg className="absolute w-0 h-0">
         <defs>
           <filter id="gooey">
@@ -334,7 +247,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
               ref={(el) => {
                 blobRefs.current[index] = el
               }}
-              className="mercury-blob"
+              className={cn(
+                'mercury-blob',
+                index % 3 === 0
+                  ? 'mercury-blob--a'
+                  : index % 3 === 1
+                    ? 'mercury-blob--b'
+                    : 'mercury-blob--c',
+              )}
               style={{
                 width: `${data.size}px`,
                 height: `${data.size}px`,
@@ -342,14 +262,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 top: `${data.top}%`,
                 animationDelay: `${data.animationDelay}s`,
                 animationDuration: `${data.animationDuration}s`,
-                background:
-                  index % 3 === 0
-                    ? 'linear-gradient(135deg, #2E8FFF, #8B8CFF)'
-                    : index % 3 === 1
-                      ? 'linear-gradient(135deg, #17D6C3, #A9E9FF)'
-                      : 'linear-gradient(135deg, #8B8CFF, #2E8FFF)',
-                boxShadow:
-                  'inset -10px -10px 30px rgba(0,0,0,0.3), 10px 10px 40px rgba(46, 143, 255, 0.2)',
               }}
             />
           ))}
