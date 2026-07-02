@@ -2,7 +2,10 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { motion } from 'framer-motion'
 import { CheckCircle2, XCircle } from 'lucide-react'
+import { AiOffBanner } from '@/features/reservation/AiOffBanner'
+import { FormStepper } from '@/features/reservation/FormStepper'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -55,9 +58,22 @@ export function ReservationFormPage() {
     const reservation = create.data
     return (
       <div className="mx-auto max-w-2xl space-y-6">
+        <FormStepper current={3} />
         <Card>
-          <CardContent className="space-y-4 p-8 text-center">
-            <CheckCircle2 className="mx-auto h-10 w-10 text-primary" aria-hidden />
+          <CardContent className="relative space-y-4 overflow-hidden p-8 text-center">
+            {/* Yumuşak kutlama halesi + ikonda tek seferlik scale-in. */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-primary/10 to-transparent"
+            />
+            <motion.div
+              initial={{ scale: 0.4, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+              className="relative mx-auto w-fit"
+            >
+              <CheckCircle2 className="h-10 w-10 text-primary" aria-hidden />
+            </motion.div>
             <h1 className="text-xl font-bold">Rezervasyonunuz alındı</h1>
             <div>
               <p className="text-sm text-muted-foreground">Rezervasyon numaranız</p>
@@ -91,6 +107,7 @@ export function ReservationFormPage() {
   if (create.isError) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
+        <FormStepper current={3} />
         <Card>
           <CardContent className="space-y-4 p-8 text-center">
             <XCircle className="mx-auto h-10 w-10 text-destructive" aria-hidden />
@@ -152,6 +169,7 @@ export function ReservationFormPage() {
   if (preview.data && request) {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
+        <FormStepper current={2} />
         <h1 className="text-2xl font-bold">Rezervasyon önizleme</h1>
         <Card>
           <CardHeader>
@@ -175,12 +193,12 @@ export function ReservationFormPage() {
               Toplam: {formatPrice(preview.data.totalAmount, preview.data.currency)}
             </p>
 
-            <label className="flex items-start gap-2 text-sm">
+            <label className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
               <input
                 type="checkbox"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+                className="mt-0.5 h-5 w-5 rounded border-input accent-primary"
               />
               Bilgilerimi kontrol ettim, rezervasyonu onaylıyorum.
             </label>
@@ -217,7 +235,9 @@ export function ReservationFormPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <FormStepper current={1} />
       <h1 className="text-2xl font-bold">Rezervasyon</h1>
+      <AiOffBanner />
 
       <Card>
         <CardHeader>
@@ -238,7 +258,7 @@ export function ReservationFormPage() {
           {fields.map((field, index) => {
             const pErr = errors.passengers?.[index]
             return (
-              <div key={field.id} className="space-y-3 rounded-lg border p-4">
+              <div key={field.id} className="space-y-3 rounded-xl border bg-card p-4 shadow-sm">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold">
                     {index === 0 ? 'Ana misafir' : `Yolcu ${index + 1}`}

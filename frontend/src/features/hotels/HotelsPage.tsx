@@ -6,6 +6,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { Skeleton } from '@/components/ui/skeleton'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { useAppSelector } from '@/app/hooks'
 import { darkFieldClass, darkPrimaryButtonClass } from '@/lib/field-styles'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
@@ -108,6 +109,15 @@ export function HotelsPage() {
             className={darkFieldClass}
           />
         </div>
+        {/* Görsel kısayol — native tarih kutularıyla aynı state'e yazar. */}
+        <DateRangePicker
+          checkIn={checkIn}
+          checkOut={checkOut}
+          onChange={(ci, co) => {
+            setCheckIn(ci)
+            setCheckOut(co)
+          }}
+        />
         <div className="grid gap-1.5">
           <Label htmlFor="hotel-adults">Yetişkin</Label>
           <Input
