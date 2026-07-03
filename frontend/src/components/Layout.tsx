@@ -234,7 +234,10 @@ export function Layout() {
         )}
       </header>
 
-      <main className="container relative z-10 py-8">
+      {/* container'ın sm padding'i tailwind container.screens={'2xl'} yüzünden
+          uygulanmıyor ve 1400px'e dek genişlik sınırsız kalıyordu — header'ın
+          px-4/sm:px-8 oluklarıyla hizalı, max-w-7xl ile sınırlı sarmalayıcı. */}
+      <main className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-8">
         {/* Rota geçişi: mode="wait" + pathname key — AnimatedOutlet ayrılan
             kopyada eski sayfayı dondurur (frozen outlet deseni). */}
         <AnimatePresence mode="wait" initial={false}>

@@ -7,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { logout } from '@/features/auth/authSlice'
@@ -58,10 +57,9 @@ export function ProfilePage() {
             {initials}
           </div>
           <div className="min-w-0 space-y-1">
-            <CardTitle className="flex flex-wrap items-center gap-2 text-lg">
-              <span className="truncate">{displayName}</span>
-              {user.guest && <Badge variant="secondary">Misafir</Badge>}
-            </CardTitle>
+            {/* Misafirde ad zaten "Misafir" — ayrıca rozet basmak tekrar olur;
+                oturum türü aşağıdaki bilgi listesinde gösteriliyor. */}
+            <CardTitle className="truncate text-lg">{displayName}</CardTitle>
             <CardDescription className="truncate">
               {user.email || 'Misafir oturumu'}
             </CardDescription>

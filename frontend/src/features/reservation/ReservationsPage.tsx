@@ -20,7 +20,8 @@ export function ReservationsPage() {
   const { data, isError, isFetching, error, refetch } = useReservations()
 
   return (
-    <div className="space-y-6">
+    // Kardeş sayfalar (detay/form/profil) gibi ortalı — tablo uçtan uca yayılmaz.
+    <div className="mx-auto max-w-5xl space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Rezervasyonlarım</h1>
         <p className="text-sm text-muted-foreground">Geçmiş ve bekleyen rezervasyonlarınız.</p>
