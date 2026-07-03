@@ -47,6 +47,8 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL}
       AI_PROVIDER_MODEL: ${AI_PROVIDER_MODEL}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET}
+      AUTH_JWT_EXPIRATION_MINUTES: ${AUTH_JWT_EXPIRATION_MINUTES}
     depends_on:
       postgres:
         condition: service_healthy
