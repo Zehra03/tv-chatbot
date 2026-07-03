@@ -1,0 +1,42 @@
+# Profile for rate limiter load testing (Gatling + fail-open integration test).
+# Low capacities so scenarios finish quickly, and a lean boot: the app has no JPA
+# entities/repositories, so the datasource stack is excluded and only Redis + web
+# are needed to run the rate limiter.
+spring:
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+      - org.springframework.boot.autoconfigure.flyway.FlywayAutoConfiguration
+  data:
+    redis:
+      # Fail fast when Redis is unreachable so the fail-open path triggers quickly.
+      timeout: 2s
+  ai:
+    ollama:
+      init:
+        # Never reach out to Ollama at startup during load tests.
+        pull-model-strategy: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+
+ratelimit:
+  fail-open: true
+  excluded-paths:
+    - "/actuator/health"
+  default-policy:
+    path: "/**"
+    capacity: 100
+    refill-tokens: 100
+    refill-period-seconds: 60
+  policies:
+    - path: "/api/search/**"
+      capacity: 10
+      refill-tokens: 10
+      refill-period-seconds: 60

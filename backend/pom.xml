@@ -20,6 +20,8 @@
         <java.version>21</java.version>
         <spring-ai.version>1.0.0</spring-ai.version>
         <spring-cloud.version>2025.0.0</spring-cloud.version>
+        <gatling.version>3.11.5</gatling.version>
+        <gatling-maven-plugin.version>4.8.0</gatling-maven-plugin.version>
     </properties>
 
     <dependencyManagement>
@@ -111,6 +113,20 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Testcontainers (version managed by the Spring Boot BOM) — used by the
+             rate limiter fail-open integration test to start/stop a real Redis. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Gatling (Java DSL) load-test simulations for the rate limiter. -->
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -118,6 +134,14 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- Runs Gatling simulations from src/test/java via `mvn gatling:test`.
+                 Not bound to the build lifecycle — invoked explicitly against a
+                 running app (see loadtest docs). -->
+            <plugin>
+                <groupId>io.gatling</groupId>
+                <artifactId>gatling-maven-plugin</artifactId>
+                <version>${gatling-maven-plugin.version}</version>
             </plugin>
         </plugins>
     </build>
