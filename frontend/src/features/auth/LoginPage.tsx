@@ -289,12 +289,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
           <div key={mode} className="auth-panel-anim">
             <div className="space-y-2 text-center mb-8">
               <h1 className="font-science-gothic text-3xl font-extralight tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
-                {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
+            
               </h1>
               <p className="font-science-gothic text-sm font-light text-brand-ice/80">
-                {isRegister
-                  ? 'Aramıza katıl, seyahatini planlamaya başla.'
-                  : 'Devam etmek için giriş yap.'}
+             
               </p>
             </div>
 
