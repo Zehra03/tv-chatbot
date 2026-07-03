@@ -1,5 +1,5 @@
 import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
-import type { ChatMessage, PartialCriteria } from '@/types'
+import type { ChatMessage, ChatSession, PartialCriteria } from '@/types'
 import type { SendMessageResponse } from '@/api'
 
 /**
@@ -52,6 +52,14 @@ const chatSlice = createSlice({
       if (accumulatedCriteria) state.accumulatedCriteria = accumulatedCriteria
       state.pendingQuestion = pendingQuestion
     },
+    /** Geçmişten seçilen oturumu olduğu gibi yükler (thread + kriterler + soru). */
+    sessionLoaded(state, action: PayloadAction<ChatSession>) {
+      const { id, messages, accumulatedCriteria, pendingQuestion } = action.payload
+      state.sessionId = id
+      state.messages = messages
+      state.accumulatedCriteria = accumulatedCriteria
+      state.pendingQuestion = pendingQuestion
+    },
     /** Yeni sohbet — tüm konuşma durumunu sıfırlar. */
     chatReset() {
       return initialState
@@ -59,5 +67,5 @@ const chatSlice = createSlice({
   },
 })
 
-export const { userMessageSent, assistantReplied, chatReset } = chatSlice.actions
+export const { userMessageSent, assistantReplied, sessionLoaded, chatReset } = chatSlice.actions
 export default chatSlice.reducer

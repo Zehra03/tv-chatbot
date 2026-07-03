@@ -9,7 +9,13 @@ import type {
   SendMessageRequest,
 } from '@/api'
 import { flightFixtures, hotelFixtures, reservationFixtures } from './fixtures'
-import { deleteSessionState, getSessionState, norm, processMessage } from './chatEngine'
+import {
+  deleteSessionState,
+  getSessionState,
+  listSessionStates,
+  norm,
+  processMessage,
+} from './chatEngine'
 
 /**
  * MSW istek yakalayıcıları — backend sözleşmesini (`/api/v1/*`) birebir taklit eder
@@ -61,6 +67,9 @@ export const handlers: RequestHandler[] = [
     const body = (await request.json()) as SendMessageRequest
     return HttpResponse.json(processMessage(body.sessionId, body.message ?? ''))
   }),
+
+  // Statik path, ':sessionId' kalıbından ÖNCE kayıtlı olmalı (MSW sıra ile eşler).
+  http.get('/api/v1/chat/sessions', () => HttpResponse.json(listSessionStates())),
 
   http.get('/api/v1/chat/:sessionId', ({ params }) => {
     const session = getSessionState(String(params.sessionId))

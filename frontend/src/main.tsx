@@ -10,7 +10,15 @@ import { Providers } from '@/app/providers'
 async function enableMocking() {
   if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_MSW === 'false') return
   const { worker } = await import('@/mocks/browser')
-  await worker.start({ onUnhandledRequest: 'bypass' })
+  await worker.start({
+    // Handler'ı olmayan /api istekleri sessizce backend'e sızmasın — konsola
+    // uyarı düşsün (asset istekleri serbest). Not: hard refresh'te service
+    // worker'ın tamamen baypas edilmesini bu yakalayamaz; o durumda apiClient
+    // interceptor'ı HTML yanıtı ApiError'a çevirir.
+    onUnhandledRequest(request, print) {
+      if (new URL(request.url).pathname.startsWith('/api/')) print.warning()
+    },
+  })
 }
 
 enableMocking().then(() => {

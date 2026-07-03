@@ -2,6 +2,7 @@ import type {
   ChatMessage,
   ChatRole,
   ChatSession,
+  ChatSessionSummary,
   FlightSearchCriteria,
   HotelSearchCriteria,
   PartialCriteria,
@@ -28,6 +29,8 @@ interface SessionState {
   hotel: Partial<HotelSearchCriteria>
   flight: Partial<FlightSearchCriteria>
   pendingQuestion?: string
+  /** Son mesajın zamanı — geçmiş paneli bununla sıralanır. */
+  updatedAt: string
 }
 
 const sessions = new Map<string, SessionState>()
@@ -198,10 +201,19 @@ export function processMessage(
 ): SendMessageResponse {
   let s = sessionId ? sessions.get(sessionId) : undefined
   if (!s) {
-    s = { id: crypto.randomUUID(), messages: [], hotel: {}, flight: {} }
+    s = {
+      id: crypto.randomUUID(),
+      messages: [],
+      hotel: {},
+      flight: {},
+      updatedAt: new Date().toISOString(),
+    }
     sessions.set(s.id, s)
   }
   s.messages.push(makeMessage('user', message))
+  // Başlık ilk kullanıcı mesajından türer (backend'de title varchar(200)).
+  if (!s.title) s.title = message.length > 48 ? `${message.slice(0, 48)}…` : message
+  s.updatedAt = new Date().toISOString()
 
   if (!s.intent) s.intent = detectIntent(message)
 
@@ -264,3 +276,74 @@ export function getSessionState(sessionId: string): ChatSession | undefined {
 export function deleteSessionState(sessionId: string): boolean {
   return sessions.delete(sessionId)
 }
+
+/** Geçmiş paneli için oturum özetleri — en son güncellenen üstte. */
+export function listSessionStates(): ChatSessionSummary[] {
+  return [...sessions.values()]
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+    .map((s) => ({
+      id: s.id,
+      title: s.title,
+      updatedAt: s.updatedAt,
+      messageCount: s.messages.length,
+    }))
+}
+
+/**
+ * ⚠️ MOCK tohum oturumları — geçmiş paneli ilk açılışta boş görünmesin diye.
+ * Sabit id/timestamp kullanılır (modül yüklenirken crypto.randomUUID jsdom'da
+ * henüz polyfill'lenmemiş olabilir). Devam ettirilebilirler: intent + kriterler dolu.
+ */
+function seedSession(state: SessionState): void {
+  sessions.set(state.id, state)
+}
+
+seedSession({
+  id: 'seed-session-hotel',
+  title: 'Kapadokya balayı oteli',
+  intent: 'hotel',
+  hotel: { destination: 'Kapadokya', checkIn: '2026-07-10', checkOut: '2026-07-14', adults: 2 },
+  flight: {},
+  updatedAt: '2026-07-01T18:42:00.000Z',
+  messages: [
+    {
+      id: 'seed-hotel-msg-1',
+      role: 'user',
+      content: 'Kapadokya balayı oteli arıyorum, 2026-07-10 / 2026-07-14 arası 2 kişi',
+      createdAt: '2026-07-01T18:41:00.000Z',
+    },
+    {
+      id: 'seed-hotel-msg-2',
+      role: 'assistant',
+      content:
+        '"Kapadokya" için sonuçları buldum. Rezervasyon için bir kart seçin — ' +
+        "sohbet yalnızca listeler, booking'i onay formu yapar.",
+      createdAt: '2026-07-01T18:42:00.000Z',
+      cards: hotelCards('Kapadokya'),
+    },
+  ],
+})
+
+seedSession({
+  id: 'seed-session-flight',
+  title: 'İstanbul - Roma uçuşu',
+  intent: 'flight',
+  hotel: {},
+  flight: { origin: 'İstanbul', destination: 'Roma' },
+  pendingQuestion: 'Gidiş tarihi nedir? (örn. 2026-08-01)',
+  updatedAt: '2026-06-28T09:15:00.000Z',
+  messages: [
+    {
+      id: 'seed-flight-msg-1',
+      role: 'user',
+      content: "İstanbul'dan Roma'ya uçuş bakar mısın?",
+      createdAt: '2026-06-28T09:14:00.000Z',
+    },
+    {
+      id: 'seed-flight-msg-2',
+      role: 'assistant',
+      content: 'Gidiş tarihi nedir? (örn. 2026-08-01)',
+      createdAt: '2026-06-28T09:15:00.000Z',
+    },
+  ],
+})

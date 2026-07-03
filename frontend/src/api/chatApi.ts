@@ -1,10 +1,11 @@
 import { apiClient } from './client'
-import type { ChatMessage, ChatSession, PartialCriteria } from '@/types'
+import type { ChatMessage, ChatSession, ChatSessionSummary, PartialCriteria } from '@/types'
 
 /**
  * Sohbet endpoint'leri (docs/frontend-architecture.md §6 · §8).
  * Backend sözleşmesi:
  *   POST   /api/v1/chat            → mesaj gönder (intent + slot-filling)
+ *   GET    /api/v1/chat/sessions   → oturum listesi (geçmiş paneli)
  *   GET    /api/v1/chat/{id}       → oturumu getir
  *   DELETE /api/v1/chat/{id}       → oturumu sil
  * Chatbot yalnızca arar/listeler/yönlendirir — asla booking yapmaz.
@@ -29,6 +30,11 @@ export interface SendMessageResponse {
 export const chatApi = {
   async sendMessage(body: SendMessageRequest): Promise<SendMessageResponse> {
     const res = await apiClient.post<SendMessageResponse>('/api/v1/chat', body)
+    return res.data
+  },
+
+  async listSessions(): Promise<ChatSessionSummary[]> {
+    const res = await apiClient.get<ChatSessionSummary[]>('/api/v1/chat/sessions')
     return res.data
   },
 

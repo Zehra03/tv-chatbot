@@ -11,6 +11,10 @@ const badgeVariants = cva(
         secondary: 'border-transparent bg-secondary text-secondary-foreground',
         destructive: 'border-transparent bg-destructive text-destructive-foreground',
         outline: 'text-foreground',
+        // Gece uçuşu (koyu AI bölgesi) varyantları — cam chip + teal vurgulu intent.
+        glass: 'border-white/20 bg-white/10 text-brand-ice backdrop-blur-sm',
+        glassAccent:
+          'border-brand-teal/40 bg-brand-teal/15 text-white shadow-[0_0_12px_theme(colors.brand.teal/30%)] backdrop-blur-sm',
       },
     },
     defaultVariants: { variant: 'default' },

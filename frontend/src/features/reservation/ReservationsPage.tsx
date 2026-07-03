@@ -61,7 +61,10 @@ export function ReservationsPage() {
             </thead>
             <tbody>
               {data.map((r) => (
-                <tr key={r.id} className="border-b last:border-0">
+                <tr
+                  key={r.id}
+                  className="border-b transition-colors even:bg-muted/20 last:border-0 hover:bg-muted/40"
+                >
                   <td className="p-3 font-mono font-medium">{r.reservationNumber}</td>
                   <td className="p-3">{r.productType === 'hotel' ? 'Otel' : 'Uçuş'}</td>
                   <td className="p-3">{formatDate(r.reservationDate)}</td>

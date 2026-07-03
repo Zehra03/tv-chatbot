@@ -5,8 +5,8 @@
       "args": ["-y", "@playwright/mcp@latest"]
     },
     "shadcn": {
-      "command": "npx",
-      "args": ["-y", "shadcn@latest", "mcp"]
+      "command": "cmd",
+      "args": ["/c", "cd /d \"%CLAUDE_PROJECT_DIR%\\frontend\" && npx -y shadcn@latest mcp"]
     },
     "magic": {
       "command": "npx",

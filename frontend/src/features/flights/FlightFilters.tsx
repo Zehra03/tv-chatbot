@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { NativeSelect } from '@/components/ui/native-select'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { darkFieldClass } from '@/lib/field-styles'
 import {
   flightFiltersChanged,
   flightFiltersReset,
@@ -18,13 +19,13 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
   const dispatch = useAppDispatch()
 
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      <label className="flex items-center gap-2 text-sm">
+    <div className="glass-card flex flex-wrap items-center gap-3 p-4">
+      <label className="flex items-center gap-2 text-sm text-white">
         <input
           type="checkbox"
           checked={filters.nonstopOnly}
           onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
-          className="h-4 w-4 rounded border-input accent-primary"
+          className="h-4 w-4 rounded border-white/30 accent-brand-teal"
         />
         Yalnızca direkt
       </label>
@@ -33,6 +34,7 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         aria-label="Havayolu filtresi"
         value={filters.airline ?? ''}
         onChange={(e) => dispatch(flightFiltersChanged({ airline: e.target.value || null }))}
+        className={darkFieldClass}
       >
         <option value="">Havayolu: tümü</option>
         {airlines.map((a) => (
@@ -47,7 +49,7 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         min={0}
         aria-label="En yüksek fiyat"
         placeholder="En yüksek fiyat"
-        className="w-40"
+        className={`w-40 ${darkFieldClass}`}
         value={filters.maxPrice ?? ''}
         onChange={(e) =>
           dispatch(flightFiltersChanged({ maxPrice: e.target.value ? Number(e.target.value) : null }))
@@ -60,13 +62,20 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         onChange={(e) =>
           dispatch(flightFiltersChanged({ sort: (e.target.value || null) as FlightSort | null }))
         }
+        className={darkFieldClass}
       >
         <option value="">Sıralama: önerilen</option>
         <option value="price-asc">Fiyat (artan)</option>
         <option value="depart-asc">Kalkış saati</option>
       </NativeSelect>
 
-      <Button type="button" variant="ghost" size="sm" onClick={() => dispatch(flightFiltersReset())}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="text-brand-ice/70 hover:bg-white/10 hover:text-white"
+        onClick={() => dispatch(flightFiltersReset())}
+      >
         Temizle
       </Button>
     </div>
