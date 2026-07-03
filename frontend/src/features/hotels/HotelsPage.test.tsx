@@ -65,7 +65,9 @@ describe('HotelsPage (MSW ile)', () => {
     expect(screen.getByText('5 sonuç')).toBeTruthy()
 
     // minStars=5 → 3★ Sample Boutique elenir, 2 sonuç kalır.
-    await user.selectOptions(screen.getByLabelText('Yıldız filtresi'), '5')
+    // (DropdownSelect listbox deseni: tetikleyiciye tıkla, seçeneğe tıkla.)
+    await user.click(screen.getByLabelText('Yıldız filtresi'))
+    await user.click(await screen.findByRole('option', { name: '5★' }))
     expect(screen.getByText('2 sonuç')).toBeTruthy()
     expect(screen.queryByText('Sample Boutique Kapadokya')).toBeNull()
 

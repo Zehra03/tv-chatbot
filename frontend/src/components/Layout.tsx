@@ -114,7 +114,7 @@ export function Layout() {
                     className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
                   />
                 )}
-                <Logo height={44} className="relative" />
+                <Logo height={64} className="relative" />
               </span>
             </NavLink>
             {/* Masaüstü navigasyonu — mobilde gizli, hamburger paneline taşınır. */}

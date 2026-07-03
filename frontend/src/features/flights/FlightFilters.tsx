@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { NativeSelect } from '@/components/ui/native-select'
+import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { darkFieldClass } from '@/lib/field-styles'
 import {
@@ -12,7 +12,7 @@ import {
 /**
  * Uçuş listesi filtre çubuğu — durum uiSlice'ta yaşar (§5), sunucudan gelen
  * sonuçlara istemci tarafında uygulanır. Havayolu seçenekleri o anki
- * sonuçlardan türetilir.
+ * sonuçlardan türetilir. Seçimler DropdownSelect (animasyonlu listbox) ile.
  */
 export function FlightFilters({ airlines }: { airlines: string[] }) {
   const filters = useAppSelector((s) => s.ui.flightFilters)
@@ -30,19 +30,15 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         Yalnızca direkt
       </label>
 
-      <NativeSelect
+      <DropdownSelect
         aria-label="Havayolu filtresi"
         value={filters.airline ?? ''}
-        onChange={(e) => dispatch(flightFiltersChanged({ airline: e.target.value || null }))}
-        className={darkFieldClass}
-      >
-        <option value="">Havayolu: tümü</option>
-        {airlines.map((a) => (
-          <option key={a} value={a}>
-            {a}
-          </option>
-        ))}
-      </NativeSelect>
+        options={[
+          { value: '', label: 'Havayolu: tümü' },
+          ...airlines.map((a) => ({ value: a, label: a })),
+        ]}
+        onChange={(v) => dispatch(flightFiltersChanged({ airline: v || null }))}
+      />
 
       <Input
         type="number"
@@ -56,18 +52,16 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         }
       />
 
-      <NativeSelect
+      <DropdownSelect
         aria-label="Sıralama"
         value={filters.sort ?? ''}
-        onChange={(e) =>
-          dispatch(flightFiltersChanged({ sort: (e.target.value || null) as FlightSort | null }))
-        }
-        className={darkFieldClass}
-      >
-        <option value="">Sıralama: önerilen</option>
-        <option value="price-asc">Fiyat (artan)</option>
-        <option value="depart-asc">Kalkış saati</option>
-      </NativeSelect>
+        options={[
+          { value: '', label: 'Sıralama: önerilen' },
+          { value: 'price-asc', label: 'Fiyat (artan)' },
+          { value: 'depart-asc', label: 'Kalkış saati' },
+        ]}
+        onChange={(v) => dispatch(flightFiltersChanged({ sort: (v || null) as FlightSort | null }))}
+      />
 
       <Button
         type="button"

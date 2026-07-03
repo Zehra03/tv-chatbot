@@ -58,19 +58,21 @@ describe('FlightsPage (MSW ile)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    // İstanbul → Antalya: 3 fixture uçuşu. ("TestJet" filtre <option>'ında da
-    // geçtiğinden metin yerine sonuç sayısıyla doğrula.)
+    // İstanbul → Antalya: 3 fixture uçuşu. (DropdownSelect seçenekleri yalnızca
+    // menü açıkken DOM'da olduğundan "TestJet" sadece kartta görünür.)
     await search(user)
     expect(await screen.findByText('3 sonuç', {}, { timeout: 3000 })).toBeTruthy()
-    expect(screen.getAllByText('TestJet').length).toBeGreaterThanOrEqual(2) // kart + option
+    expect(screen.getAllByText('TestJet')).toHaveLength(1) // kart
 
-    // Yalnızca direkt → 1 aktarmalı TestJet kartı elenir (option kalır).
+    // Yalnızca direkt → 1 aktarmalı TestJet kartı elenir.
     await user.click(screen.getByLabelText('Yalnızca direkt'))
     expect(screen.getByText('2 sonuç')).toBeTruthy()
-    expect(screen.getAllByText('TestJet')).toHaveLength(1)
+    expect(screen.queryByText('TestJet')).toBeNull()
 
-    // Havayolu filtresi listedeki havayollarından türetilir.
-    await user.selectOptions(screen.getByLabelText('Havayolu filtresi'), 'MockAir')
+    // Havayolu filtresi listedeki havayollarından türetilir
+    // (DropdownSelect listbox deseni: tetikleyiciye tıkla, seçeneğe tıkla).
+    await user.click(screen.getByLabelText('Havayolu filtresi'))
+    await user.click(await screen.findByRole('option', { name: 'MockAir' }))
     expect(screen.getByText('2 sonuç')).toBeTruthy()
 
     // Temizle → 3 sonuç geri gelir.
@@ -86,7 +88,8 @@ describe('FlightsPage (MSW ile)', () => {
     expect(await screen.findByText('3 sonuç', {}, { timeout: 3000 })).toBeTruthy()
 
     // En ucuz uçuşu öne al, ilk Seç ona ait olsun.
-    await user.selectOptions(screen.getByLabelText('Sıralama'), 'price-asc')
+    await user.click(screen.getByLabelText('Sıralama'))
+    await user.click(await screen.findByRole('option', { name: 'Fiyat (artan)' }))
     await user.click(screen.getAllByRole('button', { name: /seç/i })[0])
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toMatchObject({

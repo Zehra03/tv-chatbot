@@ -3,7 +3,9 @@ import { Plane } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { NativeSelect } from '@/components/ui/native-select'
+import { DropdownSelect } from '@/components/ui/dropdown-select'
+import { DatePicker } from '@/components/ui/date-picker'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
@@ -101,43 +103,43 @@ export function FlightsPage() {
         </div>
         <div className="grid gap-1.5">
           <Label htmlFor="flight-triptype">Yön</Label>
-          <NativeSelect
+          <DropdownSelect
             id="flight-triptype"
             value={tripType}
-            onChange={(e) => setTripType(e.target.value as TripType)}
-            className={darkFieldClass}
-          >
-            <option value="one_way">Tek yön</option>
-            <option value="round_trip">Gidiş-dönüş</option>
-          </NativeSelect>
+            options={[
+              { value: 'one_way', label: 'Tek yön' },
+              { value: 'round_trip', label: 'Gidiş-dönüş' },
+            ]}
+            onChange={(v) => setTripType(v as TripType)}
+          />
         </div>
-        {/* Gidiş + dönüş tek grupta — gidiş-dönüşte alanlar yan yana durur. */}
-        <div className="flex items-end gap-3">
-          <div className="grid gap-1.5">
-            <Label htmlFor="flight-depart">Gidiş tarihi</Label>
-            <Input
-              id="flight-depart"
-              type="date"
-              value={departDate}
-              onChange={(e) => setDepartDate(e.target.value)}
-              required
-              className={darkFieldClass}
-            />
-          </div>
-          {tripType === 'round_trip' && (
-            <div className="grid gap-1.5">
-              <Label htmlFor="flight-return">Dönüş tarihi</Label>
-              <Input
-                id="flight-return"
-                type="date"
-                value={returnDate}
-                min={departDate || undefined}
-                onChange={(e) => setReturnDate(e.target.value)}
-                className={darkFieldClass}
-              />
-            </div>
-          )}
-        </div>
+        {/* Tarih alanına tıklayınca temalı takvim açılır; gidiş-dönüşte
+            gidiş + dönüş yan yana tek aralık takvimini paylaşır. */}
+        {tripType === 'round_trip' ? (
+          <DateRangePicker
+            checkIn={departDate}
+            checkOut={returnDate}
+            onChange={(depart, ret) => {
+              setDepartDate(depart)
+              setReturnDate(ret)
+            }}
+            checkInId="flight-depart"
+            checkOutId="flight-return"
+            checkInLabel="Gidiş tarihi"
+            checkOutLabel="Dönüş tarihi"
+            fieldClassName={darkFieldClass}
+            required
+          />
+        ) : (
+          <DatePicker
+            id="flight-depart"
+            label="Gidiş tarihi"
+            value={departDate}
+            onChange={setDepartDate}
+            required
+            fieldClassName={darkFieldClass}
+          />
+        )}
         <div className="grid gap-1.5">
           <Label htmlFor="flight-passengers">Yolcu</Label>
           <Input
