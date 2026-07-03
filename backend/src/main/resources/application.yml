@@ -72,11 +72,3 @@ ratelimit:
       capacity: 30
       refill-tokens: 30
       refill-period-seconds: 60
-
-tourvisio:
-  url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
-  culture: ${TOURVISIO_CULTURE:en-US}
-  timezone: ${TOURVISIO_TIMEZONE:Europe/Istanbul}
-  agency: ${TOURVISIO_AGENCY:}
-  user: ${TOURVISIO_USER:}
-  password: ${TOURVISIO_PASSWORD:}
