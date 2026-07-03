@@ -1,69 +1,73 @@
 package com.paximum.paxassist.hotel;
 
+import com.paximum.paxassist.common.log.LogModuleClient;
+import com.paximum.paxassist.hotel.dto.AutocompleteResponse;
+import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
+import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
+import org.mockito.Mockito;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-@ExtendWith(MockitoExtension.class)
 class HotelSearchServiceTest {
 
-    @Mock
-    private TourVisioHotelApiClient tourVisioApiClient;
+    private TourVisioHotelApiClient apiClient;
+    private LogModuleClient logModuleClient;
+    private HotelSearchService searchService;
 
-    @Mock
-    private RedisTemplate<String, Object> redisTemplate;
-
-    @Mock
-    private ValueOperations<String, Object> valueOperations;
-
-    @InjectMocks
-    private HotelSearchService hotelSearchService;
-
-    @Test
-    void shouldReturnFromRedisCacheWithoutCallingApiIfDataExists() {
-        // Given
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        List<HotelProduct> cachedResponse = List.of(new HotelProduct("1", "Rixos Premium", "Antalya"));
-        when(valueOperations.get("hotel:search:Antalya")).thenReturn(cachedResponse);
-        
-        // When
-        List<HotelProduct> result = hotelSearchService.searchHotels(new HotelSearchCriteria("Antalya"));
-
-        // Then
-        assertThat(result).isEqualTo(cachedResponse);
-        // Ensure API is NEVER called when cache hits
-        verify(tourVisioApiClient, never()).searchHotels(any());
+    @BeforeEach
+    void setUp() {
+        apiClient = Mockito.mock(TourVisioHotelApiClient.class);
+        logModuleClient = Mockito.mock(LogModuleClient.class);
+        searchService = new HotelSearchServiceImpl(apiClient, logModuleClient);
     }
 
     @Test
-    void shouldCallTourVisioApiAndSaveToRedisIfCacheMisses() {
-        // Given
-        when(redisTemplate.opsForValue()).thenReturn(valueOperations);
-        when(valueOperations.get(anyString())).thenReturn(null);
-        
-        List<HotelProduct> apiResponse = List.of(new HotelProduct("2", "Titanic Mardan", "Antalya"));
-        when(tourVisioApiClient.searchHotels(any())).thenReturn(apiResponse);
-        
-        // When
-        List<HotelProduct> result = hotelSearchService.searchHotels(new HotelSearchCriteria("Antalya"));
+    void searchHotels_WhenParametersMissing_ShouldReturnIncomplete() {
+        HotelSearchRequest request = new HotelSearchRequest(
+            "Antalya", null, null, null, List.of(), "TR", "TRY", "tr-TR"
+        );
 
-        // Then
-        assertThat(result).isEqualTo(apiResponse);
-        // Ensure result is saved to cache
-        verify(valueOperations).set(eq("hotel:search:Antalya"), eq(apiResponse));
+        HotelSearchResponse response = searchService.searchHotels(request);
+
+        assertThat(response.status()).isEqualTo("INCOMPLETE");
+        assertThat(response.missingParameters()).containsExactlyInAnyOrder("checkIn", "night", "adult");
+        assertThat(response.results()).isNull();
+    }
+
+    @Test
+    void searchHotels_WhenAllParametersPresent_ShouldCallApiAndReturnSuccess() {
+        HotelSearchRequest request = new HotelSearchRequest(
+            "Antalya", "2023-06-20", 7, 2, List.of(), "TR", "TRY", "tr-TR"
+        );
+
+        AutocompleteResponse autocompleteRes = new AutocompleteResponse(
+            new AutocompleteResponse.Header(true),
+            new AutocompleteResponse.Body(List.of(
+                new AutocompleteResponse.Item(
+                    1,
+                    new AutocompleteResponse.City("23494", "Antalya"),
+                    null
+                )
+            ))
+        );
+        when(apiClient.getArrivalAutocomplete("Antalya")).thenReturn(autocompleteRes);
+
+        Map<String, Object> mockPriceResult = new HashMap<>();
+        mockPriceResult.put("searchId", "12345");
+        when(apiClient.priceSearch(eq(request), eq("23494"))).thenReturn(mockPriceResult);
+
+        HotelSearchResponse response = searchService.searchHotels(request);
+
+        assertThat(response.status()).isEqualTo("SUCCESS");
+        assertThat(response.missingParameters()).isEmpty();
+        assertThat(response.results()).isEqualTo(mockPriceResult);
     }
 }
