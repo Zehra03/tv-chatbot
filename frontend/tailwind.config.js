@@ -7,7 +7,8 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: '2rem',
+      // Mobilde 2rem kenar boşluğu 375px'in ~%17'sini yiyordu — kademeli ölçek.
+      padding: { DEFAULT: '1rem', sm: '2rem' },
       screens: { '2xl': '1400px' },
     },
     extend: {

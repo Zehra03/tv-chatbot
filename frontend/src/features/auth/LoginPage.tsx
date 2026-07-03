@@ -137,7 +137,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
   )
 
   return (
-    <div className="h-screen w-full flex overflow-hidden bg-brand-navy">
+    <div className="min-h-screen lg:h-screen w-full flex overflow-hidden bg-brand-navy">
       <style>{`
         @keyframes mercuryFloat {
           0% { transform: translate(0, 0) scale(1); }
@@ -308,13 +308,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              aria-label="Oteli görüntüle"
+            {/* Dekoratif vitrin öğesi — işlevi yok, klavye/ekran okuyucuya kapalı. */}
+            <span
+              aria-hidden="true"
               className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white text-brand-navy transition-transform hover:scale-105"
             >
               <ArrowRight className="h-4 w-4" />
-            </button>
+            </span>
           </div>
         </div>
       </div>
@@ -364,7 +364,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
               <img
                 src={logoSrc}
                 alt="PaxAssist Logo"
-                className="relative z-10 h-60 w-auto object-contain"
+                className="relative z-10 h-40 lg:h-60 w-auto object-contain"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement
                   target.style.display = 'none'
@@ -377,10 +377,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
           <div key={mode} className="auth-panel-anim">
             <div className="space-y-2 text-center mb-8">
               <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
-               
+                {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
               </h1>
               <p className="text-sm text-brand-ice/80">
-             
+                {isRegister
+                  ? 'Aramıza katıl, seyahatini planlamaya başla.'
+                  : 'Devam etmek için giriş yap.'}
               </p>
             </div>
 
@@ -415,13 +417,17 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   onChange={setConfirmPassword}
                 />
 
-                {error && <p className="text-xs text-red-300">{error}</p>}
+                {error && (
+                  <p role="alert" className="text-xs text-destructive">
+                    {error}
+                  </p>
+                )}
 
                 <div className="relative gooey-filter mt-12">
                   <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
                   <button
                     type="submit"
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus:outline-none transition-all duration-300"
+                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
                   >
                     Kayıt Ol
                   </button>
@@ -459,7 +465,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
                   <button
                     type="submit"
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus:outline-none transition-all duration-300"
+                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
                   >
                     Giriş Yap
                   </button>
@@ -468,7 +474,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 <button
                   type="button"
                   onClick={onGuestContinue}
-                  className="w-full flex items-center justify-center py-3 px-4 bg-white/5 hover:bg-white/10 rounded-xl text-brand-ice font-semibold border border-brand-ice/30 hover:border-brand-teal focus:outline-none transition-all duration-300"
+                  className="w-full flex items-center justify-center py-3 px-4 bg-white/5 hover:bg-white/10 rounded-xl text-brand-ice font-semibold border border-brand-ice/30 hover:border-brand-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
                 >
                   Misafir olarak devam et
                 </button>

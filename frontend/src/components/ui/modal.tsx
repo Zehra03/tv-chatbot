@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect } from 'react'
+import { type ReactNode, useEffect, useId, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
@@ -12,12 +12,17 @@ interface ModalProps {
 
 /**
  * Hafif modal — portal ile <body>'ye render edilir, overlay tıklaması ve Escape
- * ile kapanır. Not: tam odak-tuzağı (focus trap) yok; karmaşık akışlar için
+ * ile kapanır. Açılışta odak diyaloğa taşınır; başlık aria-labelledby ile
+ * bağlanır. Not: tam odak-tuzağı (focus trap) yok; karmaşık akışlar için
  * ileride Radix Dialog'a yükseltilebilir.
  */
 export function Modal({ open, onClose, title, children, className }: ModalProps) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+
   useEffect(() => {
     if (!open) return
+    dialogRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
@@ -31,14 +36,21 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden />
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
+        tabIndex={-1}
+        {...(title ? { 'aria-labelledby': titleId } : { 'aria-label': 'İletişim kutusu' })}
         className={cn(
-          'relative z-10 w-full max-w-lg rounded-lg border bg-card p-6 text-card-foreground shadow-lg',
+          'relative z-10 w-full max-w-lg rounded-lg border bg-card p-6 text-card-foreground shadow-lg focus-visible:outline-none',
           className,
         )}
       >
-        {title && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
+        {title && (
+          <h2 id={titleId} className="mb-4 text-lg font-semibold">
+            {title}
+          </h2>
+        )}
         {children}
       </div>
     </div>,

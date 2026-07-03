@@ -4,10 +4,13 @@ interface SpinnerProps {
   className?: string
   /** px cinsinden boyut. */
   size?: number
+  /** Yanında görünür durum metni varken true — ekran okuyucuya çifte
+   * duyuru yapılmaz; role="status" sarmalayıcıya konur (bkz. LoadingState). */
+  decorative?: boolean
 }
 
 /** Basit yükleniyor göstergesi — currentColor alır, `text-*` ile renklendirilir. */
-export function Spinner({ className, size = 20 }: SpinnerProps) {
+export function Spinner({ className, size = 20, decorative = false }: SpinnerProps) {
   return (
     <svg
       className={cn('animate-spin text-muted-foreground', className)}
@@ -15,8 +18,9 @@ export function Spinner({ className, size = 20 }: SpinnerProps) {
       height={size}
       viewBox="0 0 24 24"
       fill="none"
-      role="status"
-      aria-label="Yükleniyor"
+      {...(decorative
+        ? { 'aria-hidden': true }
+        : { role: 'status' as const, 'aria-label': 'Yükleniyor' })}
     >
       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
       <path

@@ -17,7 +17,7 @@ spring:
       "[hibernate.format_sql]": true
     open-in-view: false
   flyway:
-    enabled: true
+    enabled: false
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
@@ -28,7 +28,8 @@ spring:
       chat:
         model: ${AI_PROVIDER_MODEL:gemma3:4b}
         options:
-          temperature: 0.3
+          temperature: 0.0
+          num-predict: 1024
 
 server:
   port: ${SERVER_PORT:${BACKEND_PORT:8080}}

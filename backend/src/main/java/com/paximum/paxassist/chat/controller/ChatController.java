@@ -5,15 +5,13 @@ import com.paximum.paxassist.chat.dto.ChatRequest;
 import com.paximum.paxassist.chat.dto.ChatResponse;
 import com.paximum.paxassist.chat.service.ChatService;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
-import com.paximum.paxassist.hotel.HotelProduct;
-import com.paximum.paxassist.hotel.HotelSearchCriteria;
-import com.paximum.paxassist.hotel.TourVisioHotelApiClient;
 import jakarta.validation.Valid;
-import java.util.List;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Flux;
 
 @RestController
 @RequestMapping("/api/v1/chat")
@@ -21,25 +19,22 @@ public class ChatController {
 
     private final ChatService chatService;
     private final ChatSessionStore sessionStore;
-    private final TourVisioHotelApiClient hotelApiClient;
 
-    public ChatController(ChatService chatService, ChatSessionStore sessionStore, TourVisioHotelApiClient hotelApiClient) {
+    public ChatController(ChatService chatService, ChatSessionStore sessionStore) {
         this.chatService = chatService;
         this.sessionStore = sessionStore;
-        this.hotelApiClient = hotelApiClient;
     }
 
     @PostMapping
     public ChatResponse chat(@RequestBody @Valid ChatRequest request) {
         ChatSession session = sessionStore.getOrCreate(request.sessionId());
-        String reply = chatService.chat(request.message());
-        
-        HotelSearchCriteria criteria = new HotelSearchCriteria("Antalya");
-        List<HotelProduct> products = hotelApiClient.searchHotels(criteria);
-        
-        @SuppressWarnings("unchecked")
-        List<Object> hotels = (List<Object>)(List<?>) products;
+        var aiReply = chatService.chat(request.message());
+        return new ChatResponse(aiReply.reply(), session.getId(), null, false, null);
+    }
 
-        return new ChatResponse(reply, session.getId(), hotels, false, null);
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public Flux<String> streamChat(@RequestBody @Valid ChatRequest request) {
+        sessionStore.getOrCreate(request.sessionId());
+        return chatService.streamChat(request.message());
     }
 }
