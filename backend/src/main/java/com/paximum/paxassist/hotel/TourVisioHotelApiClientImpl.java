@@ -20,16 +20,16 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.tourvisio.url}")
+    @Value("${tourvisio.url}")
     private String baseUrl;
 
-    @Value("${app.tourvisio.agency}")
+    @Value("${tourvisio.agency}")
     private String agency;
 
-    @Value("${app.tourvisio.user}")
+    @Value("${tourvisio.user}")
     private String username;
 
-    @Value("${app.tourvisio.password}")
+    @Value("${tourvisio.password}")
     private String password;
 
     private String cachedToken;
