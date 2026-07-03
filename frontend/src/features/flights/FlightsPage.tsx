@@ -100,17 +100,6 @@ export function FlightsPage() {
           />
         </div>
         <div className="grid gap-1.5">
-          <Label htmlFor="flight-depart">Gidiş tarihi</Label>
-          <Input
-            id="flight-depart"
-            type="date"
-            value={departDate}
-            onChange={(e) => setDepartDate(e.target.value)}
-            required
-            className={darkFieldClass}
-          />
-        </div>
-        <div className="grid gap-1.5">
           <Label htmlFor="flight-triptype">Yön</Label>
           <NativeSelect
             id="flight-triptype"
@@ -122,18 +111,33 @@ export function FlightsPage() {
             <option value="round_trip">Gidiş-dönüş</option>
           </NativeSelect>
         </div>
-        {tripType === 'round_trip' && (
+        {/* Gidiş + dönüş tek grupta — gidiş-dönüşte alanlar yan yana durur. */}
+        <div className="flex items-end gap-3">
           <div className="grid gap-1.5">
-            <Label htmlFor="flight-return">Dönüş tarihi</Label>
+            <Label htmlFor="flight-depart">Gidiş tarihi</Label>
             <Input
-              id="flight-return"
+              id="flight-depart"
               type="date"
-              value={returnDate}
-              onChange={(e) => setReturnDate(e.target.value)}
+              value={departDate}
+              onChange={(e) => setDepartDate(e.target.value)}
+              required
               className={darkFieldClass}
             />
           </div>
-        )}
+          {tripType === 'round_trip' && (
+            <div className="grid gap-1.5">
+              <Label htmlFor="flight-return">Dönüş tarihi</Label>
+              <Input
+                id="flight-return"
+                type="date"
+                value={returnDate}
+                min={departDate || undefined}
+                onChange={(e) => setReturnDate(e.target.value)}
+                className={darkFieldClass}
+              />
+            </div>
+          )}
+        </div>
         <div className="grid gap-1.5">
           <Label htmlFor="flight-passengers">Yolcu</Label>
           <Input

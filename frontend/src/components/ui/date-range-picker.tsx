@@ -1,22 +1,35 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
-import { CalendarDays } from 'lucide-react'
-import { DayPicker, type DateRange } from 'react-day-picker'
+import {
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+} from 'react'
+import { type DateRange } from 'react-day-picker'
 import { format, isValid, parseISO } from 'date-fns'
-import { tr } from 'date-fns/locale'
-import 'react-day-picker/style.css'
-import { Button } from '@/components/ui/button'
-import { BRAND } from '@/lib/brand'
+import { Calendar, calendarPopoverClass } from '@/components/ui/calendar'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
 
 /**
- * Tarih aralığı takvimi — progressive enhancement: native <input type="date">
- * alanları otoriter kalır (testler ve klavye/ekran okuyucu akışı onların
- * üzerinden), bu popover yalnızca AYNI state'e yazan görsel bir kısayoldur.
- * Koyu cam panel + teal aralık vurgusu (gece uçuşu yüzeyi için).
+ * Tarih aralığı alanları + takvim — ayrı bir "Takvim" butonu yoktur; giriş/çıkış
+ * alanına tıklandığında popover açılır. Progressive enhancement korunur: native
+ * <input type="date"> otoriter kalır (testler ve klavye/ekran okuyucu akışı
+ * onların üzerinden), takvim AYNI state'e yazan görsel bir kısayoldur.
+ * Tema: components/ui/calendar.tsx (koyu cam panel + teal aralık vurgusu).
  */
 interface DateRangePickerProps {
   checkIn: string
   checkOut: string
   onChange: (checkIn: string, checkOut: string) => void
+  /** Alan id'leri — <Label htmlFor> ilişkisi için. */
+  checkInId?: string
+  checkOutId?: string
+  checkInLabel?: string
+  checkOutLabel?: string
+  /** Native alanlara giydirilecek ek sınıf (ör. koyu yüzey cam görünümü). */
+  fieldClassName?: string
+  required?: boolean
 }
 
 function parseDay(value: string): Date | undefined {
@@ -25,7 +38,17 @@ function parseDay(value: string): Date | undefined {
   return isValid(parsed) ? parsed : undefined
 }
 
-export function DateRangePicker({ checkIn, checkOut, onChange }: DateRangePickerProps) {
+export function DateRangePicker({
+  checkIn,
+  checkOut,
+  onChange,
+  checkInId = 'date-range-checkin',
+  checkOutId = 'date-range-checkout',
+  checkInLabel = 'Giriş',
+  checkOutLabel = 'Çıkış',
+  fieldClassName,
+  required,
+}: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
 
@@ -49,38 +72,51 @@ export function DateRangePicker({ checkIn, checkOut, onChange }: DateRangePicker
   const to = parseDay(checkOut)
   const selected: DateRange | undefined = from ? { from, to } : undefined
 
+  // Native picker yerine bizim takvim: mousedown'da preventDefault native
+  // tarih diyaloğunu/segment odağını bastırır (klavyeyle yazma yolu açık kalır).
+  const fieldClass = cn('[&::-webkit-calendar-picker-indicator]:hidden', fieldClassName)
+  const openCalendar = (e: ReactMouseEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    setOpen(true)
+  }
+
   return (
-    <div ref={rootRef} className="relative">
-      <Button
-        type="button"
-        variant="outline"
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        className="border-white/15 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white"
-        onClick={() => setOpen((o) => !o)}
-      >
-        {/* Metin "seç" içermemeli — kart testleri getByRole(name: /seç/i) kullanıyor. */}
-        <CalendarDays className="h-4 w-4" aria-hidden />
-        Takvim
-      </Button>
+    <div ref={rootRef} className="relative flex items-end gap-3">
+      <div className="grid gap-1.5">
+        <Label htmlFor={checkInId}>{checkInLabel}</Label>
+        <Input
+          id={checkInId}
+          type="date"
+          value={checkIn}
+          onChange={(e) => onChange(e.target.value, checkOut)}
+          onMouseDown={openCalendar}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          required={required}
+          className={fieldClass}
+        />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor={checkOutId}>{checkOutLabel}</Label>
+        <Input
+          id={checkOutId}
+          type="date"
+          value={checkOut}
+          min={checkIn || undefined}
+          onChange={(e) => onChange(checkIn, e.target.value)}
+          onMouseDown={openCalendar}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          required={required}
+          className={fieldClass}
+        />
+      </div>
 
       {open && (
-        <div
-          role="dialog"
-          aria-label="Tarih aralığı seç"
-          className="absolute left-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-brand-navy/95 p-3 text-white shadow-2xl backdrop-blur-md"
-          style={
-            {
-              '--rdp-accent-color': BRAND.teal,
-              '--rdp-accent-background-color': `${BRAND.teal}26`, // %15 alfa
-              '--rdp-today-color': BRAND.ice,
-            } as CSSProperties
-          }
-        >
-          <DayPicker
+        <div role="dialog" aria-label="Tarih aralığı seç" className={calendarPopoverClass}>
+          <Calendar
             mode="range"
             numberOfMonths={2}
-            locale={tr}
             selected={selected}
             defaultMonth={from}
             onSelect={(range) => {

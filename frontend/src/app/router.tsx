@@ -4,12 +4,14 @@ import type { ZoneHandle } from '@/app/zones'
 import { Layout } from '@/components/Layout'
 import LoginPage from '@/features/auth/LoginPage'
 import Design from '@/pages/Design'
+import { RouteErrorPage } from '@/pages/RouteErrorPage'
 import { ChatPage } from '@/features/chat/ChatPage'
 import { HotelsPage } from '@/features/hotels/HotelsPage'
 import { FlightsPage } from '@/features/flights/FlightsPage'
 import { ReservationFormPage } from '@/features/reservation/ReservationFormPage'
 import { ReservationsPage } from '@/features/reservation/ReservationsPage'
 import { ReservationDetailPage } from '@/features/reservation/ReservationDetailPage'
+import { ProfilePage } from '@/features/profile/ProfilePage'
 
 /**
  * Korumalı rota sarmalı — state'te mock kullanıcı yoksa /login'e yönlendirir
@@ -22,53 +24,72 @@ function ProtectedRoute() {
 }
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  // Tasarım playground'u — korumasız, screenshot/iterasyon hedefi.
-  { path: '/design', element: <Design /> },
   {
-    element: <ProtectedRoute />,
+    // Kök hata sınırı — Login/Layout dahil her yerde varsayılan İngilizce
+    // hata ekranı yerine RouteErrorPage görünür (chrome'suz, tam sayfa).
+    errorElement: <RouteErrorPage />,
     children: [
+      { path: '/login', element: <LoginPage /> },
+      // Tasarım playground'u — korumasız, screenshot/iterasyon hedefi.
+      { path: '/design', element: <Design /> },
       {
-        // Ortak çatı (header + navigasyon); korumalı sayfalar bunun içinde render olur.
-        element: <Layout />,
+        element: <ProtectedRoute />,
         children: [
-          { index: true, element: <Navigate to="/chat" replace /> },
-          // Bölge işaretleri (src/app/zones.ts): 'ai' = koyu gece uçuşu yüzeyi
-          // (chat + arama sonuçları), 'controlled' = açık rezervasyon yüzeyi.
           {
-            path: '/chat',
-            element: <ChatPage />,
-            handle: { zone: 'ai' } satisfies ZoneHandle,
-          },
-          {
-            path: '/hotels',
-            element: <HotelsPage />,
-            handle: { zone: 'ai' } satisfies ZoneHandle,
-          },
-          {
-            path: '/flights',
-            element: <FlightsPage />,
-            handle: { zone: 'ai' } satisfies ZoneHandle,
-          },
-          {
-            path: '/reservation/new',
-            element: <ReservationFormPage />,
-            handle: { zone: 'controlled' } satisfies ZoneHandle,
-          },
-          {
-            path: '/reservations',
-            element: <ReservationsPage />,
-            handle: { zone: 'controlled' } satisfies ZoneHandle,
-          },
-          {
-            path: '/reservations/:id',
-            element: <ReservationDetailPage />,
-            handle: { zone: 'controlled' } satisfies ZoneHandle,
+            // Ortak çatı (header + navigasyon); korumalı sayfalar bunun içinde render olur.
+            element: <Layout />,
+            children: [
+              {
+                // Sayfa hataları buraya yükselir → kart Layout'un Outlet'inde
+                // render olur, header/nav korunur.
+                errorElement: <RouteErrorPage />,
+                children: [
+                  { index: true, element: <Navigate to="/chat" replace /> },
+                  // Bölge işaretleri (src/app/zones.ts): 'ai' = koyu gece uçuşu yüzeyi
+                  // (chat + arama sonuçları), 'controlled' = açık rezervasyon yüzeyi.
+                  {
+                    path: '/chat',
+                    element: <ChatPage />,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
+                  },
+                  {
+                    path: '/hotels',
+                    element: <HotelsPage />,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
+                  },
+                  {
+                    path: '/flights',
+                    element: <FlightsPage />,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
+                  },
+                  {
+                    path: '/reservation/new',
+                    element: <ReservationFormPage />,
+                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                  },
+                  {
+                    path: '/reservations',
+                    element: <ReservationsPage />,
+                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                  },
+                  {
+                    path: '/reservations/:id',
+                    element: <ReservationDetailPage />,
+                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                  },
+                  {
+                    path: '/profile',
+                    element: <ProfilePage />,
+                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                  },
+                ],
+              },
+            ],
           },
         ],
       },
+      // Bilinmeyen yollar → /chat (oturum yoksa oradan /login'e düşer).
+      { path: '*', element: <Navigate to="/chat" replace /> },
     ],
   },
-  // Bilinmeyen yollar → /chat (oturum yoksa oradan /login'e düşer).
-  { path: '*', element: <Navigate to="/chat" replace /> },
 ])

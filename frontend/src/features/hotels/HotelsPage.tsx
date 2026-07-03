@@ -88,29 +88,7 @@ export function HotelsPage() {
             className={darkFieldClass}
           />
         </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="hotel-checkin">Giriş</Label>
-          <Input
-            id="hotel-checkin"
-            type="date"
-            value={checkIn}
-            onChange={(e) => setCheckIn(e.target.value)}
-            required
-            className={darkFieldClass}
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="hotel-checkout">Çıkış</Label>
-          <Input
-            id="hotel-checkout"
-            type="date"
-            value={checkOut}
-            onChange={(e) => setCheckOut(e.target.value)}
-            required
-            className={darkFieldClass}
-          />
-        </div>
-        {/* Görsel kısayol — native tarih kutularıyla aynı state'e yazar. */}
+        {/* Giriş/Çıkış alanına tıklayınca takvim açılır (ayrı buton yok). */}
         <DateRangePicker
           checkIn={checkIn}
           checkOut={checkOut}
@@ -118,6 +96,10 @@ export function HotelsPage() {
             setCheckIn(ci)
             setCheckOut(co)
           }}
+          checkInId="hotel-checkin"
+          checkOutId="hotel-checkout"
+          fieldClassName={darkFieldClass}
+          required
         />
         <div className="grid gap-1.5">
           <Label htmlFor="hotel-adults">Yetişkin</Label>

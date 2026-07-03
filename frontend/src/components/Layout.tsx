@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Menu, X } from 'lucide-react'
+import { Menu, UserRound, X } from 'lucide-react'
 import { AnimatedOutlet } from '@/components/AnimatedOutlet'
 import { Logo } from '@/components/Logo'
 import { NightSkyBackground } from '@/components/NightSkyBackground'
@@ -102,7 +102,8 @@ export function Layout() {
           dark ? 'border-white/10 bg-brand-navy/70' : 'border-border bg-background/80',
         )}
       >
-        <div className="container flex h-16 items-center justify-between gap-4">
+        {/* Bar tam genişlik (container sınırı yok) — h-20; ChatPage 9rem hesabı buna bağlı. */}
+        <div className="flex h-20 w-full items-center justify-between gap-4 px-4 sm:px-8">
           <div className="flex items-center gap-8">
             <NavLink to="/chat" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
               {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
@@ -113,7 +114,7 @@ export function Layout() {
                     className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
                   />
                 )}
-                <Logo height={32} className="relative" />
+                <Logo height={44} className="relative" />
               </span>
             </NavLink>
             {/* Masaüstü navigasyonu — mobilde gizli, hamburger paneline taşınır. */}
@@ -126,15 +127,26 @@ export function Layout() {
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            {/* Kullanıcı adı → profil sayfası. */}
             {user && (
-              <span
-                className={cn(
-                  'hidden max-w-[16rem] truncate text-sm md:inline',
-                  dark ? 'text-brand-ice/70' : 'text-muted-foreground',
-                )}
+              <NavLink
+                to="/profile"
+                className={({ isActive }) =>
+                  cn(
+                    'hidden max-w-[16rem] items-center gap-1.5 truncate rounded-md px-2 py-1 text-sm transition-colors md:flex',
+                    dark
+                      ? isActive
+                        ? 'text-white'
+                        : 'text-brand-ice/70 hover:text-white'
+                      : isActive
+                        ? 'text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
+                  )
+                }
               >
-                {user.name ?? user.email}
-              </span>
+                <UserRound className="h-4 w-4 shrink-0" aria-hidden />
+                <span className="truncate">{user.name ?? user.email}</span>
+              </NavLink>
             )}
             <Button
               variant="outline"
@@ -171,7 +183,7 @@ export function Layout() {
               dark ? 'border-white/10 bg-brand-navy/95' : 'bg-background',
             )}
           >
-            <nav className="container flex flex-col gap-1 py-3">
+            <nav className="flex flex-col gap-1 px-4 py-3 sm:px-8">
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
@@ -188,15 +200,21 @@ export function Layout() {
                   dark && 'border-white/10',
                 )}
               >
+                {/* Kullanıcı adı → profil sayfası (panel kapanır). */}
                 {user && (
-                  <span
+                  <NavLink
+                    to="/profile"
+                    onClick={() => setMenuOpen(false)}
                     className={cn(
-                      'min-w-0 truncate px-3 text-sm',
-                      dark ? 'text-brand-ice/70' : 'text-muted-foreground',
+                      'flex min-w-0 items-center gap-1.5 truncate px-3 text-sm transition-colors',
+                      dark
+                        ? 'text-brand-ice/70 hover:text-white'
+                        : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
-                    {user.name ?? user.email}
-                  </span>
+                    <UserRound className="h-4 w-4 shrink-0" aria-hidden />
+                    <span className="truncate">{user.name ?? user.email}</span>
+                  </NavLink>
                 )}
                 <Button
                   variant="outline"

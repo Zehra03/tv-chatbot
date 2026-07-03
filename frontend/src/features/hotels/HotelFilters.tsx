@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { NativeSelect } from '@/components/ui/native-select'
+import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { darkFieldClass } from '@/lib/field-styles'
 import {
@@ -12,7 +12,7 @@ import {
 /**
  * Otel listesi filtre çubuğu — durum uiSlice'ta yaşar (§5), sunucudan gelen
  * sonuçlara istemci tarafında uygulanır. Pansiyon seçenekleri o anki
- * sonuçlardan türetilir.
+ * sonuçlardan türetilir. Seçimler DropdownSelect (animasyonlu listbox) ile.
  */
 export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
   const filters = useAppSelector((s) => s.ui.hotelFilters)
@@ -20,33 +20,27 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
 
   return (
     <div className="glass-card flex flex-wrap items-center gap-3 p-4">
-      <NativeSelect
+      <DropdownSelect
         aria-label="Yıldız filtresi"
-        value={filters.minStars ?? ''}
-        onChange={(e) =>
-          dispatch(hotelFiltersChanged({ minStars: e.target.value ? Number(e.target.value) : null }))
-        }
-        className={darkFieldClass}
-      >
-        <option value="">Yıldız: tümü</option>
-        <option value="3">3★ ve üzeri</option>
-        <option value="4">4★ ve üzeri</option>
-        <option value="5">5★</option>
-      </NativeSelect>
+        value={filters.minStars ? String(filters.minStars) : ''}
+        options={[
+          { value: '', label: 'Yıldız: tümü' },
+          { value: '3', label: '3★ ve üzeri' },
+          { value: '4', label: '4★ ve üzeri' },
+          { value: '5', label: '5★' },
+        ]}
+        onChange={(v) => dispatch(hotelFiltersChanged({ minStars: v ? Number(v) : null }))}
+      />
 
-      <NativeSelect
+      <DropdownSelect
         aria-label="Pansiyon filtresi"
         value={filters.boardType ?? ''}
-        onChange={(e) => dispatch(hotelFiltersChanged({ boardType: e.target.value || null }))}
-        className={darkFieldClass}
-      >
-        <option value="">Pansiyon: tümü</option>
-        {boardTypes.map((bt) => (
-          <option key={bt} value={bt}>
-            {bt}
-          </option>
-        ))}
-      </NativeSelect>
+        options={[
+          { value: '', label: 'Pansiyon: tümü' },
+          ...boardTypes.map((bt) => ({ value: bt, label: bt })),
+        ]}
+        onChange={(v) => dispatch(hotelFiltersChanged({ boardType: v || null }))}
+      />
 
       <Input
         type="number"
@@ -60,19 +54,17 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
         }
       />
 
-      <NativeSelect
+      <DropdownSelect
         aria-label="Sıralama"
         value={filters.sort ?? ''}
-        onChange={(e) =>
-          dispatch(hotelFiltersChanged({ sort: (e.target.value || null) as HotelSort | null }))
-        }
-        className={darkFieldClass}
-      >
-        <option value="">Sıralama: önerilen</option>
-        <option value="price-asc">Fiyat (artan)</option>
-        <option value="price-desc">Fiyat (azalan)</option>
-        <option value="stars-desc">Yıldız (azalan)</option>
-      </NativeSelect>
+        options={[
+          { value: '', label: 'Sıralama: önerilen' },
+          { value: 'price-asc', label: 'Fiyat (artan)' },
+          { value: 'price-desc', label: 'Fiyat (azalan)' },
+          { value: 'stars-desc', label: 'Yıldız (azalan)' },
+        ]}
+        onChange={(v) => dispatch(hotelFiltersChanged({ sort: (v || null) as HotelSort | null }))}
+      />
 
       <Button
         type="button"

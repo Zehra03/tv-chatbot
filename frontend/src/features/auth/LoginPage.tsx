@@ -288,10 +288,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
           {/* Mod'a göre değişen içerik — geçişte fade animasyonu. */}
           <div key={mode} className="auth-panel-anim">
             <div className="space-y-2 text-center mb-8">
-              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
+              <h1 className="font-science-gothic text-3xl font-extralight tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
                 {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
               </h1>
-              <p className="text-sm text-brand-ice/80">
+              <p className="font-science-gothic text-sm font-light text-brand-ice/80">
                 {isRegister
                   ? 'Aramıza katıl, seyahatini planlamaya başla.'
                   : 'Devam etmek için giriş yap.'}

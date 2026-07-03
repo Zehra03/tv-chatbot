@@ -14,6 +14,8 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        // Login karşılama başlıkları — Science Gothic değişken font (100..900).
+        'science-gothic': ['Science Gothic', 'sans-serif'],
         // FloatingInput etiketleri `font-mono` kullanıyor — kontrollü sistem yığını.
         mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
