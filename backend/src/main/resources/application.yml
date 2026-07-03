@@ -51,6 +51,28 @@ app:
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
 
+ratelimit:
+  # When true, a rate limiter failure (e.g. Redis unavailable) lets requests through.
+  fail-open: true
+  # Ant path patterns that bypass rate limiting entirely. Structure only — none yet.
+  excluded-paths: []
+  # Fallback policy applied when no entry in `policies` matches the request path.
+  default-policy:
+    path: "/**"
+    capacity: 60
+    refill-tokens: 60
+    refill-period-seconds: 60
+  # Specific rules; the most specific matching path wins over the default policy.
+  policies:
+    - path: "/api/booking/**"
+      capacity: 10
+      refill-tokens: 10
+      refill-period-seconds: 60
+    - path: "/api/search/**"
+      capacity: 30
+      refill-tokens: 30
+      refill-period-seconds: 60
+
 tourvisio:
   url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
   culture: ${TOURVISIO_CULTURE:en-US}

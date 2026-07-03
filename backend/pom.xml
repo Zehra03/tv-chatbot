@@ -58,6 +58,14 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- Bucket4j distributed rate limiting over the existing Lettuce/Redis client.
+             JDK17 artifact is the correct target for Java 21; lettuce-core version is
+             governed by the Spring Boot 3.5 BOM so we reuse the same client. -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-lettuce</artifactId>
+            <version>8.15.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
