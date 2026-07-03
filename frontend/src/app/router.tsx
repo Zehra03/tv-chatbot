@@ -1,4 +1,4 @@
-import { createBrowserRouter, Navigate, Outlet } from 'react-router-dom'
+import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
 import type { ZoneHandle } from '@/app/zones'
 import { Layout } from '@/components/Layout'
@@ -23,7 +23,8 @@ function ProtectedRoute() {
   return user ? <Outlet /> : <Navigate to="/login" replace />
 }
 
-export const router = createBrowserRouter([
+/** Rota ağacı ayrıca export edilir ki hata sınırı yerleşimi test edilebilsin. */
+export const routes: RouteObject[] = [
   {
     // Kök hata sınırı — Login/Layout dahil her yerde varsayılan İngilizce
     // hata ekranı yerine RouteErrorPage görünür (chrome'suz, tam sayfa).
@@ -92,4 +93,6 @@ export const router = createBrowserRouter([
       { path: '*', element: <Navigate to="/chat" replace /> },
     ],
   },
-])
+]
+
+export const router = createBrowserRouter(routes)
