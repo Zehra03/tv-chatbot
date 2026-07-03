@@ -1,6 +1,7 @@
 package com.paximum.paxassist.ratelimiter;
 
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -22,10 +23,11 @@ public class RateLimitFilterConfig {
             RateLimitKeyResolver keyResolver,
             ObjectProvider<LettuceBasedProxyManager<String>> proxyManagerProvider,
             RateLimitProperties properties,
-            RateLimitResponseWriter responseWriter) {
+            RateLimitResponseWriter responseWriter,
+            MeterRegistry meterRegistry) {
 
         RateLimitFilter filter = new RateLimitFilter(
-                policyProvider, keyResolver, proxyManagerProvider, properties, responseWriter);
+                policyProvider, keyResolver, proxyManagerProvider, properties, responseWriter, meterRegistry);
 
         FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(filter);
         registration.setOrder(Ordered.LOWEST_PRECEDENCE - 100);

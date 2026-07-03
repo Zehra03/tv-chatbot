@@ -6,6 +6,7 @@ import io.github.bucket4j.BucketConfiguration;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisException;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,18 +37,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final ObjectProvider<LettuceBasedProxyManager<String>> proxyManagerProvider;
     private final RateLimitProperties properties;
     private final RateLimitResponseWriter responseWriter;
+    private final MeterRegistry meterRegistry;
     private final AntPathMatcher pathMatcher = new AntPathMatcher();
 
     public RateLimitFilter(RateLimitPolicyProvider policyProvider,
                            RateLimitKeyResolver keyResolver,
                            ObjectProvider<LettuceBasedProxyManager<String>> proxyManagerProvider,
                            RateLimitProperties properties,
-                           RateLimitResponseWriter responseWriter) {
+                           RateLimitResponseWriter responseWriter,
+                           MeterRegistry meterRegistry) {
         this.policyProvider = policyProvider;
         this.keyResolver = keyResolver;
         this.proxyManagerProvider = proxyManagerProvider;
         this.properties = properties;
         this.responseWriter = responseWriter;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -82,7 +86,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             // (RedisConnectionException, RedisCommandTimeoutException, etc.). Any other
             // exception is a genuine bug and must propagate, not be masked as fail-open.
             if (properties.isFailOpen()) {
-                log.warn("Rate limiter unavailable for path {} — failing open: {}", path, ex.toString());
+                log.warn("Rate limiter Redis unreachable, failing open for endpoint: {}", path, ex);
+                // Tag with the policy pattern (not the raw path) to keep metric cardinality bounded.
+                meterRegistry.counter("ratelimit.fail_open", "endpoint", policy.path()).increment();
                 chain.doFilter(request, response);
             } else {
                 response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
@@ -97,8 +103,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        // 7. Rejected: write the response here and do NOT continue the chain.
-        responseWriter.writeLimitExceeded(request, response, probe);
+        // 7. Rejected: write the 429 response here and do NOT continue the chain.
+        long retryAfterSeconds = (probe.getNanosToWaitForRefill() + 999_999_999L) / 1_000_000_000L;
+        responseWriter.writeRejection(response, retryAfterSeconds);
     }
 
     private BucketConfiguration toBucketConfiguration(RateLimitPolicy policy) {
