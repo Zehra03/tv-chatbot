@@ -5,7 +5,6 @@ import com.paximum.paxassist.chat.exception.AiClientException;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 
 @Service
 public class ChatService {
@@ -53,18 +52,6 @@ public class ChatService {
         }
         throw (lastError != null) ? lastError
                 : new AiClientException(AiClientException.Code.UNKNOWN, "AI servisinden yanıt alınamadı");
-    }
-
-    public Flux<String> streamChat(@NonNull String message) {
-        try {
-            return chatClient.prompt()
-                    .user(message)
-                    .stream()
-                    .content()
-                    .onErrorMap(RuntimeException.class, this::classify);
-        } catch (RuntimeException e) {
-            return Flux.error(classify(e));
-        }
     }
 
     private boolean isParseFailure(RuntimeException e) {
