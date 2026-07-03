@@ -30,6 +30,10 @@ interface DateRangePickerProps {
   /** Native alanlara giydirilecek ek sınıf (ör. koyu yüzey cam görünümü). */
   fieldClassName?: string
   required?: boolean
+  /** true → aralık arası vurgulanmaz, yalnızca iki uç tarih işaretlenir. */
+  endpointsOnly?: boolean
+  /** Popover hizası — form sağ kenara yakınsa 'right' taşmayı önler. */
+  align?: 'left' | 'right'
 }
 
 function parseDay(value: string): Date | undefined {
@@ -48,6 +52,8 @@ export function DateRangePicker({
   checkOutLabel = 'Çıkış',
   fieldClassName,
   required,
+  endpointsOnly,
+  align = 'left',
 }: DateRangePickerProps) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -113,10 +119,15 @@ export function DateRangePicker({
       </div>
 
       {open && (
-        <div role="dialog" aria-label="Tarih aralığı seç" className={calendarPopoverClass}>
+        <div
+          role="dialog"
+          aria-label="Tarih aralığı seç"
+          className={cn(calendarPopoverClass, align === 'right' ? 'right-0' : 'left-0')}
+        >
           <Calendar
             mode="range"
             numberOfMonths={2}
+            endpointsOnly={endpointsOnly}
             selected={selected}
             defaultMonth={from}
             onSelect={(range) => {

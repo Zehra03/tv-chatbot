@@ -3,6 +3,7 @@ import { DayPicker, type DayPickerProps } from 'react-day-picker'
 import { tr } from 'date-fns/locale'
 import 'react-day-picker/style.css'
 import { BRAND, rgbTriplet } from '@/lib/brand'
+import { cn } from '@/lib/utils'
 
 /**
  * Gece uçuşu temalı takvim — DateRangePicker/DatePicker'ın ortak gövdesi.
@@ -31,12 +32,36 @@ const CALENDAR_STYLE = {
   '--rdp-months-gap': '1.5rem',
 } as CSSProperties
 
-/** Takvim popover kabuğu — koyu cam panel (alan grubunun altına açılır). */
-export const calendarPopoverClass =
-  'absolute left-0 top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-brand-navy/95 p-3 text-white shadow-2xl backdrop-blur-md'
+/** Aralık bandını söndürür: orta günler + uç hücrelerin yarım gradyanları
+ * şeffaflaşır, yalnızca iki uç tarihin teal dairesi kalır (uçuş gidiş-dönüş). */
+const ENDPOINTS_ONLY_STYLE = {
+  '--rdp-range_middle-background-color': 'transparent',
+  '--rdp-range_start-background': 'none',
+  '--rdp-range_end-background': 'none',
+} as CSSProperties
 
-export function Calendar(props: DayPickerProps) {
-  return <DayPicker locale={tr} style={CALENDAR_STYLE} {...props} />
+/** Takvim popover kabuğu — koyu cam panel (alan grubunun altına açılır).
+ * Yatay hizayı (left-0 / right-0) kullanan bileşen ekler: form sağ kenara
+ * yakınsa left-0 iki aylık paneli viewport dışına taşırır. */
+export const calendarPopoverClass =
+  'absolute top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-brand-navy/95 p-3 text-white shadow-2xl backdrop-blur-md'
+
+type CalendarProps = DayPickerProps & {
+  /** true → aralık arası vurgulanmaz, yalnızca seçilen iki tarih işaretlenir. */
+  endpointsOnly?: boolean
+}
+
+export function Calendar({ endpointsOnly, className, ...props }: CalendarProps) {
+  const style = endpointsOnly ? { ...CALENDAR_STYLE, ...ENDPOINTS_ONLY_STYLE } : CALENDAR_STYLE
+  return (
+    <DayPicker
+      locale={tr}
+      style={style}
+      // Ara günlerdeki .rdp-selected kalınlaştırmasını da sıfırla (index.css).
+      className={cn(endpointsOnly && 'pax-endpoints-only', className)}
+      {...props}
+    />
+  )
 }
 
 export default Calendar

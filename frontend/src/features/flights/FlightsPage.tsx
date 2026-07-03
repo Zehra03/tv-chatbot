@@ -129,6 +129,10 @@ export function FlightsPage() {
             checkOutLabel="Dönüş tarihi"
             fieldClassName={darkFieldClass}
             required
+            // Uçuşta gidiş-dönüş bir konaklama aralığı değil — ara günler boyanmaz.
+            endpointsOnly
+            // Tarih alanları formun sağına yakın — sola hizalı panel taşar.
+            align="right"
           />
         ) : (
           <DatePicker

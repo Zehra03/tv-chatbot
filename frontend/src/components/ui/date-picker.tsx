@@ -84,7 +84,7 @@ export function DatePicker({
       />
 
       {open && (
-        <div role="dialog" aria-label="Tarih seç" className={calendarPopoverClass}>
+        <div role="dialog" aria-label="Tarih seç" className={cn(calendarPopoverClass, 'left-0')}>
           <Calendar
             mode="single"
             numberOfMonths={1}

@@ -68,6 +68,12 @@
   .glass-card {
     @apply rounded-2xl border border-white/15 bg-white/10 backdrop-blur-md;
   }
+  /* endpointsOnly takvim (uçuş gidiş-dönüş): rdp aradaki günlere de .rdp-selected
+     verir; bant zaten şeffaf, kalın/büyük yazı vurgusunu da sıfırla. */
+  .pax-endpoints-only .rdp-range_middle {
+    font-weight: normal;
+    font-size: inherit;
+  }
   .glass-chip {
     @apply rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-xs backdrop-blur-sm;
   }
