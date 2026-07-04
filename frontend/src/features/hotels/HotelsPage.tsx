@@ -8,6 +8,7 @@ import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { SplitText } from '@/components/SplitText'
 import { useAppSelector } from '@/app/hooks'
 import { darkFieldClass, darkPrimaryButtonClass } from '@/lib/field-styles'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
@@ -70,7 +71,14 @@ export function HotelsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Oteller</h1>
+        <SplitText
+          text="Oteller"
+          tag="h1"
+          textAlign="left"
+          className="text-2xl font-bold text-white"
+          delay={40}
+          duration={0.8}
+        />
         <p className="text-sm text-brand-ice/70">
           Kriterlere göre ara; sonuçları yıldız, pansiyon ve fiyata göre daralt.
         </p>

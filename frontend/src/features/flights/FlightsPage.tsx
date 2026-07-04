@@ -9,6 +9,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
+import { SplitText } from '@/components/SplitText'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppSelector } from '@/app/hooks'
 import { darkFieldClass, darkPrimaryButtonClass } from '@/lib/field-styles'
@@ -72,7 +73,14 @@ export function FlightsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-white">Uçuşlar</h1>
+        <SplitText
+          text="Uçuşlar"
+          tag="h1"
+          textAlign="left"
+          className="text-2xl font-bold text-white"
+          delay={40}
+          duration={0.8}
+        />
         <p className="text-sm text-brand-ice/70">
           Kriterlere göre ara; sonuçları aktarma, havayolu ve fiyata göre daralt.
         </p>
