@@ -9,6 +9,7 @@ import { FormStepper } from '@/features/reservation/FormStepper'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { TiltedCard } from '@/components/TiltedCard'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NativeSelect } from '@/components/ui/native-select'
@@ -60,6 +61,7 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={3} />
+        <TiltedCard rotateAmplitude={5} scaleOnHover={1.01}>
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardContent className="relative space-y-4 overflow-hidden p-8 text-center">
             {/* Yumuşak kutlama halesi + ikonda tek seferlik scale-in. */}
@@ -104,6 +106,7 @@ export function ReservationFormPage() {
             </div>
           </CardContent>
         </Card>
+        </TiltedCard>
       </div>
     )
   }
@@ -113,6 +116,7 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={3} />
+        <TiltedCard rotateAmplitude={5} scaleOnHover={1.01}>
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardContent className="space-y-4 p-8 text-center">
             <XCircle className="mx-auto h-10 w-10 text-destructive" aria-hidden />
@@ -137,6 +141,7 @@ export function ReservationFormPage() {
             </div>
           </CardContent>
         </Card>
+        </TiltedCard>
       </div>
     )
   }
@@ -185,6 +190,8 @@ export function ReservationFormPage() {
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={2} />
         <h1 className="text-2xl font-bold text-white">Rezervasyon önizleme</h1>
+        {/* Onay checkbox'ı + butonlar var: eğim küçük, büyüme yok. */}
+        <TiltedCard rotateAmplitude={4} scaleOnHover={1}>
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardHeader>
             <CardTitle>{preview.data.title}</CardTitle>
@@ -245,6 +252,7 @@ export function ReservationFormPage() {
             </div>
           </CardContent>
         </Card>
+        </TiltedCard>
       </div>
     )
   }
@@ -255,6 +263,7 @@ export function ReservationFormPage() {
       <h1 className="text-2xl font-bold text-white">Rezervasyon</h1>
       <AiOffBanner />
 
+      <TiltedCard rotateAmplitude={5} scaleOnHover={1.01}>
       <Card className="glass-card border-white/15 bg-white/10 text-white">
         <CardHeader>
           <CardTitle>Ürün özeti</CardTitle>
@@ -267,6 +276,7 @@ export function ReservationFormPage() {
           <p className="shrink-0 text-lg font-bold">{formatPrice(draft.price, draft.currency)}</p>
         </CardContent>
       </Card>
+      </TiltedCard>
 
       <form onSubmit={handleSubmit(onValid)} className="space-y-6" noValidate>
         <section className="space-y-3">

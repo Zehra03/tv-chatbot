@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import { Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { TiltedCard } from '@/components/TiltedCard'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
+import { SplitText } from '@/components/SplitText'
 import { useReservations } from '@/features/reservation/useReservations'
 import {
   RESERVATION_STATUS_LABELS,
@@ -31,7 +33,14 @@ export function ReservationsPage() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: 'easeOut' }}
       >
-        <h1 className="text-2xl font-bold text-white">Rezervasyonlarım</h1>
+        <SplitText
+          text="Rezervasyonlarım"
+          tag="h1"
+          textAlign="left"
+          className="text-2xl font-bold text-white"
+          delay={40}
+          duration={0.8}
+        />
         <div
           aria-hidden="true"
           className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
@@ -58,6 +67,8 @@ export function ReservationsPage() {
       )}
 
       {data && data.length > 0 && (
+        // Geniş tablo yüzeyi: eğim çok küçük, büyüme yok — satır butonları kaymasın.
+        <TiltedCard rotateAmplitude={3} scaleOnHover={1}>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -127,6 +138,7 @@ export function ReservationsPage() {
             </tbody>
           </table>
         </motion.div>
+        </TiltedCard>
       )}
     </div>
   )

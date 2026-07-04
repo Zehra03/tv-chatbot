@@ -9,6 +9,8 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { TiltedCard } from '@/components/TiltedCard'
+import { SplitText } from '@/components/SplitText'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { logout } from '@/features/auth/authSlice'
 import { useReservations } from '@/features/reservation/useReservations'
@@ -59,7 +61,14 @@ export function ProfilePage() {
       className="mx-auto max-w-2xl space-y-6"
     >
       <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold text-white">Profil</h1>
+        <SplitText
+          text="Profil"
+          tag="h1"
+          textAlign="left"
+          className="text-2xl font-bold text-white"
+          delay={40}
+          duration={0.8}
+        />
         <div
           aria-hidden="true"
           className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
@@ -70,6 +79,7 @@ export function ProfilePage() {
       </motion.div>
 
       <motion.div variants={itemVariants}>
+        <TiltedCard rotateAmplitude={5} scaleOnHover={1.01}>
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardHeader className="flex-row items-center gap-4 space-y-0">
             <div
@@ -117,10 +127,12 @@ export function ProfilePage() {
             </dl>
           </CardContent>
         </Card>
+        </TiltedCard>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2">
-        <Card className="glass-card border-white/15 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-brand-teal/40 hover:bg-white/[0.14]">
+        <TiltedCard>
+        <Card className="glass-card h-full border-white/15 bg-white/10 text-white transition-all hover:border-brand-teal/40 hover:bg-white/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
@@ -152,8 +164,10 @@ export function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
+        </TiltedCard>
 
-        <Card className="glass-card border-white/15 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-brand-teal/40 hover:bg-white/[0.14]">
+        <TiltedCard>
+        <Card className="glass-card h-full border-white/15 bg-white/10 text-white transition-all hover:border-brand-teal/40 hover:bg-white/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
@@ -179,6 +193,7 @@ export function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
+        </TiltedCard>
       </motion.div>
 
       <motion.div variants={itemVariants}>
