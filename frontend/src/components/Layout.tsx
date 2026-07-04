@@ -96,35 +96,27 @@ export function Layout() {
         )}
       >
         {/* Bar tam genişlik (container sınırı yok) — h-20; ChatPage 9rem hesabı buna bağlı. */}
-        <div className="flex h-20 w-full items-center justify-between gap-4 px-4 sm:px-8">
-          <div className="flex items-center gap-8">
-            <NavLink to="/chat" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
-              {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
-              <span className="relative inline-block">
-                {dark && (
-                  <span
-                    aria-hidden="true"
-                    className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
-                  />
-                )}
-                <Logo height={64} className="relative" />
-              </span>
-            </NavLink>
-            {/* Masaüstü navigasyonu — GooeyNav (parçacıklı pill); mobilde gizli,
-                hamburger paneline taşınır. */}
-            <div className="hidden md:block">
-              <GooeyNav
-                items={NAV.map((item) => ({ label: item.label, href: item.to }))}
-                activeIndex={activeNavIndex}
-                onNavigate={(href) => navigate(href)}
-                particleCount={15}
-                particleDistances={[90, 10]}
-                particleR={100}
-                animationTime={600}
-                timeVariance={300}
-                colors={[1, 2, 3, 1, 2, 3, 1, 4]}
-              />
-            </div>
+        <div className="relative flex h-20 w-full items-center justify-between gap-4 px-4 sm:px-8">
+          <NavLink to="/chat" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
+            {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
+            <span className="relative inline-block">
+              {dark && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
+                />
+              )}
+              <Logo height={64} className="relative" />
+            </span>
+          </NavLink>
+          {/* Masaüstü navigasyonu — barın gerçek ortasında (mutlak konum, logo ve
+              sağ eylemlerden bağımsız); mobilde gizli, hamburger paneline taşınır. */}
+          <div className="absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 md:block">
+            <GooeyNav
+              items={NAV.map((item) => ({ label: item.label, href: item.to }))}
+              activeIndex={activeNavIndex}
+              onNavigate={(href) => navigate(href)}
+            />
           </div>
           <div className="flex items-center gap-3">
             {/* Kullanıcı adı → profil sayfası. */}
