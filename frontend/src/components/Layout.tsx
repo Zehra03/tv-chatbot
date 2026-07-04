@@ -3,6 +3,7 @@ import { NavLink, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, UserRound, X } from 'lucide-react'
 import { AnimatedOutlet } from '@/components/AnimatedOutlet'
+import { GooeyNav } from '@/components/GooeyNav'
 import { Logo } from '@/components/Logo'
 import { NightSkyBackground } from '@/components/NightSkyBackground'
 import { Button } from '@/components/ui/button'
@@ -24,24 +25,6 @@ const NAV = [
   { to: '/flights', label: 'Uçuşlar' },
   { to: '/reservations', label: 'Rezervasyonlar' },
 ]
-
-/** Masaüstü nav: açık bölgede pill, koyu bölgede teal glow alt çizgi. */
-const desktopNavLinkClass =
-  (zone: Zone) =>
-  ({ isActive }: { isActive: boolean }) =>
-    zone === 'ai'
-      ? cn(
-          'relative rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive
-            ? 'text-white after:absolute after:inset-x-3 after:-bottom-0.5 after:h-0.5 after:rounded-full after:bg-brand-teal after:shadow-[0_0_8px_theme(colors.brand.teal)]'
-            : 'text-brand-ice/60 hover:text-white',
-        )
-      : cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-accent text-accent-foreground'
-            : 'text-muted-foreground hover:text-foreground',
-        )
 
 /** Mobil panel nav: her iki bölgede de pill (dikey listede alt çizgi okunmaz). */
 const mobileNavLinkClass =
@@ -69,6 +52,14 @@ export function Layout() {
 
   const zone = zoneFromMatches(matches)
   const dark = zone === 'ai'
+
+  // GooeyNav'ın aktif öğesi rotadan türer; '/reservation/new' da Rezervasyonlar
+  // sekmesini işaretler. Eşleşme yoksa (-1, ör. /profile) pill gizlenir.
+  const activeNavIndex = NAV.findIndex((item) =>
+    item.to === '/reservations'
+      ? location.pathname.startsWith('/reservation')
+      : location.pathname.startsWith(item.to),
+  )
 
   const handleLogout = () => {
     dispatch(logout())
@@ -119,14 +110,21 @@ export function Layout() {
                 <Logo height={64} className="relative" />
               </span>
             </NavLink>
-            {/* Masaüstü navigasyonu — mobilde gizli, hamburger paneline taşınır. */}
-            <nav className="hidden items-center gap-1 md:flex">
-              {NAV.map((item) => (
-                <NavLink key={item.to} to={item.to} className={desktopNavLinkClass(zone)}>
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
+            {/* Masaüstü navigasyonu — GooeyNav (parçacıklı pill); mobilde gizli,
+                hamburger paneline taşınır. */}
+            <div className="hidden md:block">
+              <GooeyNav
+                items={NAV.map((item) => ({ label: item.label, href: item.to }))}
+                activeIndex={activeNavIndex}
+                onNavigate={(href) => navigate(href)}
+                particleCount={15}
+                particleDistances={[90, 10]}
+                particleR={100}
+                animationTime={600}
+                timeVariance={300}
+                colors={[1, 2, 3, 1, 2, 3, 1, 4]}
+              />
+            </div>
           </div>
           <div className="flex items-center gap-3">
             {/* Kullanıcı adı → profil sayfası. */}
