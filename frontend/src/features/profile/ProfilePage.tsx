@@ -59,22 +59,22 @@ export function ProfilePage() {
       className="mx-auto max-w-2xl space-y-6"
     >
       <motion.div variants={itemVariants}>
-        <h1 className="text-2xl font-bold">Profil</h1>
+        <h1 className="text-2xl font-bold text-white">Profil</h1>
         <div
           aria-hidden="true"
           className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
         />
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-brand-ice/70">
           Hesap bilgileriniz ve hızlı bağlantılar.
         </p>
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Card>
+        <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardHeader className="flex-row items-center gap-4 space-y-0">
             <div
               aria-hidden="true"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-teal text-xl font-bold text-white ring-4 ring-primary/10"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-teal text-xl font-bold text-white ring-4 ring-white/15"
             >
               {initials}
             </div>
@@ -82,7 +82,7 @@ export function ProfilePage() {
               {/* Misafirde ad zaten "Misafir" — ayrıca rozet basmak tekrar olur;
                   oturum türü aşağıdaki bilgi listesinde gösteriliyor. */}
               <CardTitle className="truncate text-lg">{displayName}</CardTitle>
-              <CardDescription className="truncate">
+              <CardDescription className="truncate text-brand-ice/70">
                 {user.email || 'Misafir oturumu'}
               </CardDescription>
             </div>
@@ -92,12 +92,12 @@ export function ProfilePage() {
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
                 >
                   <Mail className="h-4 w-4" />
                 </span>
                 <div className="min-w-0">
-                  <dt className="text-muted-foreground">E-posta</dt>
+                  <dt className="text-brand-ice/70">E-posta</dt>
                   {/* Misafir oturumunda e-posta yok — boş satır yerine tire. */}
                   <dd className="truncate font-medium">{user.email || '—'}</dd>
                 </div>
@@ -105,12 +105,12 @@ export function ProfilePage() {
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
                 >
                   <UserRound className="h-4 w-4" />
                 </span>
                 <div>
-                  <dt className="text-muted-foreground">Oturum türü</dt>
+                  <dt className="text-brand-ice/70">Oturum türü</dt>
                   <dd className="font-medium">{user.guest ? 'Misafir' : 'Üye'}</dd>
                 </div>
               </div>
@@ -120,7 +120,7 @@ export function ProfilePage() {
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2">
-        <Card className="transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+        <Card className="glass-card border-white/15 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-brand-teal/40 hover:bg-white/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
@@ -131,9 +131,9 @@ export function ProfilePage() {
               </span>
               Rezervasyonlarım
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-brand-ice/70">
               {reservations.data ? (
-                <span className="font-semibold text-primary">
+                <span className="font-semibold text-brand-teal">
                   {reservations.data.length} rezervasyon
                 </span>
               ) : (
@@ -146,14 +146,14 @@ export function ProfilePage() {
               asChild
               variant="outline"
               size="sm"
-              className="transition-colors hover:border-primary/40 hover:text-primary"
+              className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
             >
               <Link to="/reservations">Rezervasyonlara git</Link>
             </Button>
           </CardContent>
         </Card>
 
-        <Card className="transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md">
+        <Card className="glass-card border-white/15 bg-white/10 text-white transition-all hover:-translate-y-0.5 hover:border-brand-teal/40 hover:bg-white/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
@@ -164,14 +164,16 @@ export function ProfilePage() {
               </span>
               Sohbet
             </CardTitle>
-            <CardDescription>Aramaya asistanla devam edin.</CardDescription>
+            <CardDescription className="text-brand-ice/70">
+              Aramaya asistanla devam edin.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Button
               asChild
               variant="outline"
               size="sm"
-              className="transition-colors hover:border-primary/40 hover:text-primary"
+              className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
             >
               <Link to="/chat">Sohbete dön</Link>
             </Button>
@@ -183,7 +185,7 @@ export function ProfilePage() {
         <Button
           variant="outline"
           onClick={handleLogout}
-          className="gap-2 transition-colors hover:border-destructive/40 hover:text-destructive"
+          className="gap-2 border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-destructive hover:bg-destructive/20 hover:text-white"
         >
           <LogOut className="h-4 w-4" aria-hidden />
           Çıkış yap

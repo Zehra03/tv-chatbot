@@ -79,7 +79,9 @@ export function Layout() {
     <div
       className={cn(
         'min-h-screen transition-colors duration-700',
-        dark ? 'bg-brand-navy text-white' : 'bg-background text-foreground',
+        // 'dark' sınıfı semantik token'ları (bg-card, muted-foreground, border…)
+        // koyu palete çevirir — token'la yazılmış sayfalar otomatik okunur kalır.
+        dark ? 'dark bg-brand-navy text-white' : 'bg-background text-foreground',
       )}
     >
       {/* Gece uçuşu arka planı — yalnızca AI bölgesinde, yumuşak giriş/çıkışla. */}

@@ -46,8 +46,10 @@ export const routes: RouteObject[] = [
                 errorElement: <RouteErrorPage />,
                 children: [
                   { index: true, element: <Navigate to="/chat" replace /> },
-                  // Bölge işaretleri (src/app/zones.ts): 'ai' = koyu gece uçuşu yüzeyi
-                  // (chat + arama sonuçları), 'controlled' = açık rezervasyon yüzeyi.
+                  // Bölge işaretleri (src/app/zones.ts): sahibin kararıyla TÜM rotalar
+                  // koyu gece uçuşu yüzeyinde ('ai'). "AI devre dışı" anlatısı artık
+                  // yüzey rengiyle değil AiOffBanner ile verilir; 'controlled' mekanizması
+                  // ileride gerekirse duruyor.
                   {
                     path: '/chat',
                     element: <ChatPage />,
@@ -66,22 +68,22 @@ export const routes: RouteObject[] = [
                   {
                     path: '/reservation/new',
                     element: <ReservationFormPage />,
-                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
                     path: '/reservations',
                     element: <ReservationsPage />,
-                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
                     path: '/reservations/:id',
                     element: <ReservationDetailPage />,
-                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
                     path: '/profile',
                     element: <ProfilePage />,
-                    handle: { zone: 'controlled' } satisfies ZoneHandle,
+                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                 ],
               },
