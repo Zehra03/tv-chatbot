@@ -95,8 +95,8 @@ export function Layout() {
           dark ? 'border-white/10 bg-brand-navy/70' : 'border-border bg-background/80',
         )}
       >
-        {/* Bar tam genişlik (container sınırı yok) — h-20; ChatPage 9rem hesabı buna bağlı. */}
-        <div className="relative flex h-20 w-full items-center justify-between gap-4 px-4 sm:px-8">
+        {/* Bar tam genişlik (container sınırı yok) — h-24; ChatPage 10rem hesabı buna bağlı. */}
+        <div className="relative flex h-24 w-full items-center justify-between gap-4 px-4 sm:px-8">
           <NavLink to="/chat" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
             {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
             <span className="relative inline-block">
@@ -106,7 +106,7 @@ export function Layout() {
                   className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
                 />
               )}
-              <Logo height={64} className="relative" />
+              <Logo height={88} className="relative" />
             </span>
           </NavLink>
           {/* Masaüstü navigasyonu — barın gerçek ortasında (mutlak konum, logo ve
@@ -140,18 +140,6 @@ export function Layout() {
                 <span className="truncate">{user.name ?? user.email}</span>
               </NavLink>
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleLogout}
-              className={cn(
-                'hidden md:inline-flex',
-                dark &&
-                  'border-brand-ice/30 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white',
-              )}
-            >
-              Çıkış
-            </Button>
             {/* Mobil menü düğmesi */}
             <Button
               variant="ghost"
@@ -211,11 +199,7 @@ export function Layout() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className={cn(
-                    'shrink-0',
-                    dark &&
-                      'border-brand-ice/30 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white',
-                  )}
+                  className="shrink-0"
                   onClick={handleLogout}
                 >
                   Çıkış
