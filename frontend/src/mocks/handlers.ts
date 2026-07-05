@@ -31,8 +31,44 @@ const reservations: Reservation[] = reservationFixtures.map((r) => ({
 }))
 let nextReservationId = 2000
 
-/** Yeni oturum açan kullanıcı (mock). GET /auth/me bunu döner ya da 401. */
-let currentUser: AuthUser | null = null
+/**
+ * Mock oturum — gerçek backend'in kalıcı kullanıcı tablosunun karşılığı olarak
+ * localStorage'a yazılır: sayfa yenilenince modül state'i sıfırlansa da
+ * GET /auth/me saklı jetonu tanımaya devam eder (istemci oturumu kalıcıdır).
+ * Storage yoksa (kısıtlı ortam) bellek kopyasıyla çalışır.
+ */
+interface MockAuthSession {
+  user: AuthUser
+  token: string
+}
+const MOCK_AUTH_KEY = 'pax-msw-auth'
+let mockAuthMemory: MockAuthSession | null = null
+/** Aynı oturumda tekrar kayıt denemesi 409 döndürsün diye (backend paritesi). */
+const registeredEmails = new Set<string>()
+
+function readAuthSession(): MockAuthSession | null {
+  try {
+    const raw = localStorage.getItem(MOCK_AUTH_KEY)
+    return raw ? (JSON.parse(raw) as MockAuthSession) : mockAuthMemory
+  } catch {
+    return mockAuthMemory
+  }
+}
+
+function writeAuthSession(session: MockAuthSession | null) {
+  mockAuthMemory = session
+  try {
+    if (session) localStorage.setItem(MOCK_AUTH_KEY, JSON.stringify(session))
+    else localStorage.removeItem(MOCK_AUTH_KEY)
+  } catch {
+    /* bellek kopyası yeter */
+  }
+}
+
+/** Backend'in ErrorResponse kaydıyla aynı gövde: { error, message, timestamp }. */
+function errorBody(error: string, message: string) {
+  return { error, message, timestamp: new Date().toISOString() }
+}
 
 /** Ürün-tipi bağımsız özet — preview/create için fixture'lardan ürün çözer. */
 function findProduct(id: string) {
@@ -163,31 +199,69 @@ export const handlers: RequestHandler[] = [
     return HttpResponse.json(r)
   }),
 
-  // ── Auth (mock; gerçek doğrulama backend'de) ───────────────────────────────
+  // ── Auth (mock; gerçek doğrulama backend'de — şifre burada denetlenmez) ────
+  // Durum kodları ve hata gövdeleri backend AuthController/AuthExceptionHandler
+  // paritesinde: 201, 400 VALIDATION_ERROR, 409 EMAIL_ALREADY_EXISTS,
+  // 401 UNAUTHENTICATED ({ error, message, timestamp }).
   http.post('/api/v1/auth/register', async ({ request }) => {
     const body = (await request.json()) as RegisterRequest
-    currentUser = { id: crypto.randomUUID(), email: body.email, name: body.name }
-    return HttpResponse.json(
-      { user: currentUser, token: `mock-token-${crypto.randomUUID()}` },
-      { status: 201 },
-    )
+    if (!body?.email) {
+      return HttpResponse.json(errorBody('VALIDATION_ERROR', 'email: E-posta gerekli.'), {
+        status: 400,
+      })
+    }
+    if ((body.password ?? '').length < 8) {
+      return HttpResponse.json(
+        errorBody('VALIDATION_ERROR', 'password: Şifre en az 8 karakter olmalıdır.'),
+        { status: 400 },
+      )
+    }
+    if (registeredEmails.has(body.email.toLowerCase())) {
+      return HttpResponse.json(
+        errorBody('EMAIL_ALREADY_EXISTS', `Bu e-posta zaten kayıtlı: ${body.email}`),
+        { status: 409 },
+      )
+    }
+    registeredEmails.add(body.email.toLowerCase())
+    const user: AuthUser = { id: crypto.randomUUID(), email: body.email, name: body.name }
+    const session: MockAuthSession = { user, token: `mock-token-${crypto.randomUUID()}` }
+    writeAuthSession(session)
+    return HttpResponse.json({ user: session.user, token: session.token }, { status: 201 })
   }),
 
   http.post('/api/v1/auth/login', async ({ request }) => {
     const body = (await request.json()) as LoginRequest
-    if (!body?.email) return HttpResponse.json({ message: 'E-posta gerekli.' }, { status: 400 })
-    currentUser = { id: crypto.randomUUID(), email: body.email, name: body.email.split('@')[0] }
-    return HttpResponse.json({ user: currentUser, token: `mock-token-${crypto.randomUUID()}` })
+    if (!body?.email || !body?.password) {
+      return HttpResponse.json(
+        errorBody('VALIDATION_ERROR', 'email/password: E-posta ve şifre gerekli.'),
+        { status: 400 },
+      )
+    }
+    const user: AuthUser = {
+      id: crypto.randomUUID(),
+      email: body.email,
+      name: body.email.split('@')[0],
+    }
+    const session: MockAuthSession = { user, token: `mock-token-${crypto.randomUUID()}` }
+    writeAuthSession(session)
+    return HttpResponse.json({ user: session.user, token: session.token })
   }),
 
   http.post('/api/v1/auth/logout', () => {
-    currentUser = null
+    writeAuthSession(null)
     return new HttpResponse(null, { status: 204 })
   }),
 
-  http.get('/api/v1/auth/me', () => {
-    return currentUser
-      ? HttpResponse.json(currentUser)
-      : HttpResponse.json({ message: 'Oturum yok.' }, { status: 401 })
+  // Gerçek backend gibi Authorization: Bearer <token> ister — istemcinin jeton
+  // gönderme zinciri (authSlice → setAuthToken → interceptor) mock'ta da doğrulanır.
+  http.get('/api/v1/auth/me', ({ request }) => {
+    const session = readAuthSession()
+    const header = request.headers.get('Authorization')
+    if (!session || header !== `Bearer ${session.token}`) {
+      return HttpResponse.json(errorBody('UNAUTHENTICATED', 'Oturum yok ya da jeton geçersiz.'), {
+        status: 401,
+      })
+    }
+    return HttpResponse.json(session.user)
   }),
 ]

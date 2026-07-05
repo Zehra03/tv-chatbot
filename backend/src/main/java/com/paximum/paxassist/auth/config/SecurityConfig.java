@@ -25,6 +25,8 @@ import com.paximum.paxassist.auth.security.AuthAccessDeniedHandler;
 import com.paximum.paxassist.auth.security.AuthEntryPoint;
 import com.paximum.paxassist.auth.security.JwtAuthenticationFilter;
 
+import jakarta.servlet.DispatcherType;
+
 /**
  * Central security filter chain for every endpoint in the monolith. Sits at the entry of the
  * ratelimiter -&gt; guard -&gt; orchestrator pipeline: stateless (JWT bearer only, no sessions),
@@ -62,6 +64,10 @@ public class SecurityConfig {
                         .authenticationEntryPoint(authEntryPoint)
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
+                        // Spring Boot'un /error yönlendirmesi (ERROR dispatch) güvenlikten muaf:
+                        // aksi halde eşlenmemiş/hatalı bir endpoint'in 404/500'ü, /error zincirde
+                        // kimliksiz göründüğü için 401'e dönüşüyor ve SPA geçerli oturumu düşürüyor.
+                        .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
                         .requestMatchers(
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/login",

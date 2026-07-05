@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { useFieldArray, useForm } from 'react-hook-form'
+import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { motion } from 'framer-motion'
 import { CheckCircle2, XCircle } from 'lucide-react'
@@ -12,10 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TiltedCard } from '@/components/TiltedCard'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { NativeSelect } from '@/components/ui/native-select'
+import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { Spinner } from '@/components/ui/spinner'
 import { useAppSelector } from '@/app/hooks'
-import { darkFieldClass, darkPrimaryButtonClass } from '@/lib/field-styles'
+import { darkFieldClass } from '@/lib/field-styles'
 import {
   emptyPassenger,
   reservationFormSchema,
@@ -93,14 +93,10 @@ export function ReservationFormPage() {
               </span>
             </div>
             <div className="flex justify-center gap-3">
-              <Button asChild className={darkPrimaryButtonClass}>
+              <Button asChild>
                 <Link to={`/reservations/${reservation.id}`}>Detayı gör</Link>
               </Button>
-              <Button
-                asChild
-                variant="outline"
-                className="border-white/15 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white"
-              >
+              <Button asChild variant="outline">
                 <Link to="/reservations">Rezervasyonlarım</Link>
               </Button>
             </div>
@@ -125,7 +121,7 @@ export function ReservationFormPage() {
               {create.error.message}
             </p>
             <div className="flex justify-center gap-3">
-              <Button className={darkPrimaryButtonClass} onClick={() => create.reset()}>
+              <Button onClick={() => create.reset()}>
                 Önizlemeye dön
               </Button>
               <Button
@@ -165,7 +161,6 @@ export function ReservationFormPage() {
               asChild
               variant="outline"
               size="sm"
-              className="border-white/15 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white"
             >
               <Link to={item.to}>{item.label}</Link>
             </Button>
@@ -226,7 +221,6 @@ export function ReservationFormPage() {
 
             <div className="flex gap-3">
               <Button
-                className={darkPrimaryButtonClass}
                 disabled={!confirmed || create.isPending}
                 onClick={() => create.mutate(request)}
               >
@@ -348,14 +342,23 @@ export function ReservationFormPage() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`passenger-${index}-type`}>Tip</Label>
-                    <NativeSelect
-                      id={`passenger-${index}-type`}
-                      className={darkFieldClass}
-                      {...register(`passengers.${index}.passengerType`)}
-                    >
-                      <option value="adult">Yetişkin</option>
-                      <option value="child">Çocuk</option>
-                    </NativeSelect>
+                    {/* RHF'e Controller ile bağlanır — DropdownSelect kontrollü
+                        (value/onChange) animasyonlu listbox'tır, register spread'i almaz. */}
+                    <Controller
+                      control={control}
+                      name={`passengers.${index}.passengerType`}
+                      render={({ field }) => (
+                        <DropdownSelect
+                          id={`passenger-${index}-type`}
+                          value={field.value}
+                          options={[
+                            { value: 'adult', label: 'Yetişkin' },
+                            { value: 'child', label: 'Çocuk' },
+                          ]}
+                          onChange={field.onChange}
+                        />
+                      )}
+                    />
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`passenger-${index}-age`}>Yaş (opsiyonel)</Label>
@@ -403,7 +406,6 @@ export function ReservationFormPage() {
             type="button"
             variant="outline"
             size="sm"
-            className="border-white/15 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white"
             onClick={() => append(emptyPassenger)}
           >
             Yolcu ekle
@@ -454,7 +456,7 @@ export function ReservationFormPage() {
             {preview.error.message}
           </p>
         )}
-        <Button type="submit" className={darkPrimaryButtonClass} disabled={preview.isPending}>
+        <Button type="submit" disabled={preview.isPending}>
           {preview.isPending ? (
             <>
               <Spinner size={16} decorative className="text-white" />

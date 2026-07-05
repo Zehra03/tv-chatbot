@@ -3,8 +3,9 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { ArrowRight, Eye, EyeOff, MapPin, Plane, Star, Wifi } from 'lucide-react'
 import heroImage from '@/assets/travel-hero.png'
 import hotelImage from '@/assets/hotel-room.png'
+import { authApi, type ApiError, type AuthResponse } from '@/api'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { login } from '@/features/auth/authSlice'
+import { guestSessionStarted, sessionStarted } from '@/features/auth/authSlice'
 import { FloatingInput } from '@/components/ui/floating-input'
 import { cn } from '@/lib/utils'
 
@@ -22,6 +23,12 @@ interface AuthScreenProps {
   onRegister?: (data: RegisterData) => void
   onGuestContinue?: () => void
   onForgotPassword?: () => void
+  /** API çağrısı sürerken submit butonları kilitlenir. */
+  submitting?: boolean
+  /** Backend'den dönen hata (ör. hatalı şifre) — form içi hatalarla aynı yerde gösterilir. */
+  errorMessage?: string
+  /** Mod değişince üstteki API hatasını temizlemek için. */
+  onModeSwitch?: () => void
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -30,6 +37,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
   onRegister = () => {},
   onGuestContinue = () => {},
   onForgotPassword = () => {},
+  submitting = false,
+  errorMessage = '',
+  onModeSwitch = () => {},
 }) => {
   const [mode, setMode] = useState<AuthMode>('login')
   const [fullName, setFullName] = useState('')
@@ -40,9 +50,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
   const [error, setError] = useState('')
 
   const isRegister = mode === 'register'
+  // Yerel form hatası öncelikli; yoksa API hatası gösterilir.
+  const shownError = error || errorMessage
 
   const switchMode = (next: AuthMode) => {
     setError('')
+    onModeSwitch()
     setMode(next)
   }
 
@@ -55,6 +68,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
     e.preventDefault()
     if (password !== confirmPassword) {
       setError('Şifreler eşleşmiyor.')
+      return
+    }
+    // Backend kuralıyla aynı (RegisterRequestDto @Size(min = 8)).
+    if (password.length < 8) {
+      setError('Şifre en az 8 karakter olmalıdır.')
       return
     }
     setError('')
@@ -327,9 +345,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   onChange={setConfirmPassword}
                 />
 
-                {error && (
+                {shownError && (
                   <p role="alert" className="text-xs text-destructive">
-                    {error}
+                    {shownError}
                   </p>
                 )}
 
@@ -337,9 +355,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
                   <button
                     type="submit"
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
+                    disabled={submitting}
+                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Kayıt Ol
+                    {submitting ? 'Kayıt yapılıyor…' : 'Kayıt Ol'}
                   </button>
                 </div>
               </form>
@@ -371,13 +390,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   </button>
                 </div>
 
+                {shownError && (
+                  <p role="alert" className="text-xs text-destructive">
+                    {shownError}
+                  </p>
+                )}
+
                 <div className="relative gooey-filter mt-12">
                   <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
                   <button
                     type="submit"
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
+                    disabled={submitting}
+                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Giriş Yap
+                    {submitting ? 'Giriş yapılıyor…' : 'Giriş Yap'}
                   </button>
                 </div>
 
@@ -409,33 +435,52 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
 }
 
 /**
- * Mock kimlik doğrulama akışını bağlar (docs/frontend-architecture.md §3, §5):
- * giriş / kayıt / misafir → kullanıcıyı Redux'a yazar ve /chat'e yönlendirir.
- * Zaten oturum açıksa doğrudan /chat'e gider. Gerçek doğrulama backend'de;
- * şifre burada doğrulanmaz (mock) ve hiçbir sır saklanmaz.
+ * Kimlik doğrulama akışını backend'e bağlar (docs/frontend-architecture.md §3, §5):
+ * giriş / kayıt → POST /api/v1/auth/login|register; dönen { user, token }
+ * Redux'a yazılır (authSlice jetonu Axios'a ve localStorage'a aynalar) ve
+ * /chat'e yönlendirilir. Misafir jetonsuz yerel oturumdur — backend'e gitmez.
+ * Şifre burada saklanmaz; doğrulama tamamen backend'dedir.
  */
 export default function LoginPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const user = useAppSelector((s) => s.auth.user)
+  const [submitting, setSubmitting] = useState(false)
+  const [apiError, setApiError] = useState('')
 
   // Oturum açıkken /login'e gelinirse uygulamaya geri dön.
   if (user) return <Navigate to="/chat" replace />
 
   const goToApp = () => navigate('/chat', { replace: true })
 
+  const runAuth = async (call: () => Promise<AuthResponse>) => {
+    if (submitting) return
+    setSubmitting(true)
+    setApiError('')
+    try {
+      const response = await call()
+      dispatch(sessionStarted(response))
+      goToApp()
+    } catch (err) {
+      setApiError((err as ApiError).message || 'İşlem başarısız — lütfen tekrar deneyin.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <AuthScreen
-      onLogin={(email) => {
-        dispatch(login({ email }))
-        goToApp()
+      submitting={submitting}
+      errorMessage={apiError}
+      onModeSwitch={() => setApiError('')}
+      onLogin={(email, password) => {
+        void runAuth(() => authApi.login({ email, password }))
       }}
-      onRegister={({ email, fullName }) => {
-        dispatch(login({ email, name: fullName }))
-        goToApp()
+      onRegister={({ email, fullName, password }) => {
+        void runAuth(() => authApi.register({ email, password, name: fullName || undefined }))
       }}
       onGuestContinue={() => {
-        dispatch(login({ email: '', name: 'Misafir', guest: true }))
+        dispatch(guestSessionStarted())
         goToApp()
       }}
     />

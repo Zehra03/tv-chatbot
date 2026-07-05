@@ -43,7 +43,7 @@ export function Composer({ onSend, disabled, placeholder }: ComposerProps) {
       <Button
         type="submit"
         disabled={disabled || !text.trim()}
-        className="h-11 rounded-xl bg-gradient-to-r from-brand-blue to-brand-teal text-white shadow-[0_4px_16px_theme(colors.brand.teal/30%)] transition-shadow hover:shadow-[0_4px_24px_theme(colors.brand.teal/45%)]"
+        className="h-11 rounded-xl"
       >
         <Send className="h-4 w-4" />
         Gönder

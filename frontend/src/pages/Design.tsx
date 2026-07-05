@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { FloatingInput } from '@/components/ui/floating-input'
+import DarkVeil from '@/components/DarkVeil'
+import { AnimatedAIChat } from '@/components/ui/animated-ai-chat'
 
 /**
  * /design — the design playground.
@@ -86,7 +88,9 @@ export default function Design() {
         </Section>
 
         <Section title="Gece Uçuşu — koyu yüzey (AI bölgesi)">
-          <div className="space-y-8 rounded-3xl bg-brand-navy p-8">
+          {/* 'dark': Layout AI bölgesinde token'ları koyuya çevirir; playground
+              aynı koşulda render etsin ki buton/kart önizlemeleri gerçeğe uysun. */}
+          <div className="dark space-y-8 rounded-3xl bg-brand-navy p-8">
             <div className="space-y-1">
               <h3 className="text-2xl font-bold tracking-tight text-gradient-brand">
                 Gece uçuşuna hoş geldin
@@ -135,6 +139,15 @@ export default function Design() {
               </button>
             </div>
 
+            {/* Ortak Button — koyu yüzeyde liquid glass variant önizlemesi. */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Button>Rezervasyona git</Button>
+              <Button variant="secondary">Otelleri filtrele</Button>
+              <Button variant="outline">Daha fazla göster</Button>
+              <Button variant="ghost">İptal</Button>
+              <Button variant="destructive">Sil</Button>
+            </div>
+
             {/* Koyu drop zone — Magic/shadcn üretimi bileşenler önce buraya. */}
             <div className="rounded-xl border border-dashed border-white/20 p-8">
               <p className="text-center text-sm text-brand-ice/60">
@@ -156,6 +169,24 @@ export default function Design() {
               <Button variant="outline">Daha fazla göster</Button>
               <Button variant="ghost">İptal</Button>
               <Button variant="destructive">Sil</Button>
+            </div>
+
+            {/* Deneme: React Bits DarkVeil arka planı — hero adayı */}
+            <div className="relative h-80 overflow-hidden rounded-xl border">
+              <DarkVeil hueShift={25} />
+              {/* dark: koyu görsel üstündeki buton/metin token'ları koyu bölgeyle uysun. */}
+              <div className="dark absolute inset-0 flex flex-col items-center justify-center gap-2">
+                <p className="text-3xl font-semibold text-white">Gece uçuşuna hazır mısın?</p>
+                <p className="text-sm text-white/70">
+                  DarkVeil — @react-bits arka planı, hero denemesi
+                </p>
+                <Button className="mt-2">Uçuş ara</Button>
+              </div>
+            </div>
+
+            {/* Deneme: 21st.dev Animated AI Chat (jatin-yadav05) — chat arayüzü adayı */}
+            <div className="h-[640px] overflow-hidden rounded-3xl bg-brand-navy">
+              <AnimatedAIChat />
             </div>
           </div>
         </Section>
