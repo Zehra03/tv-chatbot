@@ -13,9 +13,31 @@ export interface ApiError {
   message: string
 }
 
+/**
+ * Jetonlu bir istek 401 dönünce yayınlanan olay — SessionManager (providers.tsx)
+ * dinler ve Redux oturumunu kapatır. Store'u buradan import etmek döngü yaratırdı;
+ * olay köprüsü katmanları ayrık tutar.
+ */
+export const UNAUTHORIZED_EVENT = 'pax:unauthorized'
+
+let authToken: string | null = null
+
+/**
+ * Oturum jetonunu istemciye tanıtır (null = oturum kapalı). Tek çağıran
+ * authSlice'tır; jeton OPAK'tır, içeriği burada yorumlanmaz (CLAUDE.md).
+ */
+export function setAuthToken(token: string | null) {
+  authToken = token
+}
+
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   headers: { 'Content-Type': 'application/json' },
+})
+
+apiClient.interceptors.request.use((config) => {
+  if (authToken) config.headers.Authorization = `Bearer ${authToken}`
+  return config
 })
 
 /**
@@ -45,8 +67,19 @@ apiClient.interceptors.response.use(
     return response
   },
   (error: AxiosError<{ message?: string }>) => {
+    const status = error.response?.status ?? null
+
+    // Elimizde jeton varken gelen 401 = oturum düşmüş (süre dolumu / geçersiz
+    // jeton). Login/register'ın kendi 401'i (hatalı şifre) oturum düşmesi
+    // değildir — o formda inline gösterilir.
+    const url = error.config?.url ?? ''
+    const isAuthAttempt = url.includes('/auth/login') || url.includes('/auth/register')
+    if (status === 401 && authToken && !isAuthAttempt && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+    }
+
     const normalized: ApiError = {
-      status: error.response?.status ?? null,
+      status,
       message:
         error.response?.data?.message ?? error.message ?? 'Beklenmeyen bir hata oluştu.',
     }

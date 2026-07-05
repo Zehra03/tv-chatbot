@@ -158,7 +158,6 @@ export function ProfilePage() {
               asChild
               variant="outline"
               size="sm"
-              className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
             >
               <Link to="/reservations">Rezervasyonlara git</Link>
             </Button>
@@ -187,7 +186,6 @@ export function ProfilePage() {
               asChild
               variant="outline"
               size="sm"
-              className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
             >
               <Link to="/chat">Sohbete dön</Link>
             </Button>
@@ -200,7 +198,7 @@ export function ProfilePage() {
         <Button
           variant="outline"
           onClick={handleLogout}
-          className="gap-2 border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-destructive hover:bg-destructive/20 hover:text-white"
+          className="gap-2 hover:border-destructive hover:bg-destructive/20 hover:text-white"
         >
           <LogOut className="h-4 w-4" aria-hidden />
           Çıkış yap

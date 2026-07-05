@@ -1,10 +1,13 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
-import { authApi, reservationApi } from '@/api'
+import { authApi, reservationApi, setAuthToken, UNAUTHORIZED_EVENT } from '@/api'
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
-afterEach(() => server.resetHandlers())
+afterEach(() => {
+  server.resetHandlers()
+  setAuthToken(null)
+})
 afterAll(() => server.close())
 
 /**
@@ -50,5 +53,69 @@ describe('apiClient interceptor (MSW ile)', () => {
       status: 500,
       message: 'Sunucu hatası.',
     })
+  })
+
+  it('setAuthToken sonrası istekler Authorization: Bearer başlığı taşır', async () => {
+    let seenHeader: string | null = null
+    server.use(
+      http.get('/api/v1/auth/me', ({ request }) => {
+        seenHeader = request.headers.get('Authorization')
+        return HttpResponse.json({ id: '1', email: 'a@b.c' })
+      }),
+    )
+
+    setAuthToken('jwt-123')
+    await authApi.me()
+
+    expect(seenHeader).toBe('Bearer jwt-123')
+  })
+
+  it('jetonsuz isteklerde Authorization başlığı gönderilmez', async () => {
+    let seenHeader: string | null = 'sentinel'
+    server.use(
+      http.get('/api/v1/auth/me', ({ request }) => {
+        seenHeader = request.headers.get('Authorization')
+        return HttpResponse.json({ id: '1', email: 'a@b.c' })
+      }),
+    )
+
+    await authApi.me()
+
+    expect(seenHeader).toBeNull()
+  })
+
+  it('jetonlu istek 401 dönünce UNAUTHORIZED_EVENT yayınlar', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ message: 'Jeton süresi doldu.' }, { status: 401 }),
+      ),
+    )
+    const listener = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, listener)
+
+    setAuthToken('jwt-eski')
+    await expect(authApi.me()).rejects.toMatchObject({ status: 401 })
+    window.removeEventListener(UNAUTHORIZED_EVENT, listener)
+
+    expect(listener).toHaveBeenCalledTimes(1)
+  })
+
+  it('login’in kendi 401’i (hatalı şifre) oturum-düşmesi olayı YAYINLAMAZ', async () => {
+    server.use(
+      http.post('/api/v1/auth/login', () =>
+        HttpResponse.json({ message: 'Invalid email or password' }, { status: 401 }),
+      ),
+    )
+    const listener = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, listener)
+
+    // Süresi dolmuş bir jetonla yeniden giriş denemesi senaryosu.
+    setAuthToken('jwt-eski')
+    await expect(authApi.login({ email: 'a@b.c', password: 'yanlis' })).rejects.toMatchObject({
+      status: 401,
+    })
+    window.removeEventListener(UNAUTHORIZED_EVENT, listener)
+
+    expect(listener).not.toHaveBeenCalled()
   })
 })
