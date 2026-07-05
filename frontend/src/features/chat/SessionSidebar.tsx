@@ -31,7 +31,7 @@ export function SessionSidebar() {
         type="button"
         variant="outline"
         size="sm"
-        className="w-full justify-start gap-2 border-white/15 bg-white/5 text-brand-ice hover:border-brand-teal hover:bg-white/10 hover:text-white"
+        className="w-full justify-start gap-2"
         onClick={() => dispatch(chatReset())}
       >
         <MessageSquarePlus className="h-4 w-4" aria-hidden />

@@ -133,14 +133,17 @@ Textarea.displayName = "Textarea"
  * Kendi arka plan katmanı YOK: kök şeffaftır, Layout'taki NightSkyBackground
  * arkadan görünür. `onSend` verilirse gerçek akışa bağlanır (Composer ile aynı
  * sözleşme); verilmezse playground için gönderimi simüle eder.
+ * `hero=false` (thread modu): başlık ve hızlı eylemler kapanır, aynı cam kart
+ * alta inip kalıcı composer olur — ilk mesajda bileşen sökülmez, bozulmaz.
  */
 interface AnimatedAIChatProps {
     onSend?: (text: string) => void;
     disabled?: boolean;
     placeholder?: string;
+    hero?: boolean;
 }
 
-export function AnimatedAIChat({ onSend, disabled, placeholder }: AnimatedAIChatProps = {}) {
+export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: AnimatedAIChatProps = {}) {
     const [value, setValue] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [, startTransition] = useTransition();
@@ -283,47 +286,62 @@ export function AnimatedAIChat({ onSend, disabled, placeholder }: AnimatedAIChat
 
     // Orijinali min-h-screen + kendi blob katmanı; kök h-full/şeffaf yapıldı,
     // blob'lar kaldırıldı — sayfanın NightSkyBackground'u arkadan görünür.
+    // Thread modunda (hero=false) kök dikeyde büyümez, palet yukarı taşabilsin
+    // diye overflow serbest kalır.
     return (
-        <div className="h-full min-h-full flex flex-col w-full items-center justify-center bg-transparent text-white p-6 relative overflow-hidden">
-            <div className="w-full max-w-2xl mx-auto relative">
-                <motion.div 
+        <div className={cn(
+            "flex flex-col w-full items-center bg-transparent text-white relative",
+            hero && "h-full min-h-full flex-1 justify-center p-6 overflow-hidden"
+        )}>
+            <div className={cn("w-full mx-auto relative", hero && "max-w-2xl")}>
+                <motion.div
                     className="relative z-10 space-y-12"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.6, ease: "easeOut" }}
                 >
-                    <div className="text-center space-y-3">
-                        <motion.div
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.2, duration: 0.5 }}
-                            className="inline-block"
-                        >
-                            <h1 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white/90 to-white/40 pb-1">
-                                Bugün nereye gidiyoruz?
-                            </h1>
-                            <motion.div 
-                                className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                                initial={{ width: 0, opacity: 0 }}
-                                animate={{ width: "100%", opacity: 1 }}
-                                transition={{ delay: 0.5, duration: 0.8 }}
-                            />
-                        </motion.div>
-                        <motion.p 
-                            className="text-sm text-white/40"
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: 0.3 }}
-                        >
-                            Bir komut yazın ya da sorunuzu sorun
-                        </motion.p>
-                    </div>
+                    <AnimatePresence>
+                        {hero && (
+                            <motion.div
+                                key="hero-header"
+                                className="text-center space-y-3 overflow-hidden"
+                                exit={{ opacity: 0, height: 0, y: -8 }}
+                                transition={{ duration: 0.25, ease: "easeIn" }}
+                            >
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.2, duration: 0.5 }}
+                                    className="inline-block"
+                                >
+                                    <h1 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white/90 to-white/40 pb-1">
+                                        Bugün nereye gidiyoruz?
+                                    </h1>
+                                    <motion.div
+                                        className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                        initial={{ width: 0, opacity: 0 }}
+                                        animate={{ width: "100%", opacity: 1 }}
+                                        transition={{ delay: 0.5, duration: 0.8 }}
+                                    />
+                                </motion.div>
+                                <motion.p
+                                    className="text-sm text-white/40"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.3 }}
+                                >
+                                    Bir komut yazın ya da sorunuzu sorun
+                                </motion.p>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                    <motion.div 
+                    <motion.div
+                        layout
                         className="relative backdrop-blur-2xl bg-white/[0.02] rounded-2xl border border-white/[0.05] shadow-2xl"
                         initial={{ scale: 0.98 }}
                         animate={{ scale: 1 }}
-                        transition={{ delay: 0.1 }}
+                        transition={{ delay: 0.1, layout: { duration: 0.35, ease: "easeOut" } }}
                     >
                         <AnimatePresence>
                             {showCommandPalette && (
@@ -441,33 +459,42 @@ export function AnimatedAIChat({ onSend, disabled, placeholder }: AnimatedAIChat
                         </div>
                     </motion.div>
 
-                    <div className="flex flex-wrap items-center justify-center gap-2">
-                        {commandSuggestions.map((suggestion, index) => (
-                            <motion.button
-                                key={suggestion.prefix}
-                                onClick={() => selectCommandSuggestion(index)}
-                                className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] rounded-lg text-sm text-white/60 hover:text-white/90 transition-all relative group"
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: index * 0.1 }}
+                    <AnimatePresence>
+                        {hero && (
+                            <motion.div
+                                key="quick-actions"
+                                className="flex flex-wrap items-center justify-center gap-2 overflow-hidden"
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.25, ease: "easeIn" }}
                             >
-                                {suggestion.icon}
-                                <span>{suggestion.label}</span>
-                                <motion.div
-                                    className="absolute inset-0 border border-white/[0.05] rounded-lg"
-                                    initial={false}
-                                    animate={{
-                                        opacity: [0, 1],
-                                        scale: [0.98, 1],
-                                    }}
-                                    transition={{
-                                        duration: 0.3,
-                                        ease: "easeOut",
-                                    }}
-                                />
-                            </motion.button>
-                        ))}
-                    </div>
+                                {commandSuggestions.map((suggestion, index) => (
+                                    <motion.button
+                                        key={suggestion.prefix}
+                                        onClick={() => selectCommandSuggestion(index)}
+                                        className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] rounded-lg text-sm text-white/60 hover:text-white/90 transition-all relative group"
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: index * 0.1 }}
+                                    >
+                                        {suggestion.icon}
+                                        <span>{suggestion.label}</span>
+                                        <motion.div
+                                            className="absolute inset-0 border border-white/[0.05] rounded-lg"
+                                            initial={false}
+                                            animate={{
+                                                opacity: [0, 1],
+                                                scale: [0.98, 1],
+                                            }}
+                                            transition={{
+                                                duration: 0.3,
+                                                ease: "easeOut",
+                                            }}
+                                        />
+                                    </motion.button>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </motion.div>
             </div>
 

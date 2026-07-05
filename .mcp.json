@@ -6,7 +6,7 @@
     },
     "shadcn": {
       "command": "cmd",
-      "args": ["/c", "cd /d \"%CLAUDE_PROJECT_DIR%\\frontend\" && npx -y shadcn@latest mcp"]
+      "args": ["/c", "frontend\\shadcn-mcp.cmd"]
     },
     "magic": {
       "command": "npx",

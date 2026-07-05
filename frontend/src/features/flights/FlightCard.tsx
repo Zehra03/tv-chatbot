@@ -65,7 +65,7 @@ export function FlightCard({ product }: { product: FlightProduct }) {
           </div>
           <Button
             size="sm"
-            className="rounded-full bg-gradient-to-r from-brand-blue to-brand-teal px-5 text-white shadow-[0_2px_12px_theme(colors.brand.teal/30%)] transition-shadow hover:shadow-[0_2px_20px_theme(colors.brand.teal/50%)]"
+            className="rounded-full px-5"
             aria-label={`${product.airline} ${product.origin} ${product.destination} uçuşunu seç`}
             onClick={() =>
               select({

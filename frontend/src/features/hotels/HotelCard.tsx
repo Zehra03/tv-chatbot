@@ -44,7 +44,7 @@ export function HotelCard({ product }: { product: HotelProduct }) {
           <Button
             size="sm"
             disabled={!product.availability}
-            className="rounded-full bg-gradient-to-r from-brand-blue to-brand-teal px-5 text-white shadow-[0_2px_12px_theme(colors.brand.teal/30%)] transition-shadow hover:shadow-[0_2px_20px_theme(colors.brand.teal/50%)]"
+            className="rounded-full px-5"
             aria-label={`${product.hotelName} otelini seç`}
             onClick={() =>
               select({

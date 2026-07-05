@@ -3,6 +3,7 @@ import { useAppSelector } from '@/app/hooks'
 import type { ZoneHandle } from '@/app/zones'
 import { Layout } from '@/components/Layout'
 import LoginPage from '@/features/auth/LoginPage'
+import LandingPage from '@/pages/LandingPage'
 import Design from '@/pages/Design'
 import { RouteErrorPage } from '@/pages/RouteErrorPage'
 import { ChatPage } from '@/features/chat/ChatPage'
@@ -30,6 +31,9 @@ export const routes: RouteObject[] = [
     // hata ekranı yerine RouteErrorPage görünür (chrome'suz, tam sayfa).
     errorElement: <RouteErrorPage />,
     children: [
+      // Herkese açık tanıtım sayfası; tüm CTA'ları /chat'e akar (oturum yoksa
+      // ProtectedRoute /login'e düşürür).
+      { path: '/', element: <LandingPage /> },
       { path: '/login', element: <LoginPage /> },
       // Tasarım playground'u — korumasız, screenshot/iterasyon hedefi.
       { path: '/design', element: <Design /> },
@@ -45,7 +49,8 @@ export const routes: RouteObject[] = [
                 // render olur, header/nav korunur.
                 errorElement: <RouteErrorPage />,
                 children: [
-                  { index: true, element: <Navigate to="/chat" replace /> },
+                  // '/' artık herkese açık LandingPage'in — korumalı index
+                  // yönlendirmesi kaldırıldı ki iki rota aynı yolu yarıştırmasın.
                   // Bölge işaretleri (src/app/zones.ts): sahibin kararıyla TÜM rotalar
                   // koyu gece uçuşu yüzeyinde ('ai'). "AI devre dışı" anlatısı artık
                   // yüzey rengiyle değil AiOffBanner ile verilir; 'controlled' mekanizması
