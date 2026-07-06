@@ -3,8 +3,10 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import { ArrowRight, Eye, EyeOff, MapPin, Plane, Star, Wifi } from 'lucide-react'
 import heroImage from '@/assets/travel-hero.png'
 import hotelImage from '@/assets/hotel-room.png'
+import { authApi, type ApiError, type AuthResponse } from '@/api'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { login } from '@/features/auth/authSlice'
+import { guestSessionStarted, sessionStarted } from '@/features/auth/authSlice'
+import { FloatingInput } from '@/components/ui/floating-input'
 import { cn } from '@/lib/utils'
 
 type AuthMode = 'login' | 'register'
@@ -21,40 +23,12 @@ interface AuthScreenProps {
   onRegister?: (data: RegisterData) => void
   onGuestContinue?: () => void
   onForgotPassword?: () => void
-}
-
-/** Shared floating-label input — keeps the login/register fields visually identical. */
-interface FloatingInputProps {
-  id: string
-  label: string
-  value: string
-  onChange: (value: string) => void
-  type?: string
-  trailing?: React.ReactNode
-}
-
-function FloatingInput({ id, label, value, onChange, type = 'text', trailing }: FloatingInputProps) {
-  return (
-    <div className="relative z-0 form-group-animated">
-      <input
-        type={type}
-        id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={`block py-2.5 px-0 w-full text-sm text-white bg-transparent border-0 border-b-2 border-brand-ice/30 appearance-none focus:outline-none focus:ring-0 focus:border-brand-teal peer${trailing ? ' pr-8' : ''}`}
-        placeholder=" "
-        required
-      />
-      <label
-        htmlFor={id}
-        className="absolute text-xs text-brand-ice/60 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-brand-teal peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 uppercase tracking-wider font-mono"
-      >
-        {label}
-      </label>
-      <div className="input-glow-bar"></div>
-      {trailing}
-    </div>
-  )
+  /** API çağrısı sürerken submit butonları kilitlenir. */
+  submitting?: boolean
+  /** Backend'den dönen hata (ör. hatalı şifre) — form içi hatalarla aynı yerde gösterilir. */
+  errorMessage?: string
+  /** Mod değişince üstteki API hatasını temizlemek için. */
+  onModeSwitch?: () => void
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({
@@ -63,6 +37,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
   onRegister = () => {},
   onGuestContinue = () => {},
   onForgotPassword = () => {},
+  submitting = false,
+  errorMessage = '',
+  onModeSwitch = () => {},
 }) => {
   const [mode, setMode] = useState<AuthMode>('login')
   const [fullName, setFullName] = useState('')
@@ -73,9 +50,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
   const [error, setError] = useState('')
 
   const isRegister = mode === 'register'
+  // Yerel form hatası öncelikli; yoksa API hatası gösterilir.
+  const shownError = error || errorMessage
 
   const switchMode = (next: AuthMode) => {
     setError('')
+    onModeSwitch()
     setMode(next)
   }
 
@@ -88,6 +68,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
     e.preventDefault()
     if (password !== confirmPassword) {
       setError('Şifreler eşleşmiyor.')
+      return
+    }
+    // Backend kuralıyla aynı (RegisterRequestDto @Size(min = 8)).
+    if (password.length < 8) {
+      setError('Şifre en az 8 karakter olmalıdır.')
       return
     }
     setError('')
@@ -138,60 +123,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
 
   return (
     <div className="min-h-screen lg:h-screen w-full flex overflow-hidden bg-brand-navy">
-      <style>{`
-        @keyframes mercuryFloat {
-          0% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(10vw, 20vh) scale(1.2); }
-          66% { transform: translate(-5vw, 10vh) scale(0.8); }
-          100% { transform: translate(5vw, -10vh) scale(1.1); }
-        }
-
-        .mercury-blob {
-          position: absolute;
-          border-radius: 50%;
-          filter: blur(40px);
-          animation: mercuryFloat 20s infinite alternate ease-in-out;
-          transition: margin 0.1s ease-out;
-          opacity: 0.3;
-        }
-
-        .gooey-filter {
-          filter: url(#gooey);
-        }
-
-        .form-group-animated {
-          transition: transform 0.4s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-
-        .form-group-animated:focus-within {
-          transform: translateX(8px);
-        }
-
-        .input-glow-bar {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          width: 0%;
-          height: 2px;
-          background: linear-gradient(90deg, #17D6C3, #2E8FFF);
-          transition: width 0.6s cubic-bezier(0.2, 1, 0.3, 1);
-          box-shadow: 0 0 15px #17D6C3;
-        }
-
-        .form-group-animated:focus-within .input-glow-bar {
-          width: 100%;
-        }
-
-        /* Sağ kart içeriği mod değişince yumuşakça belirir. */
-        @keyframes authPanelFade {
-          from { opacity: 0; transform: translateY(10px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .auth-panel-anim {
-          animation: authPanelFade 0.5s cubic-bezier(0.2, 1, 0.3, 1);
-        }
-      `}</style>
-
       <svg className="absolute w-0 h-0">
         <defs>
           <filter id="gooey">
@@ -334,7 +265,14 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
               ref={(el) => {
                 blobRefs.current[index] = el
               }}
-              className="mercury-blob"
+              className={cn(
+                'mercury-blob',
+                index % 3 === 0
+                  ? 'mercury-blob--a'
+                  : index % 3 === 1
+                    ? 'mercury-blob--b'
+                    : 'mercury-blob--c',
+              )}
               style={{
                 width: `${data.size}px`,
                 height: `${data.size}px`,
@@ -342,14 +280,6 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 top: `${data.top}%`,
                 animationDelay: `${data.animationDelay}s`,
                 animationDuration: `${data.animationDuration}s`,
-                background:
-                  index % 3 === 0
-                    ? 'linear-gradient(135deg, #2E8FFF, #8B8CFF)'
-                    : index % 3 === 1
-                      ? 'linear-gradient(135deg, #17D6C3, #A9E9FF)'
-                      : 'linear-gradient(135deg, #8B8CFF, #2E8FFF)',
-                boxShadow:
-                  'inset -10px -10px 30px rgba(0,0,0,0.3), 10px 10px 40px rgba(46, 143, 255, 0.2)',
               }}
             />
           ))}
@@ -376,13 +306,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
           {/* Mod'a göre değişen içerik — geçişte fade animasyonu. */}
           <div key={mode} className="auth-panel-anim">
             <div className="space-y-2 text-center mb-8">
-              <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
-                {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
+              <h1 className="font-science-gothic text-3xl font-extralight tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
+            
               </h1>
-              <p className="text-sm text-brand-ice/80">
-                {isRegister
-                  ? 'Aramıza katıl, seyahatini planlamaya başla.'
-                  : 'Devam etmek için giriş yap.'}
+              <p className="font-science-gothic text-sm font-light text-brand-ice/80">
+             
               </p>
             </div>
 
@@ -417,9 +345,9 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   onChange={setConfirmPassword}
                 />
 
-                {error && (
+                {shownError && (
                   <p role="alert" className="text-xs text-destructive">
-                    {error}
+                    {shownError}
                   </p>
                 )}
 
@@ -427,9 +355,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
                   <button
                     type="submit"
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
+                    disabled={submitting}
+                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Kayıt Ol
+                    {submitting ? 'Kayıt yapılıyor…' : 'Kayıt Ol'}
                   </button>
                 </div>
               </form>
@@ -461,13 +390,20 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   </button>
                 </div>
 
+                {shownError && (
+                  <p role="alert" className="text-xs text-destructive">
+                    {shownError}
+                  </p>
+                )}
+
                 <div className="relative gooey-filter mt-12">
                   <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
                   <button
                     type="submit"
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
+                    disabled={submitting}
+                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    Giriş Yap
+                    {submitting ? 'Giriş yapılıyor…' : 'Giriş Yap'}
                   </button>
                 </div>
 
@@ -499,33 +435,52 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
 }
 
 /**
- * Mock kimlik doğrulama akışını bağlar (docs/frontend-architecture.md §3, §5):
- * giriş / kayıt / misafir → kullanıcıyı Redux'a yazar ve /chat'e yönlendirir.
- * Zaten oturum açıksa doğrudan /chat'e gider. Gerçek doğrulama backend'de;
- * şifre burada doğrulanmaz (mock) ve hiçbir sır saklanmaz.
+ * Kimlik doğrulama akışını backend'e bağlar (docs/frontend-architecture.md §3, §5):
+ * giriş / kayıt → POST /api/v1/auth/login|register; dönen { user, token }
+ * Redux'a yazılır (authSlice jetonu Axios'a ve localStorage'a aynalar) ve
+ * /chat'e yönlendirilir. Misafir jetonsuz yerel oturumdur — backend'e gitmez.
+ * Şifre burada saklanmaz; doğrulama tamamen backend'dedir.
  */
 export default function LoginPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const user = useAppSelector((s) => s.auth.user)
+  const [submitting, setSubmitting] = useState(false)
+  const [apiError, setApiError] = useState('')
 
   // Oturum açıkken /login'e gelinirse uygulamaya geri dön.
   if (user) return <Navigate to="/chat" replace />
 
   const goToApp = () => navigate('/chat', { replace: true })
 
+  const runAuth = async (call: () => Promise<AuthResponse>) => {
+    if (submitting) return
+    setSubmitting(true)
+    setApiError('')
+    try {
+      const response = await call()
+      dispatch(sessionStarted(response))
+      goToApp()
+    } catch (err) {
+      setApiError((err as ApiError).message || 'İşlem başarısız — lütfen tekrar deneyin.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <AuthScreen
-      onLogin={(email) => {
-        dispatch(login({ email }))
-        goToApp()
+      submitting={submitting}
+      errorMessage={apiError}
+      onModeSwitch={() => setApiError('')}
+      onLogin={(email, password) => {
+        void runAuth(() => authApi.login({ email, password }))
       }}
-      onRegister={({ email, fullName }) => {
-        dispatch(login({ email, name: fullName }))
-        goToApp()
+      onRegister={({ email, fullName, password }) => {
+        void runAuth(() => authApi.register({ email, password, name: fullName || undefined }))
       }}
       onGuestContinue={() => {
-        dispatch(login({ email: '', name: 'Misafir', guest: true }))
+        dispatch(guestSessionStarted())
         goToApp()
       }}
     />

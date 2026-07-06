@@ -43,9 +43,23 @@ management:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  # Hotel modülünün TourVisio istemcisi (@Profile("!mock")) app.tourvisio.* bekler;
+  # flight modülü ise kök tourvisio.* okur. İkisi de aynı env değişkenlerinden beslenir —
+  # bu blok olmadan dev profili "Could not resolve placeholder 'app.tourvisio.url'" ile açılamıyor.
+  tourvisio:
+    url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
+    agency: ${TOURVISIO_AGENCY:}
+    user: ${TOURVISIO_USER:}
+    password: ${TOURVISIO_PASSWORD:}
   rate-limit:
     max-requests: 60
     window-seconds: 60
+  auth:
+    jwt:
+      # Dev-only default; production MUST override via AUTH_JWT_SECRET (never commit a real secret).
+      secret: ${AUTH_JWT_SECRET:dev-only-insecure-secret-change-me-please-32bytes+}
+      expiration-minutes: ${AUTH_JWT_EXPIRATION_MINUTES:60}
+      issuer: paxassist
   cache:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5

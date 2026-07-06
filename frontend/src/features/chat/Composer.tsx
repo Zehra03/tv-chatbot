@@ -27,15 +27,24 @@ export function Composer({ onSend, disabled, placeholder }: ComposerProps) {
 
   return (
     <form onSubmit={handleSubmit} className="flex gap-2">
-      <Input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder={placeholder ?? 'Mesajınızı yazın…'}
-        disabled={disabled}
-        aria-label="Mesaj"
-        autoComplete="off"
-      />
-      <Button type="submit" disabled={disabled || !text.trim()}>
+      {/* glow-group: odakta input altındaki teal çizgi 0→%100 genişler (index.css). */}
+      <div className="glow-group relative flex-1">
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={placeholder ?? 'Mesajınızı yazın…'}
+          disabled={disabled}
+          aria-label="Mesaj"
+          autoComplete="off"
+          className="h-11 rounded-xl border-white/15 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-brand-teal"
+        />
+        <div className="input-glow-bar" aria-hidden="true"></div>
+      </div>
+      <Button
+        type="submit"
+        disabled={disabled || !text.trim()}
+        className="h-11 rounded-xl"
+      >
         <Send className="h-4 w-4" />
         Gönder
       </Button>

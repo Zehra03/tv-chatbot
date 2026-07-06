@@ -14,6 +14,10 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        // Login karşılama başlıkları — Science Gothic değişken font (100..900).
+        'science-gothic': ['Science Gothic', 'sans-serif'],
+        // FloatingInput etiketleri `font-mono` kullanıyor — kontrollü sistem yığını.
+        mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace'],
       },
       colors: {
         // Fixed brand identity palette (does NOT theme-switch). Single source of
@@ -90,6 +94,11 @@ export default {
           '50%': { transform: 'translateY(50%)' },
           '100%': { transform: 'translateY(-50%)' },
         },
+        // Skeleton yükleme parıltısı (bg-[length:200%_100%] gradyanla kullanılır).
+        shimmer: {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
@@ -99,6 +108,7 @@ export default {
         third: 'moveInCircle 40s linear infinite',
         fourth: 'moveHorizontal 40s ease infinite',
         fifth: 'moveInCircle 20s ease infinite',
+        shimmer: 'shimmer 1.8s linear infinite',
       },
     },
   },
