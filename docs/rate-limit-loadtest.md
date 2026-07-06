@@ -6,23 +6,32 @@ Testcontainers integration test for the fail-open path.
 - Simulations: `backend/src/test/java/com/paximum/paxassist/ratelimiter/loadtest/`
 - Fail-open test: `backend/src/test/java/com/paximum/paxassist/ratelimiter/RateLimiterFailOpenIntegrationTest.java`
 - Profile: `backend/src/main/resources/application-loadtest.yml`
-  (`/api/search/**` capacity 10 / refill 10 per 60s, `/actuator/health` excluded,
-  `fail-open: true`). The profile also excludes the JDBC/JPA/Flyway stack so the app
-  boots with only Redis + web.
+  (`/api/search/**` capacity 10 / refill 10 per 60s, `/actuator/health` and
+  `/api/v1/auth/**` excluded, `fail-open: true`). The profile boots against an
+  in-memory **H2** database (no external Postgres) — the always-on security layer needs a
+  real `UserRepository`, so the JPA stack stays enabled; **Redis** is still the only
+  external service the scenarios exercise.
+
+Rate limit buckets are keyed by the **authenticated principal** (the user's email),
+resolved from the `SecurityContext` — not by client IP. Every scenario therefore
+registers its own test user(s) over `/api/v1/auth/register`, captures the returned JWT,
+and sends it as `Authorization: Bearer <token>`. `/api/search/test` now requires
+authentication, so an unauthenticated request gets 401, not 200.
 
 ## Scenarios
 
 | # | Simulation class | Asserts |
 |---|------------------|---------|
 | 1 | `SingleKeyBreachSimulation` | first `capacity` requests → 200, the rest → 429 |
-| 2 | `IndependentKeysSimulation` | each distinct `X-Forwarded-For` gets its own limit; no cross-key 429 |
+| 2 | `IndependentKeysSimulation` | each distinct authenticated user gets its own limit; no cross-key 429 |
 | 3 | `RefillSimulation` | exhaust, wait `retryAfterSeconds` from the 429 body, next request → 200 |
 | 4 | `ExcludedPathSimulation` | `/actuator/health` never returns 429 under load |
 | 5 | `RateLimiterFailOpenIntegrationTest` (JUnit, not Gatling) | Redis stopped → 200 + `ratelimit.fail_open` counter increments (asserted via MeterRegistry) |
 
-Scenario 2 varies the key via `X-Forwarded-For` because the temporary resolver reads
-that header (falling back to the socket address). This mirrors a real
-proxy/load-balancer deployment and is only needed until the Security-based resolver lands.
+Scenario 2 varies the key by registering a distinct user per virtual user (unique email),
+so each key is a real authenticated principal. This exercises the production
+`SecurityContextRateLimitKeyResolver`, which reads the principal from the `SecurityContext`
+(falling back to the client socket address only for unauthenticated/anonymous requests).
 
 ## Running scenarios 1–4
 
@@ -67,10 +76,10 @@ stops it mid-test, and asserts fail-open + the counter via the app's MeterRegist
 
 ## Known environment prerequisites
 
-- **App boot:** the TourVisio clients read `tourvisio.*`, bound from the
-  `TOURVISIO_*` environment variables (see `.env` / `docker-compose.yml`). There are
-  no in-yaml defaults, so those variables must be present for the app to start, e.g.
-  `TOURVISIO_URL=... TOURVISIO_AGENCY=... TOURVISIO_USER=... TOURVISIO_PASSWORD=...`.
+- **App boot:** the TourVisio clients read `tourvisio.*`, which now have in-yaml defaults
+  in `application.yml`, so the app starts under the `loadtest` profile with no TourVisio
+  env vars set. The `TOURVISIO_*` variables (see `.env` / `docker-compose.yml`) still
+  override those defaults when you need to point at a real TourVisio endpoint.
 - **Testcontainers:** scenario 5 requires a Docker daemon the Testcontainers docker-java
   client can talk to. Very new Docker Engine builds can reject the bundled client's API
   negotiation; use a compatible Docker/Testcontainers pairing (CI Linux runners work).

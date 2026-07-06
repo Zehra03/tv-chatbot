@@ -115,6 +115,14 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- In-memory DB used only by the `loadtest` profile so the app (incl. the
+        always-on JPA-backed security layer) boots with no external Postgres. Runtime
+        scope so both `mvn test` and `mvn spring-boot:run -Ploadtest` (Gatling) can use it. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>

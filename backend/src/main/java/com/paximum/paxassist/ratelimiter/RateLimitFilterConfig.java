@@ -6,19 +6,22 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.Ordered;
 
 /**
- * Registers {@link RateLimitFilter} in the servlet filter chain.
+ * Exposes {@link RateLimitFilter} as a bean so the security layer can place it in the
+ * chain. Placement happens in {@code SecurityConfig} via
+ * {@code http.addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class)} — the
+ * limiter runs after authentication so it can key buckets by the authenticated principal.
  *
- * <p>The filter is built inside the registration bean (rather than exposed as its
- * own {@code Filter} bean) to avoid Spring Boot auto-registering it a second time.
+ * <p>Because a {@code Filter} bean would otherwise be auto-registered by Spring Boot in
+ * the raw servlet chain (running it a second time, before Spring Security), the
+ * {@link FilterRegistrationBean} below disables that automatic registration.
  */
 @Configuration
 public class RateLimitFilterConfig {
 
     @Bean
-    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(
+    public RateLimitFilter rateLimitFilter(
             RateLimitPolicyProvider policyProvider,
             RateLimitKeyResolver keyResolver,
             ObjectProvider<LettuceBasedProxyManager<String>> proxyManagerProvider,
@@ -26,14 +29,17 @@ public class RateLimitFilterConfig {
             RateLimitResponseWriter responseWriter,
             MeterRegistry meterRegistry) {
 
-        RateLimitFilter filter = new RateLimitFilter(
+        return new RateLimitFilter(
                 policyProvider, keyResolver, proxyManagerProvider, properties, responseWriter, meterRegistry);
+    }
 
-        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(filter);
-        registration.setOrder(Ordered.LOWEST_PRECEDENCE - 100);
-        registration.addUrlPatterns("/*");
-        // TODO: Once Spring Security is merged, remove this registration and instead
-        // wire via SecurityFilterChain.addFilterAfter(rateLimitFilter, <AuthFilterClass>.class)
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterServletRegistration(
+            RateLimitFilter rateLimitFilter) {
+        // Prevent Spring Boot from auto-registering the filter bean in the servlet
+        // container; it is placed explicitly inside the Spring Security filter chain.
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(rateLimitFilter);
+        registration.setEnabled(false);
         return registration;
     }
 }

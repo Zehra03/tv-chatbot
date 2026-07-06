@@ -1,9 +1,9 @@
 package com.paximum.paxassist.ratelimiter;
 
+import java.util.Comparator;
+
 import org.springframework.stereotype.Component;
 import org.springframework.util.AntPathMatcher;
-
-import java.util.Comparator;
 
 /**
  * Default {@link RateLimitPolicyProvider} backed by {@link RateLimitProperties}.
