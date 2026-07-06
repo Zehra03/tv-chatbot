@@ -24,6 +24,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.paximum.paxassist.auth.security.AuthAccessDeniedHandler;
 import com.paximum.paxassist.auth.security.AuthEntryPoint;
 import com.paximum.paxassist.auth.security.JwtAuthenticationFilter;
+import com.paximum.paxassist.ratelimiter.RateLimitFilter;
 
 import jakarta.servlet.DispatcherType;
 
@@ -55,7 +56,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter)
+            throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -86,7 +88,10 @@ public class SecurityConfig {
                                 "/api/v1/reservations/**")
                         .hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Rate limit after authentication so buckets are keyed by the authenticated
+                // principal (SecurityContextRateLimitKeyResolver), falling back to client IP.
+                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
