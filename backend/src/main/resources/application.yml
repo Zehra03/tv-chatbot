@@ -64,6 +64,15 @@ app:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
+  # Validator (second LLM layer, judges the main LLM's draft answer). Deliberately local/open-source
+  # and decoupled from the main chat model's config below — see validator/config/ValidatorConfig.java.
+  validator:
+    enabled: ${VALIDATOR_ENABLED:true}
+    ab-test-enabled: ${VALIDATOR_AB_TEST_ENABLED:false}
+    max-retries: ${VALIDATOR_MAX_RETRIES:2}
+    temperature: ${VALIDATOR_TEMPERATURE:0.0}
+    max-tokens: ${VALIDATOR_MAX_TOKENS:256}
+    model: ${VALIDATOR_MODEL:qwen2.5:3b}
 
 tourvisio:
   url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
