@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -74,5 +75,19 @@ describe('ReservationsPage (MSW ile)', () => {
     // Detay gerçek bir bağlantıdır (yeni sekmede açılabilir, link semantiği).
     await user.click(screen.getAllByRole('link', { name: 'Detay' })[0])
     expect(await screen.findByText('DETAY STUB')).toBeTruthy()
+  })
+
+  it('API JSON yerine HTML dönerse çökmeden hata durumunu gösterir', async () => {
+    // MSW baypası + Vite SPA fallback senaryosu: 200 + text/html + index.html.
+    server.use(
+      http.get('/api/v1/reservations', () =>
+        HttpResponse.html('<!doctype html><html><body><div id="root"></div></body></html>'),
+      ),
+    )
+    renderPage()
+
+    const alert = await screen.findByRole('alert', {}, { timeout: 3000 })
+    expect(alert.textContent).toContain('MSW')
+    expect(screen.getByRole('button', { name: 'Tekrar dene' })).toBeTruthy()
   })
 })

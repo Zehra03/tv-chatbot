@@ -5,7 +5,7 @@ import type { HotelProduct } from '@/types'
 /** Filtre uygulanmış otel sonuç listesi; boş listede açıklayıcı mesaj gösterir. */
 export function HotelList({ products }: { products: HotelProduct[] }) {
   if (products.length === 0) {
-    return <EmptyState>Kriterlere uyan otel bulunamadı.</EmptyState>
+    return <EmptyState tone="dark">Kriterlere uyan otel bulunamadı.</EmptyState>
   }
   return (
     <div className="grid gap-3">

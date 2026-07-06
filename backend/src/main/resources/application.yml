@@ -31,6 +31,15 @@ spring:
           temperature: 0.0
           num-predict: 1024
 
+# Kök tourvisio.* — Feign client'lar (@FeignClient url="${tourvisio.url}") ve hotel
+# @Value("${tourvisio.url}") bu değerleri okur. Default'lar sayesinde placeholder,
+# TOURVISIO_URL env olmadan da (ör. CI'daki `mvn test`) çözülür; dev/docker'da env override eder.
+tourvisio:
+  url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
+  agency: ${TOURVISIO_AGENCY:}
+  user: ${TOURVISIO_USER:}
+  password: ${TOURVISIO_PASSWORD:}
+
 server:
   port: ${SERVER_PORT:${BACKEND_PORT:8080}}
 
@@ -46,15 +55,35 @@ app:
   rate-limit:
     max-requests: 60
     window-seconds: 60
+  auth:
+    jwt:
+      # Dev-only default; production MUST override via AUTH_JWT_SECRET (never commit a real secret).
+      secret: ${AUTH_JWT_SECRET:dev-only-insecure-secret-change-me-please-32bytes+}
+      expiration-minutes: ${AUTH_JWT_EXPIRATION_MINUTES:60}
+      issuer: paxassist
   cache:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
 
-tourvisio:
-  url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
-  culture: ${TOURVISIO_CULTURE:en-US}
-  timezone: ${TOURVISIO_TIMEZONE:Europe/Istanbul}
-  agency: ${TOURVISIO_AGENCY:}
-  user: ${TOURVISIO_USER:}
-  password: ${TOURVISIO_PASSWORD:}
+ratelimit:
+  # When true, a rate limiter failure (e.g. Redis unavailable) lets requests through.
+  fail-open: true
+  # Ant path patterns that bypass rate limiting entirely. Structure only — none yet.
+  excluded-paths: []
+  # Fallback policy applied when no entry in `policies` matches the request path.
+  default-policy:
+    path: "/**"
+    capacity: 60
+    refill-tokens: 60
+    refill-period-seconds: 60
+  # Specific rules; the most specific matching path wins over the default policy.
+  policies:
+    - path: "/api/booking/**"
+      capacity: 10
+      refill-tokens: 10
+      refill-period-seconds: 60
+    - path: "/api/search/**"
+      capacity: 30
+      refill-tokens: 30
+      refill-period-seconds: 60

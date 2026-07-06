@@ -42,3 +42,11 @@ export interface ChatSession {
   /** Slot-filling'de yanıt bekleyen açık soru (backend in-memory ChatSession.pendingQuestion; transient). */
   pendingQuestion?: string
 }
+
+/** Geçmiş panelindeki oturum satırı — mesaj gövdeleri taşınmaz (liste hafif kalır). */
+export interface ChatSessionSummary {
+  id: string
+  title?: string
+  updatedAt: IsoDateTime
+  messageCount: number
+}

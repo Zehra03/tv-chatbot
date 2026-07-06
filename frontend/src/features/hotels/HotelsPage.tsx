@@ -1,15 +1,23 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { Hotel } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
+import { SearchHero } from '@/components/SearchHero'
+import { Skeleton } from '@/components/ui/skeleton'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppSelector } from '@/app/hooks'
+import { heroFieldClass } from '@/lib/field-styles'
+import { cn } from '@/lib/utils'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
 import { HotelFilters } from '@/features/hotels/HotelFilters'
 import { HotelList } from '@/features/hotels/HotelList'
 import type { HotelSearchCriteria } from '@/types'
+import hotelHero from '@/assets/hotel/valeriia-bugaiova-_pPHgeHz1uk-unsplash.jpg'
 
 /**
  * /hotels — filtrelenebilir otel sonuç ekranı (docs/frontend-architecture.md §3).
@@ -25,7 +33,19 @@ export function HotelsPage() {
   const [checkIn, setCheckIn] = useState(prefill?.checkIn ?? '')
   const [checkOut, setCheckOut] = useState(prefill?.checkOut ?? '')
   const [adults, setAdults] = useState(prefill?.adults ?? 2)
+  const [childCount, setChildCount] = useState(prefill?.children ?? 0)
+  const [childAges, setChildAges] = useState<number[]>(prefill?.childAges ?? [])
+  const [rooms, setRooms] = useState(prefill?.rooms ?? 1)
   const [criteria, setCriteria] = useState<HotelSearchCriteria | null>(null)
+
+  // childAges uzunluğu her zaman childCount ile tutarlı tutulur (types/search.ts
+  // invariantı); yeni eklenen çocuk için varsayılan yaş 7, popover'da değiştirilir.
+  const changeChildCount = (next: number) => {
+    setChildCount(next)
+    setChildAges((ages) =>
+      next > ages.length ? [...ages, ...Array<number>(next - ages.length).fill(7)] : ages.slice(0, next),
+    )
+  }
 
   const query = useHotelSearch(criteria)
   const filters = useAppSelector((s) => s.ui.hotelFilters)
@@ -55,71 +75,118 @@ export function HotelsPage() {
       checkIn,
       checkOut,
       adults,
-      children: 0,
-      childAges: [],
-      rooms: 1,
+      children: childCount,
+      childAges,
+      rooms,
       nationality: 'TR',
       currency: 'EUR',
     })
   }
 
+  const guestSummary = `${adults} yetişkin${childCount ? `, ${childCount} çocuk` : ''}, ${rooms} oda`
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Oteller</h1>
-        <p className="text-sm text-muted-foreground">
-          Kriterlere göre ara; sonuçları yıldız, pansiyon ve fiyata göre daralt.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="hotel-destination">Nereye</Label>
-          <Input
-            id="hotel-destination"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            placeholder="Şehir veya bölge"
+      {/* Skyscanner tarzı hero: fotoğraf + örtü üzerinde arama formu.
+          Alanlar beyaz (heroFieldClass), takvim/misafir popover'ları koyu cam. */}
+      <SearchHero
+        image={hotelHero}
+        title="Oteller"
+        subtitle="Bir sonraki konaklamanı bul — sonuçları yıldız, pansiyon ve fiyata göre daralt."
+      >
+        <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
+          <div className="grid flex-1 basis-52 gap-1.5 sm:max-w-72 sm:flex-none sm:basis-auto">
+            <Label htmlFor="hotel-destination">Nereye</Label>
+            <Input
+              id="hotel-destination"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder="Şehir, bölge veya otel adı"
+              required
+              className={cn('sm:w-72', heroFieldClass)}
+            />
+          </div>
+          {/* Giriş/Çıkış alanına tıklayınca takvim açılır (ayrı buton yok). */}
+          <DateRangePicker
+            checkIn={checkIn}
+            checkOut={checkOut}
+            onChange={(ci, co) => {
+              setCheckIn(ci)
+              setCheckOut(co)
+            }}
+            checkInId="hotel-checkin"
+            checkOutId="hotel-checkout"
+            fieldClassName={heroFieldClass}
             required
           />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="hotel-checkin">Giriş</Label>
-          <Input
-            id="hotel-checkin"
-            type="date"
-            value={checkIn}
-            onChange={(e) => setCheckIn(e.target.value)}
-            required
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="hotel-checkout">Çıkış</Label>
-          <Input
-            id="hotel-checkout"
-            type="date"
-            value={checkOut}
-            onChange={(e) => setCheckOut(e.target.value)}
-            required
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="hotel-adults">Yetişkin</Label>
-          <Input
-            id="hotel-adults"
-            type="number"
-            min={1}
-            className="w-24"
-            value={adults}
-            onChange={(e) => setAdults(Math.max(1, Number(e.target.value)))}
-          />
-        </div>
-        <Button type="submit">Ara</Button>
-      </form>
+          {/* Skyscanner'ın "Misafir ve oda sayısı" alanı: sayaçlar + çocuk yaşları. */}
+          <PeoplePicker
+            id="hotel-guests"
+            label="Misafir ve oda"
+            summary={guestSummary}
+            rows={[
+              { key: 'adults', label: 'Yetişkin', hint: '18 yaş ve üzeri', value: adults, min: 1, max: 9 },
+              { key: 'children', label: 'Çocuk', hint: '0–17 yaş', value: childCount, min: 0, max: 6 },
+              { key: 'rooms', label: 'Oda', value: rooms, min: 1, max: 4 },
+            ]}
+            onRowChange={(key, value) => {
+              if (key === 'adults') setAdults(value)
+              else if (key === 'children') changeChildCount(value)
+              else setRooms(value)
+            }}
+            fieldClassName={cn('w-56', heroFieldClass)}
+          >
+            {childCount > 0 && (
+              <div className="mt-4 border-t border-white/10 pt-3">
+                <p className="text-xs font-medium text-brand-ice/70">
+                  Çocuk yaşları (fiyatlama için)
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  {childAges.map((age, i) => (
+                    <label key={i} className="grid gap-1 text-xs text-brand-ice/70">
+                      {i + 1}. çocuğun yaşı
+                      <select
+                        value={age}
+                        onChange={(e) =>
+                          setChildAges((ages) =>
+                            ages.map((a, j) => (j === i ? Number(e.target.value) : a)),
+                          )
+                        }
+                        className="h-9 rounded-md border border-white/15 bg-white/5 px-2 text-sm text-white [color-scheme:dark] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
+                      >
+                        {Array.from({ length: 18 }, (_, y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+          </PeoplePicker>
+          <Button type="submit">Ara</Button>
+        </form>
+      </SearchHero>
 
-      {!criteria && <EmptyState>Sonuçları görmek için arama kriterlerini girin.</EmptyState>}
+      {!criteria && (
+        <EmptyState tone="dark" title="Aramaya hazır" icon={<Hotel className="h-5 w-5" />}>
+          Sonuçları görmek için arama kriterlerini girin.
+        </EmptyState>
+      )}
 
-      {query.isFetching && <LoadingState label="Aranıyor…" />}
+      {query.isFetching && (
+        <div className="space-y-3">
+          <LoadingState label="Aranıyor…" className="text-brand-ice/70" />
+          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          <div aria-hidden="true" className="grid gap-3">
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+            <Skeleton className="h-32" />
+          </div>
+        </div>
+      )}
 
       {query.isError && !query.isFetching && (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
@@ -128,7 +195,7 @@ export function HotelsPage() {
       {query.data && (
         <>
           <HotelFilters boardTypes={boardTypes} />
-          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
+          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
           <HotelList products={visible} />
         </>
       )}
