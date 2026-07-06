@@ -62,8 +62,8 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
         <!-- Bucket4j distributed rate limiting over the existing Lettuce/Redis client.
-             JDK17 artifact is the correct target for Java 21; lettuce-core version is
-             governed by the Spring Boot 3.5 BOM so we reuse the same client. -->
+        JDK17 artifact is the correct target for Java 21; lettuce-core version is
+        governed by the Spring Boot 3.5 BOM so we reuse the same client. -->
         <dependency>
             <groupId>com.bucket4j</groupId>
             <artifactId>bucket4j_jdk17-lettuce</artifactId>
@@ -136,7 +136,7 @@
             <scope>test</scope>
         </dependency>
         <!-- Testcontainers (version managed by the Spring Boot BOM) — used by the
-             rate limiter fail-open integration test to start/stop a real Redis. -->
+        rate limiter fail-open integration test to start/stop a real Redis. -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
@@ -147,6 +147,7 @@
             <groupId>io.gatling.highcharts</groupId>
             <artifactId>gatling-charts-highcharts</artifactId>
             <version>${gatling.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-test</artifactId>
@@ -161,8 +162,8 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <!-- Runs Gatling simulations from src/test/java via `mvn gatling:test`.
-                 Not bound to the build lifecycle — invoked explicitly against a
-                 running app (see loadtest docs). -->
+            Not bound to the build lifecycle — invoked explicitly against a
+            running app (see loadtest docs). -->
             <plugin>
                 <groupId>io.gatling</groupId>
                 <artifactId>gatling-maven-plugin</artifactId>
