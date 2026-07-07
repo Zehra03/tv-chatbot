@@ -13,7 +13,10 @@ import { cn } from '@/lib/utils'
 /**
  * Tek tarih alanı + takvim — DateRangePicker'ın tek günlük kardeşi (tek yön
  * uçuş gibi aralık gerektirmeyen alanlar için). Alana tıklandığında temalı
- * takvim açılır; native <input type="date"> otoriter kalır.
+ * takvim açılır. Native <input type="date"> readOnly: tarayıcının kendi tarih
+ * seçicisi (ikinci, gezilemez takvim) hiçbir ortamda açılmaz; değeri yalnızca
+ * temalı takvim yazar. Etiket + değer erişilebilir kalır, testler değeri
+ * programatik change ile set eder.
  */
 interface DatePickerProps {
   id?: string
@@ -75,6 +78,7 @@ export function DatePicker({
         type="date"
         value={value}
         min={min}
+        readOnly
         onChange={(e) => onChange(e.target.value)}
         onMouseDown={openCalendar}
         aria-haspopup="dialog"

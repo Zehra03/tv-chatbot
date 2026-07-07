@@ -13,9 +13,10 @@ import { cn } from '@/lib/utils'
 
 /**
  * Tarih aralığı alanları + takvim — ayrı bir "Takvim" butonu yoktur; giriş/çıkış
- * alanına tıklandığında popover açılır. Progressive enhancement korunur: native
- * <input type="date"> otoriter kalır (testler ve klavye/ekran okuyucu akışı
- * onların üzerinden), takvim AYNI state'e yazan görsel bir kısayoldur.
+ * alanına tıklandığında popover açılır. Native <input type="date"> readOnly:
+ * tarayıcının kendi tarih seçicisi (ikinci, gezilemez takvim) hiçbir ortamda
+ * açılmaz; değerleri yalnızca temalı takvim yazar. Etiket + değer erişilebilir
+ * kalır, testler değeri programatik change ile set eder.
  * Tema: components/ui/calendar.tsx (koyu cam panel + teal aralık vurgusu).
  */
 interface DateRangePickerProps {
@@ -78,8 +79,8 @@ export function DateRangePicker({
   const to = parseDay(checkOut)
   const selected: DateRange | undefined = from ? { from, to } : undefined
 
-  // Native picker yerine bizim takvim: mousedown'da preventDefault native
-  // tarih diyaloğunu/segment odağını bastırır (klavyeyle yazma yolu açık kalır).
+  // Native picker yerine bizim takvim: alan readOnly (native seçici hiç açılmaz),
+  // mousedown'da preventDefault artık yalnızca segment odağını/parlamayı bastırır.
   const fieldClass = cn('[&::-webkit-calendar-picker-indicator]:hidden', fieldClassName)
   const openCalendar = (e: ReactMouseEvent<HTMLInputElement>) => {
     e.preventDefault()
@@ -94,6 +95,7 @@ export function DateRangePicker({
           id={checkInId}
           type="date"
           value={checkIn}
+          readOnly
           onChange={(e) => onChange(e.target.value, checkOut)}
           onMouseDown={openCalendar}
           aria-haspopup="dialog"
@@ -109,6 +111,7 @@ export function DateRangePicker({
           type="date"
           value={checkOut}
           min={checkIn || undefined}
+          readOnly
           onChange={(e) => onChange(checkIn, e.target.value)}
           onMouseDown={openCalendar}
           aria-haspopup="dialog"

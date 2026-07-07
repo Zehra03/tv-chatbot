@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.*;
 
 @Service
-@Profile("!mock")
+@Profile("!mock & !demo")
 public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
 
     private final RestTemplate restTemplate;
