@@ -76,6 +76,15 @@ public class Reservation {
     @Column(name = "lead_guest_name", length = 200)
     private String leadGuestName;
 
+    /**
+     * TourVisio's own booking reference (e.g. {@code "RC002576"}) returned by CommitTransaction —
+     * distinct from our internal {@link #reservationNumber}. Null until a successful purchase.
+     * Backed by the {@code external_reservation_number} column (V2 migration); uniqueness is enforced
+     * by a partial unique index at the DB level.
+     */
+    @Column(name = "external_reservation_number", length = 64)
+    private String externalReservationNumber;
+
     /** DB-managed (DEFAULT now()); read back after insert, never written by the app. */
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", nullable = false)
