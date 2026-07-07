@@ -10,6 +10,10 @@ import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSe
 @FeignClient(
         name = "tourvisio-flight-client",
         url = "${tourvisio.url}",
+        // TourVisio method paths are under /api (see API docs: /api/productservice/pricesearch).
+        // The path prefix keeps tourvisio.url as the host+version base (.../v2), matching the hotel
+        // client which appends /api itself — so both modules agree on the same base value.
+        path = "/api",
         configuration = TourVisioFlightClientConfig.class)
 public interface TourVisioFlightClient {
 
