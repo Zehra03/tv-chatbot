@@ -46,6 +46,12 @@ spring:
 # Default'lar sayesinde placeholder TOURVISIO_URL env olmadan da (ör. CI'daki `mvn test`) çözülür.
 tourvisio:
   url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2}
+  # culture = pricesearch/autocomplete Culture; timezone interprets TourVisio's offset-less flight
+  # times (e.g. 2022-02-11T09:35:00). timezone MUST be set or TourVisioFlightResponseMapper skips
+  # every flight ("Missing tourvisio timezone") and search returns []. Defaults keep it working
+  # without extra env; override per-deployment via TOURVISIO_CULTURE / TOURVISIO_TIMEZONE.
+  culture: ${TOURVISIO_CULTURE:en-US}
+  timezone: ${TOURVISIO_TIMEZONE:Europe/Istanbul}
   agency: ${TOURVISIO_AGENCY:}
   user: ${TOURVISIO_USER:}
   password: ${TOURVISIO_PASSWORD:}
