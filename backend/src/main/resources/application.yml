@@ -53,9 +53,6 @@ management:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
-  rate-limit:
-    max-requests: 60
-    window-seconds: 60
   auth:
     jwt:
       # Dev-only default; production MUST override via AUTH_JWT_SECRET (never commit a real secret).
@@ -88,12 +85,20 @@ ratelimit:
     refill-tokens: 60
     refill-period-seconds: 60
   # Specific rules; the most specific matching path wins over the default policy.
+  # Paths target the REAL /api/v1 endpoints (chat = LLM-backed, hotels/flights = TourVisio-backed),
+  # so the expensive routes get a tighter cap than the /** default. The loadtest profile keeps its
+  # own /api/search/** policy in application-loadtest.yml. Reservation (/api/v1/reservations/**) is
+  # not implemented yet; add a tight policy (e.g. cap 10) when that endpoint lands.
   policies:
-    - path: "/api/booking/**"
-      capacity: 10
-      refill-tokens: 10
+    - path: "/api/v1/chat/**"
+      capacity: 30
+      refill-tokens: 30
       refill-period-seconds: 60
-    - path: "/api/search/**"
+    - path: "/api/v1/hotels/**"
+      capacity: 30
+      refill-tokens: 30
+      refill-period-seconds: 60
+    - path: "/api/v1/flights/**"
       capacity: 30
       refill-tokens: 30
       refill-period-seconds: 60

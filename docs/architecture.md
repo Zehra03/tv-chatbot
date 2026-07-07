@@ -1,4 +1,16 @@
 graph TD
+    %% =====================================================================
+    %% PaxAssist — Kanonik Mimari (Modular Monolith)
+    %% Değişiklik günlüğü (docs revizyonu):
+    %%  - Guard artık Orchestrator'ın İLK iç adımı (LLM öncesi fail-fast); eski "gateway
+    %%    öncesi mi / alt-adım mı" çelişkisi minimal-architecture.md ile hizalandı.
+    %%  - JWT Auth katmanı + paylaşılan users tablosu eklendi (kod gerçeğini yansıtır).
+    %%  - Rate limiter "kimliği doğrulanmış principal'a göre anahtarlar" notu eklendi.
+    %%  - Orchestrator'a Evaluator-Optimizer (AI serbest-metin çıktısında guardrail döngüsü) eklendi.
+    %%  - Runtime MCP Server (arama araçlarını yayınlar) eklendi — dev-time MCP'lerden farklıdır.
+    %%  - Log Modülü + LogDB kanonik kabul edildi; "planlanan vs. bugünkü" notu düşüldü.
+    %%  - Reservation "planlanan" olarak işaretlendi.
+    %% =====================================================================
     %% --- STİL VE RENK TANIMLAMALARI ---
     classDef client fill:#eceff1,stroke:#37474f,stroke-width:2px;
     classDef gateway fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
@@ -8,92 +20,88 @@ graph TD
     classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef ext fill:#ffebee,stroke:#c62828,stroke-width:2px;
     classDef log fill:#f1f8e9,stroke:#558b2f,stroke-width:2px;
+    classDef mcp fill:#ede7f6,stroke:#4527a0,stroke-width:2px;
 
-    %% --- AKTÖRLER VE İSTEMCİ ---
+    %% --- AKTÖRLER VE İSTEMCİLER ---
     User((Kullanıcı / Browser)):::client
+    McpClient((Harici MCP Client <br> ör. Claude Desktop)):::client
 
     %% --- MODULAR MONOLITH SINIRI ---
     subgraph Modular_Monolith_Boundary [Modular Monolith Uygulama Sınırı]
-        
-        %% Giriş ve Güvenlik Katmanı
-        RateLimiter[1. Rate Limiter <br> İstek Sınırlandırma]:::gateway
-        GuardMod[2. Guard Modülü <br> Statik Regex, Prompt Injection & Küfür Filtresi]:::gateway
-        
-        %% Ana Yönetici
-        Orchestrator[3. Chat Orchestrator <br> Akış ve İş Mantığı Yönetimi]:::orchestrator
-        
-        %% Yapay Zeka Katmanı
-        AI_Engine[4. AI / Intention Modülü <br> Niyet Analizi & Parametre Çıkarımı]:::orchestrator
 
-        %% İş Mantığı Modülleri (Business Modules)
+        %% Giriş ve Güvenlik Katmanı
+        RateLimiter[1. Rate Limiter <br> İstek sınırlandırma · kimliği doğrulanmış principal'a göre anahtarlar]:::gateway
+        JwtAuth[2. JWT Auth Filtresi <br> Stateless Bearer · Spring Security]:::gateway
+
+        %% Ana Yönetici + İç Adımlar
+        Orchestrator[3. Chat Orchestrator <br> İnce koordinatör: guard → intent → route → persist]:::orchestrator
+        Guard[3a. Guard <br> Orchestrator'ın İLK adımı · Regex / Prompt Injection / Küfür · LLM öncesi fail-fast]:::gateway
+        AI_Engine[4. AI / Intention <br> Niyet analizi + slot çıkarımı]:::orchestrator
+        Evaluator[4a. Evaluator-Optimizer <br> AI serbest-metninde üret→değerlendir→iyileştir · guardrail zorlaması]:::orchestrator
+
+        %% İş Mantığı Modülleri
         subgraph Business_Modules [İş Mantığı Modülleri]
-            FlightMod[Flight Modülü <br> Uçuş İşlemleri]:::business
-            HotelMod[Hotel Modülü <br> Otel İşlemleri]:::business
-            ReservationMod[Reservation Modülü <br> Rezervasyon Akışı]:::business
+            HotelMod[Hotel Modülü]:::business
+            FlightMod[Flight Modülü]:::business
+            ReservationMod[Reservation Modülü <br> PLANLANAN · 0-token AI-dışı form]:::business
         end
 
-        %% Önbellek Katmanı (Redis)
-        RedisCache[Redis / In-Memory Cache <br> TourVisio Canlı Sonuçlar & Geçici Filtreleme]:::cache
-
-        %% Loglama Modülü
-        LogMod[Log Modülü <br> Asenkron Kuyruk Yapısı]:::log
+        %% Önbellek + MCP + Log
+        RedisCache[Redis Cache <br> TourVisio canlı sonuçları]:::cache
+        McpServer[MCP Server -runtime- <br> Arama araçlarını yayınlar · SEARCH-ONLY, booking YOK]:::mcp
+        LogMod[Log Modülü <br> Asenkron kuyruk · PLANLANAN <br> -bugün: harici log servisi + SLF4J audit-]:::log
     end
 
     %% --- VERİTABANI KATMANI ---
     subgraph Storage_Layer [Kalıcı Veri Katmanı]
-        ChatDB[(Chat & Session DB <br> Konuşma Geçmişi ve Oturum Durumu)]:::db
-        ResDB[(Reservation DB <br> Nihai Rezervasyon Kayıtları)]:::db
-        LogDB[(Log DB <br> Sistem ve Hata Logları)]:::db
+        UsersDB[(users <br> Paylaşılan kimlik + rol)]:::db
+        ChatDB[(Chat & Session DB <br> chat_sessions / chat_messages)]:::db
+        ResDB[(Reservation DB <br> Nihai rezervasyon kayıtları)]:::db
+        LogDB[(logging.app_logs <br> Sistem ve hata logları)]:::db
     end
 
-    %% --- DIŞ DÜNYA / API KATMANI ---
-    TourVisio((TourVisio API <br> Canlı Entegrasyon)):::ext
+    %% --- DIŞ DÜNYA ---
+    TourVisio((TourVisio API <br> Canlı entegrasyon)):::ext
 
     %% =======================================================
-    %% --- UÇTAN UCA İŞ AKIŞI OKLARI (END-TO-END FLOW) ---
-    %% =======================================================
+    %% 1. Güvenlik ve giriş akışı
+    User -->|1. Doğal dilde mesaj| RateLimiter
+    RateLimiter -->|2. Limit aşılmadıysa| JwtAuth
+    JwtAuth -->|3. Kimlik doğrulandı| Orchestrator
+    JwtAuth -.->|Kullanıcı/rol doğrula| UsersDB
 
-    %% 1. Güvenlik ve Giriş Akışı
-    User -->|1. Doğal Dilde Mesaj Gönderir| RateLimiter
-    RateLimiter -->|2. İstek Limiti Aşılmadıysa Geçir| GuardMod
-    GuardMod -->|3. Güvenli / Temiz İçerik| Orchestrator
-    GuardMod -.->|Zararlı İçerik / İstek Engellendi| User
+    %% 2. Orchestrator iç akışı
+    Orchestrator -->|3a. İLK adım: girişi denetle| Guard
+    Guard -.->|Zararlı içerik → güvenli reddet yanıtı| User
+    Orchestrator -->|4. Niyet + slot çıkar| AI_Engine
+    AI_Engine -.->|Intent + çıkarılan kriterler| Orchestrator
+    Orchestrator -->|4a. AI serbest-metin çıktısını denetle| Evaluator
+    Orchestrator -->|Her mesajda durumu kaydet| ChatDB
 
-    %% 2. Niyet ve Durum Yönetimi Akışı
-    Orchestrator -->|4. Mesajı İletir| AI_Engine
-    AI_Engine -.->|5. Niyet: Otel/Uçak + Çıkarılan Parametreler| Orchestrator
-    Orchestrator -->|6. Mesajı ve Oturum Durumunu Kaydet| ChatDB
+    %% 3. Ürün arama ve önbellek
+    Orchestrator -->|Otel arama| HotelMod
+    Orchestrator -->|Uçuş arama| FlightMod
+    HotelMod -->|Önbellekte var mı?| RedisCache
+    FlightMod -->|Önbellekte var mı?| RedisCache
+    HotelMod -->|Cache miss: canlı veri| TourVisio
+    FlightMod -->|Cache miss: canlı veri| TourVisio
+    HotelMod -.->|Filtrelenmiş sonuç kartları| Orchestrator
+    FlightMod -.->|Filtrelenmiş sonuç kartları| Orchestrator
+    Orchestrator -.->|Cevap + kartlar| User
 
-    %% 3. Ürün Arama ve Önbellek (Cache) Akışı
-    Orchestrator -->|7a. Otel Arama Talebi| HotelMod
-    Orchestrator -->|7b. Uçuş Arama Talebi| FlightMod
+    %% 4. Rezervasyon akışı (AI devre dışı, geleneksel form)
+    User -->|Ürünü seç + formu doldur · 0 token güvenli alan| ReservationMod
+    ReservationMod -->|Rezervasyonu tamamla / koltuk-oda bağla| TourVisio
+    ReservationMod -->|Başarılı rezervasyonu kaydet| ResDB
 
-    HotelMod -->|8a. Önbellekte Veri Var mı?| RedisCache
-    FlightMod -->|8b. Önbellekte Veri Var mı?| RedisCache
+    %% 5. MCP -runtime- arama araçlarını dışarı açar
+    McpClient -->|MCP protokolü · JWT güvenliği arkasında| McpServer
+    McpServer -->|Arama use-case'i| HotelMod
+    McpServer -->|Arama use-case'i| FlightMod
 
-    HotelMod -->|9a. Cache Miss: Canlı Veri Çek| TourVisio
-    FlightMod -->|9b. Cache Miss: Canlı Veri Çek| TourVisio
-
-    TourVisio -.->|10a. Canlı Sonuçlar| HotelMod
-    TourVisio -.->|11a. Canlı Sonuçlar| FlightMod
-
-    HotelMod -->|12a. Gelen Sonuçları Önbelleğe Yaz| RedisCache
-    FlightMod -->|12b. Gelen Sonuçları Önbelleğe Yaz| RedisCache
-
-    %% 4. Filtreleme ve Sonuç Dönüşü
-    HotelMod -.->|13a. Filtrelenmiş / Normalize Sonuçlar| Orchestrator
-    FlightMod -.->|13b. Filtrelenmiş / Normalize Sonuçlar| Orchestrator
-    Orchestrator -.->|14. Cevap ve Kartları Ekranda Göster| User
-
-    %% 5. Rezervasyon Akışı (AI Tamamen Devre Dışı - Geleneksel UI Formu)
-    User -->|15. Ürünü Seçer & Rezervasyon Formunu Doldur <br> 0 Token - Güvenli Alan| ReservationMod
-    ReservationMod -->|16. Rezervasyonu Tamamla / Koltuk-Oda Bağla| TourVisio
-    ReservationMod -->|17. Başarılı Rezervasyon Özetini Kaydet| ResDB
-
-    %% 6. Arka Planda Asenkron (Non-Blocking) Loglama Akışı
-    Orchestrator -.->|Log Olayı / Event| LogMod
-    FlightMod -.->|Log Olayı / Event| LogMod
-    HotelMod -.->|Log Olayı / Event| LogMod
-    ReservationMod -.->|Log Olayı / Event| LogMod
-    
-    LogMod -->|Background Worker ile Toplu Yazma| LogDB
+    %% 6. Arka planda asenkron loglama (planlanan)
+    Orchestrator -.->|Log olayı| LogMod
+    HotelMod -.->|Log olayı| LogMod
+    FlightMod -.->|Log olayı| LogMod
+    ReservationMod -.->|Log olayı| LogMod
+    LogMod -->|Background worker ile toplu yazma| LogDB
