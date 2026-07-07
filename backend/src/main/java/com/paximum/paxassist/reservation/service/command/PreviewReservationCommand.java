@@ -36,6 +36,12 @@ public record PreviewReservationCommand(
         Hotel hotel,
         Flight flight) {
 
+    /** Returns a copy with the given owner id (controller injects the current-user placeholder here). */
+    public PreviewReservationCommand withUserId(Long userId) {
+        return new PreviewReservationCommand(userId, currency, totalAmount, culture, leadGuestName, reservationNote,
+                agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
+    }
+
     /** An additional service/offer to attach via AddServices (optional; primary offers go in {@link #offerIds()}). */
     public record AddOffer(String offerId, List<String> travellerIds) {
     }

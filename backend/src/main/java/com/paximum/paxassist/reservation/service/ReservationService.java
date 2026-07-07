@@ -11,11 +11,16 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
+import com.paximum.paxassist.reservation.domain.ReservationStatus;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.client.TourVisioBookingClient;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.AddServicesRequest;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancelPenalty;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancelReservationResponse;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancellationPenaltyResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CommitTransactionResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TourVisioResponseHeader;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TransactionResponse;
@@ -156,6 +161,118 @@ public class ReservationService {
         }
         AwaitingCommit awaiting = claimed.get();
         return commitAndPersist(awaiting.command(), awaiting.transactionId(), userId);
+    }
+
+    // =========================================================================================
+    // Read & cancel operations (ticket 4 — added here to keep the controller thin)
+    // =========================================================================================
+
+    /** Current user's reservations, newest first. */
+    @Transactional(readOnly = true)
+    public List<Reservation> listReservations(Long userId) {
+        return reservationRepository.findByUserIdOrderByReservationDateDescIdDesc(userId);
+    }
+
+    /** Plain load by id (no TourVisio call) — used e.g. to render a just-created reservation. */
+    @Transactional(readOnly = true)
+    public Optional<Reservation> getReservation(Long id) {
+        return reservationRepository.findById(id).map(this::initializeAssociations);
+    }
+
+    /**
+     * Reservation detail plus its live TourVisio cancellation options.
+     *
+     * <p>NOTE (flagged): the TourVisio {@code getCancellationPenalty} call currently runs on every
+     * detail view (and within this read transaction). Possible optimizations for later: only fetch
+     * when the status still allows cancellation, and/or move the HTTP call outside the DB transaction.
+     * Not changing the endpoint contract here.
+     */
+    @Transactional(readOnly = true)
+    public Optional<ReservationDetailResult> getReservationDetail(Long id) {
+        return reservationRepository.findById(id)
+                .map(this::initializeAssociations)
+                .map(reservation -> new ReservationDetailResult(reservation, fetchCancellationOptions(reservation)));
+    }
+
+    /**
+     * Cancels via TourVisio using the reservation's external reference, then maps the returned status
+     * onto our {@link ReservationStatus} and persists it. No local status change on any failure.
+     */
+    @Transactional
+    public CancelResult cancelReservation(Long id, String reason, List<String> serviceIds) {
+        Optional<Reservation> found = reservationRepository.findById(id);
+        if (found.isEmpty()) {
+            return new CancelResult.NotFound();
+        }
+        Reservation reservation = found.get();
+        String external = reservation.getExternalReservationNumber();
+        if (external == null || external.isBlank()) {
+            return new CancelResult.NotCancellable("reservation has no TourVisio external reference");
+        }
+
+        TourVisioCallResult<CancelReservationResponse> result = bookingClient.cancelReservation(external, reason, serviceIds);
+
+        if (result instanceof UnknownOutcome<CancelReservationResponse> unknown) {
+            log.error("CANCEL AMBIGUOUS: reservationId={}, external={} — verify via getReservationDetail before assuming state. {}",
+                    id, external, unknown.description());
+            return new CancelResult.OutcomeUnknown(unknown.description());
+        }
+        if (result instanceof BusinessFailure<CancelReservationResponse> rejected) {
+            TourVisioResponseHeader header = rejected.header();
+            return new CancelResult.TourVisioRejected(header == null ? null : header.primaryCode(), firstMessage(header));
+        }
+        if (!(result instanceof Success<CancelReservationResponse> success)) {
+            String description = result instanceof TechnicalFailure<CancelReservationResponse> tf ? tf.description() : "unknown technical failure";
+            return new CancelResult.TourVisioUnavailable(description);
+        }
+
+        Integer tourVisioStatus = success.body() != null && success.body().body() != null
+                ? success.body().body().reservationStatus() : null;
+        ReservationStatus newStatus = mapReservationStatus(tourVisioStatus);
+        reservation.setStatus(newStatus);
+        reservationRepository.save(reservation);
+        log.info("Reservation cancelled: id={}, external={}, tourVisioStatus={}, newStatus={}", id, external, tourVisioStatus, newStatus);
+        return new CancelResult.Cancelled(newStatus);
+    }
+
+    private List<CancelPenalty> fetchCancellationOptions(Reservation reservation) {
+        String external = reservation.getExternalReservationNumber();
+        if (external == null || external.isBlank()) {
+            return List.of();
+        }
+        TourVisioCallResult<CancellationPenaltyResponse> result = bookingClient.getCancellationPenalty(external);
+        if (result instanceof Success<CancellationPenaltyResponse> success
+                && success.body() != null && success.body().body() != null
+                && success.body().body().cancelPenalties() != null) {
+            return success.body().body().cancelPenalties();
+        }
+        log.warn("Cancellation options unavailable for reservationId={} (external={}): {}",
+                reservation.getId(), external, result.getClass().getSimpleName());
+        return List.of();
+    }
+
+    /** Forces the lazy associations to load inside the transaction so the detached entity can be mapped. */
+    private Reservation initializeAssociations(Reservation reservation) {
+        reservation.getPassengers().size();
+        if (reservation.getHotelDetails() != null) {
+            reservation.getHotelDetails().getHotelName();
+        }
+        if (reservation.getFlightDetails() != null) {
+            reservation.getFlightDetails().getOrigin();
+        }
+        return reservation;
+    }
+
+    /**
+     * Maps TourVisio's integer {@code reservationStatus} to our {@link ReservationStatus}.
+     *
+     * <p>TODO (ASK — flagged to product owner): the concrete TourVisio status codes are not documented
+     * here, so this defaults to {@code CANCELLED} on a successful cancel call (a successful
+     * cancelReservation logically means the booking is cancelled). Replace with the real code mapping
+     * once confirmed (e.g. to distinguish full vs partial cancellation).
+     */
+    private ReservationStatus mapReservationStatus(Integer tourVisioStatus) {
+        return ReservationStatus.CANCELLED;
     }
 
     // =========================================================================================
