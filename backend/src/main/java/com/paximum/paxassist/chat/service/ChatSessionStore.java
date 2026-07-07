@@ -7,10 +7,12 @@ import java.util.Optional;
 public interface ChatSessionStore {
 
     /**
-     * Returns the existing session for the given id, or creates a new one.
-     * Passing null always creates a new session.
+     * Returns the existing session for the given id when it belongs to {@code userId}, otherwise
+     * creates a new session owned by {@code userId}. Passing a null id — or an id owned by another
+     * user / unknown — always mints a fresh session, so a user can never continue someone else's
+     * conversation.
      */
-    ChatSession getOrCreate(String sessionId);
+    ChatSession getOrCreate(String sessionId, Long userId);
 
     /**
      * Returns the session for the given id without creating one.
@@ -19,10 +21,10 @@ public interface ChatSessionStore {
     Optional<ChatSession> find(String sessionId);
 
     /**
-     * Removes the session with the given id.
-     * @return true if a session existed and was removed, false otherwise.
+     * Removes the session with the given id when it belongs to {@code userId}.
+     * @return true if an owned session existed and was removed, false otherwise.
      */
-    boolean delete(String sessionId);
+    boolean delete(String sessionId, Long userId);
 
     void save(ChatSession session);
 }

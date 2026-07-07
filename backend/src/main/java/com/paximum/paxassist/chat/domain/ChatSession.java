@@ -14,8 +14,16 @@ import java.util.Map;
 public class ChatSession {
 
     private final String id;
+    // Owner (users.id). Sessions are scoped to the authenticated user so listing/loading/deleting
+    // never crosses users. Null only for legacy/in-memory sessions with no principal.
+    private Long userId;
     private Map<String, Object> accumulatedCriteria;
     private List<Object> lastResultCards;
+    private final List<ChatMessage> messages = new ArrayList<>();
+    // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
+    // which result list they are acting on. Kept as a String so this domain type does not
+    // depend on the ai module's IntentType enum.
+    private String activeDomain;
 
     public ChatSession(String id) {
         this.id = id;
@@ -25,6 +33,9 @@ public class ChatSession {
 
     public String getId() { return id; }
 
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
+
     public Map<String, Object> getAccumulatedCriteria() { return accumulatedCriteria; }
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
         this.accumulatedCriteria = accumulatedCriteria;
@@ -32,4 +43,12 @@ public class ChatSession {
 
     public List<Object> getLastResultCards() { return lastResultCards; }
     public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }
+
+    /** Append-only transcript; feeds conversation history to intent extraction and aligns
+     * with the future chat_messages table. */
+    public List<ChatMessage> getMessages() { return messages; }
+    public void addMessage(String role, String content) { messages.add(new ChatMessage(role, content)); }
+
+    public String getActiveDomain() { return activeDomain; }
+    public void setActiveDomain(String activeDomain) { this.activeDomain = activeDomain; }
 }
