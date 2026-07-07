@@ -13,11 +13,15 @@ public class InMemoryChatSessionStore implements ChatSessionStore {
     private final ConcurrentHashMap<String, ChatSession> store = new ConcurrentHashMap<>();
 
     @Override
-    public ChatSession getOrCreate(String sessionId) {
-        if (sessionId != null && store.containsKey(sessionId)) {
-            return store.get(sessionId);
+    public ChatSession getOrCreate(String sessionId, Long userId) {
+        if (sessionId != null) {
+            ChatSession existing = store.get(sessionId);
+            if (existing != null && ownedBy(existing, userId)) {
+                return existing;
+            }
         }
         ChatSession session = new ChatSession(UUID.randomUUID().toString());
+        session.setUserId(userId);
         store.put(session.getId(), session);
         return session;
     }
@@ -31,8 +35,12 @@ public class InMemoryChatSessionStore implements ChatSessionStore {
     }
 
     @Override
-    public boolean delete(String sessionId) {
+    public boolean delete(String sessionId, Long userId) {
         if (sessionId == null) {
+            return false;
+        }
+        ChatSession existing = store.get(sessionId);
+        if (existing == null || !ownedBy(existing, userId)) {
             return false;
         }
         return store.remove(sessionId) != null;
@@ -41,5 +49,9 @@ public class InMemoryChatSessionStore implements ChatSessionStore {
     @Override
     public void save(ChatSession session) {
         store.put(session.getId(), session);
+    }
+
+    private boolean ownedBy(ChatSession session, Long userId) {
+        return session.getUserId() == null || session.getUserId().equals(userId);
     }
 }

@@ -2,6 +2,7 @@ package com.paximum.paxassist.config;
 
 import com.paximum.paxassist.chat.dto.ErrorResponse;
 import com.paximum.paxassist.chat.exception.AiClientException;
+import com.paximum.paxassist.guard.GuardBlockedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,6 +11,17 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    /**
+     * Safety net for any caller that does not catch a guard block itself (the orchestrator's
+     * primary path handles it inline). Returns only the safe standard message — the detailed
+     * block reason is never exposed to the client.
+     */
+    @ExceptionHandler(GuardBlockedException.class)
+    public ResponseEntity<ErrorResponse> handleGuardBlocked(GuardBlockedException e) {
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse("GUARD_BLOCKED", e.getMessage()));
+    }
 
     @ExceptionHandler(AiClientException.class)
     public ResponseEntity<ErrorResponse> handleAiClientException(AiClientException e) {

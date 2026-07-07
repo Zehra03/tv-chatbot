@@ -4,6 +4,10 @@
 # real UserRepository bean (JPA), so the datasource/JPA stack must stay enabled. Redis
 # is the only external service the load tests actually exercise.
 spring:
+  # Reliable scalar guard: keep Flyway off under H2 regardless of profile-list precedence
+  # (spring.autoconfigure.exclude is a list and a later active profile can replace it).
+  flyway:
+    enabled: false
   autoconfigure:
     exclude:
       # Flyway stays off; the schema is created from JPA entities via ddl-auto below.
