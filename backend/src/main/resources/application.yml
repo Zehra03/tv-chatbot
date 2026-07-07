@@ -72,6 +72,13 @@ app:
     temperature: ${VALIDATOR_TEMPERATURE:0.0}
     max-tokens: ${VALIDATOR_MAX_TOKENS:256}
     model: ${VALIDATOR_MODEL:qwen2.5:3b}
+  orchestrator:
+    evaluator:
+      # Runtime guardrail loop over the assistant's free-text replies (generate → evaluate → refine).
+      # Disable to skip the critic entirely (single generation). Each retry adds one extra LLM call.
+      enabled: true
+      max-iterations: 2
+      min-score: 70
 
 ratelimit:
   # When true, a rate limiter failure (e.g. Redis unavailable) lets requests through.
