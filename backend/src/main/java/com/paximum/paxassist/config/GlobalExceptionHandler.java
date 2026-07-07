@@ -24,11 +24,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
-        String msg = e.getBindingResult().getFieldErrors().stream()
-                .map(fe -> fe.getField() + ": " + fe.getDefaultMessage())
-                .findFirst()
-                .orElse("Geçersiz istek");
+        var errors = new java.util.HashMap<String, String>();
+        e.getBindingResult().getFieldErrors().forEach(fe -> 
+            errors.put(fe.getField(), fe.getDefaultMessage())
+        );
+        
         return ResponseEntity.badRequest()
-                .body(new ErrorResponse("VALIDATION_ERROR", msg));
+                .body(new ErrorResponse("VALIDATION_ERROR", "Geçersiz istek formu.", errors));
     }
 }
