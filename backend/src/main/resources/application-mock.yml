@@ -1,4 +1,10 @@
 spring:
+  # Flyway is enabled repo-wide, but this lightweight context test boots against an empty CI
+  # Postgres with no schema management (ddl-auto=none below), so keep it off here. Reliable scalar
+  # guard (spring.autoconfigure.exclude is a list a later profile can replace). Real Flyway+validate
+  # coverage lives in ChatPersistencePostgresTest. PaxAssistApplicationTests only calls contextLoads().
+  flyway:
+    enabled: false
   ai:
     ollama:
       chat:
@@ -9,7 +15,4 @@ spring:
       - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
   jpa:
     hibernate:
-      # CI's Postgres container starts empty (Flyway is disabled repo-wide - see root
-      # application.yml comment); ddl-auto=validate on a schema-less DB fails context
-      # startup for PaxAssistApplicationTests as soon as any @Entity exists.
       ddl-auto: none

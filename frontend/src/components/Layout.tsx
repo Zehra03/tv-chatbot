@@ -97,7 +97,7 @@ export function Layout() {
       >
         {/* Bar tam genişlik (container sınırı yok) — h-24; ChatPage 10rem hesabı buna bağlı. */}
         <div className="relative flex h-24 w-full items-center justify-between gap-4 px-4 sm:px-8">
-          <NavLink to="/chat" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
+          <NavLink to="/" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
             {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
             <span className="relative inline-block">
               {dark && (
