@@ -14,6 +14,7 @@ public record FlightProductDto(
         Instant returnDepartTime,
         Instant returnArriveTime,
         int stops,
+        int durationMinutes,
         String baggage,
         BigDecimal price,
         String currency) {

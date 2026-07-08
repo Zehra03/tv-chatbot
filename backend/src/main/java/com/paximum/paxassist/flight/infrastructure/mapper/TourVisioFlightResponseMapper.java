@@ -84,6 +84,7 @@ public class TourVisioFlightResponseMapper {
                 .returnDepartTime(null)
                 .returnArriveTime(null)
                 .stops(item.stopCount())
+                .durationMinutes(item.duration())
                 .baggage(summarizeBaggage(item.baggageInformations()))
                 .price(offer.price() != null ? offer.price().amount() : null)
                 .currency(offer.price() != null ? offer.price().currency() : null)

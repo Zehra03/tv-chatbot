@@ -218,7 +218,11 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
                     available = firstOffer.path("isAvailable").asBoolean(true);
                 }
 
-                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available));
+                // Absolute image URL; TourVisio omits it for many hotels → null (frontend placeholder).
+                JsonNode thumbNode = hotelNode.path("thumbnailFull");
+                String image = thumbNode.isTextual() && !thumbNode.asText().isBlank() ? thumbNode.asText() : null;
+
+                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image));
             }
         }
         return products;
