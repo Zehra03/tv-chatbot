@@ -14,6 +14,7 @@ import java.util.List;
  * Shared        : adults, children, childAges, nationality, currency, maxPrice
  * SELECT intent : selectionReference
  */
+
 public record SlotCriteria(
 
         // ── Hotel ────────────────────────────────────────────────────────────

@@ -17,10 +17,11 @@ spring:
       "[hibernate.format_sql]": true
     open-in-view: false
   flyway:
+    enabled: true
     # Enabled repo-wide: production/default profile runs V1__initial_schema.sql against Postgres,
     # then JPA ddl-auto=validate checks the entities against it. Test profiles that use H2 or an
-    # empty DB exclude FlywayAutoConfiguration (see application-loadtest.yml / application-mock.yml).
-    enabled: true
+    # empty DB exclude FlywayAutoConfiguration (see application-loadtest.yml / application-mock.yml)
+
   ai:
     # Spring AI 1.0 model selection: main chat + intent extraction run on the OpenAI-compatible
     # Gemini endpoint; embeddings off. The Validator keeps its OWN Ollama client (validator/config),
