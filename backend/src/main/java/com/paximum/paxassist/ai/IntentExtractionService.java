@@ -2,7 +2,6 @@ package com.paximum.paxassist.ai;
 
 import com.paximum.paxassist.chat.exception.AiClientException;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.ollama.api.OllamaOptions;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 
@@ -161,7 +160,6 @@ public class IntentExtractionService {
 
         try {
             IntentExtractionResult result = chatClient.prompt()
-                    .options(OllamaOptions.builder().numPredict(512).build())
                     .system(EXTRACTION_SYSTEM_PROMPT)
                     .user(combinedPrompt)
                     .call()

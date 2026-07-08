@@ -22,17 +22,26 @@ spring:
     # empty DB exclude FlywayAutoConfiguration (see application-loadtest.yml / application-mock.yml).
     enabled: true
   ai:
+    # Spring AI 1.0 model selection: main chat + intent extraction run on the OpenAI-compatible
+    # Gemini endpoint; embeddings off. The Validator keeps its OWN Ollama client (validator/config),
+    # which reads OLLAMA_BASE_URL directly and is unaffected by this selection.
+    model:
+      chat: openai
+      embedding: none
+    openai:
+      api-key: ${GEMINI_API_KEY:}
+      # Gemini's OpenAI-compatible base already ends in /v1beta/openai, so completions-path is just
+      # /chat/completions (Spring AI requests base-url + completions-path).
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}
+      chat:
+        completions-path: /chat/completions
+        options:
+          model: ${AI_PROVIDER_MODEL:gemini-flash-latest}
+          temperature: 0.0
+    # Consumed only by the (currently disabled) Validator via OLLAMA_BASE_URL; ollama chat
+    # autoconfig is off because spring.ai.model.chat=openai.
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
-      init:
-        pull-model-strategy: when_missing
-        embedding:
-          include: false
-      chat:
-        model: ${AI_PROVIDER_MODEL:gemma3:4b}
-        options:
-          temperature: 0.0
-          num-predict: 1024
     mcp:
       server:
         # Publishes the hotel/flight SEARCH tools over MCP (WebMVC/SSE). Search-only surface.
