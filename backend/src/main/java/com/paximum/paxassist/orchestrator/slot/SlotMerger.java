@@ -28,6 +28,7 @@ public class SlotMerger {
                 pick(update.location(), base.location()),
                 pick(update.checkIn(), base.checkIn()),
                 pick(update.checkOut(), base.checkOut()),
+                pick(update.nights(), base.nights()),
                 pick(update.rooms(), base.rooms()),
                 pick(update.stars(), base.stars()),
                 pick(update.boardType(), base.boardType()),
@@ -41,6 +42,7 @@ public class SlotMerger {
                 pick(update.childAges(), base.childAges()),
                 pick(update.nationality(), base.nationality()),
                 pick(update.currency(), base.currency()),
+                pick(update.maxPrice(), base.maxPrice()),
                 pick(update.sortBy(), base.sortBy()),
                 pick(update.selectionReference(), base.selectionReference())
         );
