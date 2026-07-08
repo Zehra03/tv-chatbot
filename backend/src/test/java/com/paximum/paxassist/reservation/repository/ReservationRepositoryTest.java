@@ -7,15 +7,21 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.paximum.paxassist.auth.domain.Role;
+import com.paximum.paxassist.auth.domain.User;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
 import com.paximum.paxassist.reservation.domain.ReservationStatus;
 
 @DataJpaTest
+// Use the real (Postgres) datasource + Flyway-built schema instead of an embedded H2, so the
+// migrations' Postgres-specific DDL runs and Hibernate validate checks against the real schema.
+@AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
 @ActiveProfiles("test")
 class ReservationRepositoryTest {
 
@@ -34,9 +40,16 @@ class ReservationRepositoryTest {
 
     @Test
     void saveAndFind_persistsEntityCorrectly() {
-        // Given
+        // Given — seed an owner first; reservations.user_id has a real FK to users(id).
+        User owner = entityManager.persistAndFlush(User.builder()
+                .email("res-repo-test@example.com")
+                .passwordHash("x")
+                .displayName("Res Repo Test")
+                .role(Role.USER)
+                .build());
+
         Reservation reservation = new Reservation();
-        reservation.setUserId(123L);
+        reservation.setUserId(owner.getId());
         reservation.setReservationNumber("RES-12345");
         reservation.setProductType(ProductType.HOTEL);
         reservation.setStatus(ReservationStatus.CONFIRMED);
@@ -53,7 +66,7 @@ class ReservationRepositoryTest {
         Reservation found = reservationRepository.findById(saved.getId()).orElse(null);
         assertThat(found).isNotNull();
         assertThat(found.getReservationNumber()).isEqualTo("RES-12345");
-        assertThat(found.getUserId()).isEqualTo(123L);
+        assertThat(found.getUserId()).isEqualTo(owner.getId());
         assertThat(found.getProductType()).isEqualTo(ProductType.HOTEL);
         assertThat(found.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
         assertThat(found.getCreatedAt()).isNotNull(); // DB generated

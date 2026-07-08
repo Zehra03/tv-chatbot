@@ -82,8 +82,16 @@ class ReservationControllerTest {
                     "currency": "EUR",
                     "totalAmount": 1500.00,
                     "leadGuestName": "John Doe",
-                    "travellers": [{"type":"ADT","firstName":"John","lastName":"Doe"}],
-                    "hotel": {"productId":"HOT-1","name":"Hotel A"}
+                    "travellers": [{"firstName":"John","lastName":"Doe","passengerType":"ADULT"}],
+                    "hotel": {
+                        "hotelName":"Hotel A",
+                        "checkIn":"2026-08-01",
+                        "checkOut":"2026-08-05",
+                        "rooms":1,
+                        "adults":2,
+                        "price":1500.00,
+                        "currency":"EUR"
+                    }
                 }
                 """;
 
