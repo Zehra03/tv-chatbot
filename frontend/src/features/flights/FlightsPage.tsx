@@ -187,7 +187,10 @@ export function FlightsPage() {
               fieldClassName={cn('w-32', heroFieldClass)}
               align="right"
             />
-            <Button type="submit">Ara</Button>
+            {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
+            <Button type="submit" className="h-12">
+              Ara
+            </Button>
           </div>
         </form>
       </SearchHero>

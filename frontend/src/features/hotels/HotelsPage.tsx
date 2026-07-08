@@ -166,7 +166,10 @@ export function HotelsPage() {
               </div>
             )}
           </PeoplePicker>
-          <Button type="submit">Ara</Button>
+          {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
+          <Button type="submit" className="h-12">
+            Ara
+          </Button>
         </form>
       </SearchHero>
 

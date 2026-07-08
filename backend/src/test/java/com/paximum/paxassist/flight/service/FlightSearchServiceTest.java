@@ -53,7 +53,7 @@ class FlightSearchServiceTest {
     private TourVisioTokenProvider tokenProvider;
 
     private FlightSearchService service() {
-        return new FlightSearchService(
+        return new TourVisioFlightSearchService(
                 tourVisioFlightClient, requestMapper, responseMapper, eventPublisher, tokenProvider);
     }
 
