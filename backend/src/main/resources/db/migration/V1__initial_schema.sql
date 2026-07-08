@@ -107,7 +107,7 @@ CREATE TABLE reservations (
     CONSTRAINT uq_reservations_number       UNIQUE (reservation_number),
     CONSTRAINT fk_reservations_user         FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE SET NULL,
     CONSTRAINT ck_reservations_product_type CHECK (product_type IN ('hotel', 'flight', 'combined')),
-CONSTRAINT ck_reservations_status       CHECK (status I N ('pending', 'confirmed', 'cancelled', 'failed')),
+    CONSTRAINT ck_reservations_status       CHECK (status IN ('pending', 'confirmed', 'cancelled', 'failed')),
     CONSTRAINT ck_reservations_total_amount CHECK (total_amount >= 0)
 );
 
