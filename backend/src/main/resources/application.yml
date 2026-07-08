@@ -34,12 +34,25 @@ spring:
         options:
           temperature: 0.0
           num-predict: 1024
+    mcp:
+      server:
+        # Publishes the hotel/flight SEARCH tools over MCP (WebMVC/SSE). Search-only surface.
+        # Endpoints inherit JWT security — keep them access-controlled (they bypass the chat guard).
+        name: paxassist-search
+        version: 0.1.0
 
-# Kök tourvisio.* — Feign client'lar (@FeignClient url="${tourvisio.url}") ve hotel
-# @Value("${tourvisio.url}") bu değerleri okur. Default'lar sayesinde placeholder,
-# TOURVISIO_URL env olmadan da (ör. CI'daki `mvn test`) çözülür; dev/docker'da env override eder.
+# Kök tourvisio.* — Feign client'lar (@FeignClient url="${tourvisio.url}" path="/api") ve hotel
+# @Value("${tourvisio.url}") bu değerleri okur. tourvisio.url = host+versiyon tabanı (.../v2);
+# /api önekini flight Feign path'i ve hotel istemcisi KENDİ ekler → tam yol .../v2/api/... olur.
+# Default'lar sayesinde placeholder TOURVISIO_URL env olmadan da (ör. CI'daki `mvn test`) çözülür.
 tourvisio:
-  url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2/api}
+  url: ${TOURVISIO_URL:https://test-service.tourvisio.com/v2}
+  # culture = pricesearch/autocomplete Culture; timezone interprets TourVisio's offset-less flight
+  # times (e.g. 2022-02-11T09:35:00). timezone MUST be set or TourVisioFlightResponseMapper skips
+  # every flight ("Missing tourvisio timezone") and search returns []. Defaults keep it working
+  # without extra env; override per-deployment via TOURVISIO_CULTURE / TOURVISIO_TIMEZONE.
+  culture: ${TOURVISIO_CULTURE:en-US}
+  timezone: ${TOURVISIO_TIMEZONE:Europe/Istanbul}
   agency: ${TOURVISIO_AGENCY:}
   user: ${TOURVISIO_USER:}
   password: ${TOURVISIO_PASSWORD:}
@@ -56,9 +69,6 @@ management:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
-  rate-limit:
-    max-requests: 60
-    window-seconds: 60
   auth:
     jwt:
       # Dev-only default; production MUST override via AUTH_JWT_SECRET (never commit a real secret).
@@ -69,6 +79,22 @@ app:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
+  # Validator (second LLM layer, judges the main LLM's draft answer). Deliberately local/open-source
+  # and decoupled from the main chat model's config below — see validator/config/ValidatorConfig.java.
+  validator:
+    enabled: ${VALIDATOR_ENABLED:true}
+    ab-test-enabled: ${VALIDATOR_AB_TEST_ENABLED:false}
+    max-retries: ${VALIDATOR_MAX_RETRIES:2}
+    temperature: ${VALIDATOR_TEMPERATURE:0.0}
+    max-tokens: ${VALIDATOR_MAX_TOKENS:256}
+    model: ${VALIDATOR_MODEL:qwen2.5:3b}
+  orchestrator:
+    evaluator:
+      # Runtime guardrail loop over the assistant's free-text replies (generate → evaluate → refine).
+      # Disable to skip the critic entirely (single generation). Each retry adds one extra LLM call.
+      enabled: true
+      max-iterations: 2
+      min-score: 70
 
 ratelimit:
   # When true, a rate limiter failure (e.g. Redis unavailable) lets requests through.
@@ -82,12 +108,20 @@ ratelimit:
     refill-tokens: 60
     refill-period-seconds: 60
   # Specific rules; the most specific matching path wins over the default policy.
+  # Paths target the REAL /api/v1 endpoints (chat = LLM-backed, hotels/flights = TourVisio-backed),
+  # so the expensive routes get a tighter cap than the /** default. The loadtest profile keeps its
+  # own /api/search/** policy in application-loadtest.yml. Reservation (/api/v1/reservations/**) is
+  # not implemented yet; add a tight policy (e.g. cap 10) when that endpoint lands.
   policies:
-    - path: "/api/booking/**"
-      capacity: 10
-      refill-tokens: 10
+    - path: "/api/v1/chat/**"
+      capacity: 30
+      refill-tokens: 30
       refill-period-seconds: 60
-    - path: "/api/search/**"
+    - path: "/api/v1/hotels/**"
+      capacity: 30
+      refill-tokens: 30
+      refill-period-seconds: 60
+    - path: "/api/v1/flights/**"
       capacity: 30
       refill-tokens: 30
       refill-period-seconds: 60

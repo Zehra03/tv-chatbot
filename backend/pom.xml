@@ -49,6 +49,13 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
+        <!-- MCP server (WebMVC/SSE transport): exposes the hotel/flight SEARCH use-cases as
+        Model Context Protocol tools so external MCP clients can call them. Search-only surface —
+        no reservation/booking tool is ever registered. Version managed by the spring-ai-bom. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -133,10 +140,20 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- MUST stay on the 2.x line: springdoc 3.x targets Spring Boot 4 / Spring Framework 6→7
+        and drags in Boot 4.0 autoconfigure modules (org.springframework.boot.webmvc.autoconfigure),
+        which collide with this project's Boot 3.5 autoconfigure (duplicate ErrorMvcAutoConfiguration
+        → context fails to start). But 2.5.0 is too OLD for Boot 3.5: it calls the
+        ControllerAdviceBean(Object) constructor removed in Spring Framework 6.2, so /v3/api-docs
+        throws NoSuchMethodError (500). 2.8.x is the sweet spot — 2.x line (no Boot 4 modules) and
+        compiled against SF 6.2 (constructor fix landed in 2.7.0). Pinned to 2.8.14 specifically:
+        2.8.15+ introduced a swagger-ui resource-handler pattern (/swagger-ui/**/*swagger-initializer.js)
+        that the Boot 3.4+ PathPatternParser rejects ("No more pattern data allowed after ** element"),
+        so the context fails to start. See springdoc-openapi issue #3210. -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.5.0</version>
+            <version>2.8.14</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -148,6 +165,13 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Postgres container for the chat-persistence integration test (Flyway + ddl-auto=validate
+        against a real Postgres). Version managed by the Spring Boot BOM. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- Gatling (Java DSL) load-test simulations for the rate limiter. -->
