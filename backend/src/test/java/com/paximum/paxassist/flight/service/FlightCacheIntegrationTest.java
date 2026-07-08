@@ -69,7 +69,7 @@ class FlightCacheIntegrationTest {
                 .build();
 
         TourVisioResponseHeader header = new TourVisioResponseHeader(true);
-        TourVisioResponseBody body = new TourVisioResponseBody(null); // Assuming empty list mapped gracefully
+        TourVisioResponseBody body = new TourVisioResponseBody("mock-search-id", java.util.List.of()); // Empty list mapped gracefully
         TourVisioPriceSearchResponse mockResponse = new TourVisioPriceSearchResponse(header, body);
 
         when(tourVisioFlightClient.priceSearch(any())).thenReturn(mockResponse);
@@ -80,7 +80,7 @@ class FlightCacheIntegrationTest {
         // --- Cache Miss Senaryosu ---
         FlightSearchOutcome outcome1 = flightSearchService.search(sampleCriteria);
         assertThat(outcome1).isNotNull();
-        assertThat(outcome1.isSuccess()).isTrue();
+        assertThat(outcome1.complete()).isTrue();
 
         // Dış API tam 1 kez çağrılmış olmalı
         verify(tourVisioFlightClient, times(1)).priceSearch(any());
@@ -88,7 +88,7 @@ class FlightCacheIntegrationTest {
         // --- Cache Hit Senaryosu ---
         FlightSearchOutcome outcome2 = flightSearchService.search(sampleCriteria);
         assertThat(outcome2).isNotNull();
-        assertThat(outcome2.isSuccess()).isTrue();
+        assertThat(outcome2.complete()).isTrue();
 
         // Dış API 2. kez çağrılmamalı
         verify(tourVisioFlightClient, times(1)).priceSearch(any());
