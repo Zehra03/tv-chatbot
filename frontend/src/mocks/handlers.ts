@@ -40,6 +40,7 @@ let nextReservationId = 2000
 interface MockAuthSession {
   user: AuthUser
   token: string
+  refreshToken: string
 }
 const MOCK_AUTH_KEY = 'pax-msw-auth'
 let mockAuthMemory: MockAuthSession | null = null
@@ -62,6 +63,15 @@ function writeAuthSession(session: MockAuthSession | null) {
     else localStorage.removeItem(MOCK_AUTH_KEY)
   } catch {
     /* bellek kopyası yeter */
+  }
+}
+
+/** Backend'in çift-jeton yanıtı gibi yeni bir mock oturum (access + refresh) üretir. */
+function issueSession(user: AuthUser): MockAuthSession {
+  return {
+    user,
+    token: `mock-token-${crypto.randomUUID()}`,
+    refreshToken: `mock-refresh-${crypto.randomUUID()}`,
   }
 }
 
@@ -224,9 +234,12 @@ export const handlers: RequestHandler[] = [
     }
     registeredEmails.add(body.email.toLowerCase())
     const user: AuthUser = { id: crypto.randomUUID(), email: body.email, name: body.name }
-    const session: MockAuthSession = { user, token: `mock-token-${crypto.randomUUID()}` }
+    const session = issueSession(user)
     writeAuthSession(session)
-    return HttpResponse.json({ user: session.user, token: session.token }, { status: 201 })
+    return HttpResponse.json(
+      { user: session.user, token: session.token, refreshToken: session.refreshToken },
+      { status: 201 },
+    )
   }),
 
   http.post('/api/v1/auth/login', async ({ request }) => {
@@ -242,9 +255,33 @@ export const handlers: RequestHandler[] = [
       email: body.email,
       name: body.email.split('@')[0],
     }
-    const session: MockAuthSession = { user, token: `mock-token-${crypto.randomUUID()}` }
+    const session = issueSession(user)
     writeAuthSession(session)
-    return HttpResponse.json({ user: session.user, token: session.token })
+    return HttpResponse.json({
+      user: session.user,
+      token: session.token,
+      refreshToken: session.refreshToken,
+    })
+  }),
+
+  // Refresh jetonunu doğrulayıp yeni bir çift üretir (rotation — eski refresh jetonu
+  // artık geçersiz). Backend paritesi: geçersiz/eşleşmeyen jeton 401 INVALID_REFRESH_TOKEN.
+  http.post('/api/v1/auth/refresh', async ({ request }) => {
+    const body = (await request.json().catch(() => null)) as { refreshToken?: string } | null
+    const session = readAuthSession()
+    if (!session || !body?.refreshToken || body.refreshToken !== session.refreshToken) {
+      return HttpResponse.json(
+        errorBody('INVALID_REFRESH_TOKEN', 'Refresh jetonu geçersiz ya da süresi dolmuş.'),
+        { status: 401 },
+      )
+    }
+    const rotated = issueSession(session.user)
+    writeAuthSession(rotated)
+    return HttpResponse.json({
+      user: rotated.user,
+      token: rotated.token,
+      refreshToken: rotated.refreshToken,
+    })
   }),
 
   http.post('/api/v1/auth/logout', () => {
