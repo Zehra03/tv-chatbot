@@ -62,6 +62,7 @@ public class FlightSearchMapper {
                 product.getReturnDepartTime(),
                 product.getReturnArriveTime(),
                 product.getStops(),
+                product.getDurationMinutes(),
                 product.getBaggage(),
                 product.getPrice(),
                 product.getCurrency());
