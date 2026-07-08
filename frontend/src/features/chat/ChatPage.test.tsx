@@ -1,11 +1,12 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { configureStore } from '@reduxjs/toolkit'
 import { webcrypto } from 'node:crypto'
+import { delay, http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
 import authReducer from '@/features/auth/authSlice'
 import chatReducer from '@/features/chat/chatSlice'
@@ -76,6 +77,28 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     expect(await screen.findByText('Giriş tarihi nedir? (örn. 2026-08-01)', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('Otel araması')).toBeTruthy()
     expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
+  })
+
+  it('istek uçuştayken "Yeni sohbet"e geçilince composer yeniden yazılabilir olur', async () => {
+    const user = userEvent.setup()
+    // İlk yanıtı askıda tut: sessionId hâlâ null iken yeni sohbet senaryosu —
+    // regresyon: eskiden pending mutation sıfırlanmadığı için composer kilitli kalıyordu.
+    server.use(
+      http.post('/api/v1/chat', async () => {
+        await delay('infinite')
+        return HttpResponse.json({})
+      }),
+    )
+    renderChat()
+
+    await send(user, 'Antalya oteli')
+    const input = () => screen.getByLabelText('Mesaj') as HTMLTextAreaElement
+    // İstek beklerken composer kilitli.
+    await waitFor(() => expect(input().disabled).toBe(true))
+
+    // Yeni sohbet → bekleyen istek geçersizleşir, composer tekrar açılır.
+    await user.click(screen.getByRole('button', { name: /yeni sohbet/i }))
+    await waitFor(() => expect(input().disabled).toBe(false))
   })
 
   it('tam kriterde kartlar thread içinde görünür; Seç taslağı yazıp forma yönlendirir', async () => {
