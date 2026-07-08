@@ -45,6 +45,17 @@ class SlotMergerTest {
     }
 
     @Test
+    void maxPriceFromUpdateIsMergedAndBaseKept() {
+        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2));
+        SlotCriteria update = slots(Map.of("maxPrice", 1800));
+
+        SlotCriteria merged = merger.merge(base, update);
+
+        assertThat(merged.location()).isEqualTo("Antalya"); // kept from base
+        assertThat(merged.maxPrice()).isEqualTo(1800);       // added by update
+    }
+
+    @Test
     void emptyChildAgesDoesNotOverwriteExistingList() {
         SlotCriteria base = slots(Map.of("childAges", List.of(5, 8)));
         SlotCriteria update = slots(Map.of("childAges", List.of()));
