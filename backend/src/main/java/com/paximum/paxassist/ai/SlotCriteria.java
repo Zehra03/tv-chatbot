@@ -46,4 +46,14 @@ public record SlotCriteria(
         // ── Selection (SELECT intent) ─────────────────────────────────────────
         String selectionReference // raw user text: "1", "ilk", "en ucuz olan"
 ) {
+
+    /**
+     * An all-null criteria — used so slot accumulation never yields {@code null} when a turn
+     * carries an intent but no slots yet (e.g. "otel arıyorum"), keeping the mappers null-safe.
+     */
+    public static SlotCriteria empty() {
+        return new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null);
+    }
 }

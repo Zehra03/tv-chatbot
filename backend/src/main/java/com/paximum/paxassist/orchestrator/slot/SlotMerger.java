@@ -19,7 +19,9 @@ public class SlotMerger {
 
     public SlotCriteria merge(SlotCriteria base, SlotCriteria update) {
         if (update == null) {
-            return base;
+            // Never return null: a turn may carry an intent with no slots (e.g. "otel arıyorum"),
+            // and the mappers dereference the result — so coalesce both-null to an empty criteria.
+            return base != null ? base : SlotCriteria.empty();
         }
         if (base == null) {
             return update;
