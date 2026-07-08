@@ -2,6 +2,8 @@ package com.paximum.paxassist.reservation.web.dto;
 
 import java.util.List;
 
+import jakarta.validation.constraints.NotBlank;
+
 /**
  * Body of PATCH /api/v1/reservations/{id}/cancel.
  *
@@ -10,6 +12,6 @@ import java.util.List;
  * @param serviceIds optional subset of services to cancel
  */
 public record CancelRequest(
-        String reason,
+        @NotBlank String reason,
         List<String> serviceIds) {
 }

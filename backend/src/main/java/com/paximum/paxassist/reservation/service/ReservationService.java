@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.paximum.paxassist.common.log.LogModuleClient;
 import com.paximum.paxassist.reservation.domain.ProductType;
-import com.paximum.paxassist.reservation.dto.CreateReservationRequest;
 import com.paximum.paxassist.reservation.domain.Reservation;
 import com.paximum.paxassist.reservation.domain.ReservationStatus;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.client.TourVisioBookingClient;
@@ -144,7 +142,10 @@ public class ReservationService {
             return new ConfirmationResult.DuplicateInProgress();
         }
 
-        return runTransactionFlow(claimed.get().command(), userId);
+        PreviewReservationCommand command = claimed.get().command();
+        ConfirmationResult result = runTransactionFlow(command, userId);
+        logConfirmOutcome(command, userId, result);
+        return result;
     }
 
     /**
@@ -166,7 +167,9 @@ public class ReservationService {
             return new ConfirmationResult.DuplicateInProgress();
         }
         AwaitingCommit awaiting = claimed.get();
-        return commitAndPersist(awaiting.command(), awaiting.transactionId(), userId);
+        ConfirmationResult result = commitAndPersist(awaiting.command(), awaiting.transactionId(), userId);
+        logConfirmOutcome(awaiting.command(), userId, result);
+        return result;
     }
 
     // =========================================================================================
@@ -194,8 +197,9 @@ public class ReservationService {
      * Not changing the endpoint contract here.
      */
     @Transactional(readOnly = true)
-    public Optional<ReservationDetailResult> getReservationDetail(Long id) {
+    public Optional<ReservationDetailResult> getReservationDetail(Long id, Long userId) {
         return reservationRepository.findById(id)
+                .filter(reservation -> Objects.equals(reservation.getUserId(), userId))
                 .map(this::initializeAssociations)
                 .map(reservation -> new ReservationDetailResult(reservation, fetchCancellationOptions(reservation)));
     }
@@ -205,9 +209,16 @@ public class ReservationService {
      * onto our {@link ReservationStatus} and persists it. No local status change on any failure.
      */
     @Transactional
-    public CancelResult cancelReservation(Long id, String reason, List<String> serviceIds) {
+    public CancelResult cancelReservation(Long id, Long userId, String reason, List<String> serviceIds) {
+        CancelResult result = doCancelReservation(id, userId, reason, serviceIds);
+        logCancelOutcome(id, userId, result);
+        return result;
+    }
+
+    private CancelResult doCancelReservation(Long id, Long userId, String reason, List<String> serviceIds) {
         Optional<Reservation> found = reservationRepository.findById(id);
-        if (found.isEmpty()) {
+        // A non-owner (or missing) reservation is reported as NotFound so existence is not revealed.
+        if (found.isEmpty() || !Objects.equals(found.get().getUserId(), userId)) {
             return new CancelResult.NotFound();
         }
         Reservation reservation = found.get();
@@ -481,108 +492,45 @@ public class ReservationService {
     }
 
     // =========================================================================================
-    // Reservation intake — validated entry point with PII-masked async logging (Ticket 5).
+    // Async activity logging (LogMod) — non-blocking, PII-safe summaries only.
     // =========================================================================================
 
     /**
-     * Validated intake for a reservation request. Runs the business step, then triggers a
-     * non-blocking, PII-masked audit log via {@link LogModuleClient} for both success and failure.
+     * Emits a non-blocking LogMod activity event for a <em>terminal</em> confirm outcome. A warning
+     * awaiting a second confirm is intentionally not logged here (it is not terminal); everything else
+     * is recorded as SUCCESS (persisted) or FAILED. The payload is a PII-safe summary only —
+     * passenger names and contact details are never included.
      */
-    public Map<String, Object> processReservation(CreateReservationRequest request, String userEmail) {
-        log.info("Processing reservation for user: {}", userEmail);
-
-        String maskedRequestData = buildMaskedLogData(request);
-
-        try {
-            // TODO: Asıl rezervasyon iş mantığı (Veritabanı kaydı, fiyat kontrolü vb.) burada yer alacak.
-            if ("FAIL_SIMULATION".equals(request.getLeadGuestName())) {
-                throw new RuntimeException("Simulated business logic failure");
-            }
-
-            Map<String, Object> responseData = Map.of(
-                    "message", "Rezervasyon isteği geçerli ve işlendi.",
-                    "user", userEmail,
-                    "data", request
-            );
-
-            // Ana akışı bloklamadan (non-blocking) asenkron loglama tetikleniyor.
-            logModuleClient.logActivity(
-                    "ReservationModule",
-                    "createReservation",
-                    maskedRequestData,
-                    "SUCCESS",
-                    "Reservation successfully processed for user: " + userEmail
-            );
-
-            return responseData;
-        } catch (Exception e) {
-            log.error("Reservation processing failed for user: {}", userEmail, e);
-
-            // Hata durumunun asenkron loglanması
-            logModuleClient.logActivity(
-                    "ReservationModule",
-                    "createReservation",
-                    maskedRequestData,
-                    "FAILED",
-                    "Error: " + e.getMessage()
-            );
-
-            throw e;
+    private void logConfirmOutcome(PreviewReservationCommand command, Long userId, ConfirmationResult result) {
+        if (result instanceof ConfirmationResult.NeedsUserConfirmation) {
+            return;
+        }
+        if (result instanceof ConfirmationResult.Confirmed confirmed) {
+            logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
+                    "SUCCESS", "Reservation " + confirmed.reservationNumber() + " confirmed for user " + userId);
+        } else {
+            logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
+                    "FAILED", "Confirm failed for user " + userId + ": " + result.getClass().getSimpleName());
         }
     }
 
-    private String buildMaskedLogData(CreateReservationRequest request) {
-        if (request == null) return "null";
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("CreateReservationRequest(productType=").append(request.getProductType());
-        sb.append(", totalAmount=").append(request.getTotalAmount());
-        sb.append(", currency=").append(request.getCurrency());
-        sb.append(", leadGuestName=").append(maskString(request.getLeadGuestName()));
-
-        sb.append(", passengers=[");
-        if (request.getPassengers() != null) {
-            for (int i = 0; i < request.getPassengers().size(); i++) {
-                var p = request.getPassengers().get(i);
-                sb.append("PassengerDto(firstName=").append(maskString(p.getFirstName()))
-                  .append(", lastName=").append(maskString(p.getLastName()))
-                  .append(", passengerType=").append(p.getPassengerType())
-                  .append(", email=").append(maskEmail(p.getEmail()))
-                  .append(", phone=").append(maskPhone(p.getPhone()))
-                  .append(")");
-                if (i < request.getPassengers().size() - 1) sb.append(", ");
-            }
+    /** Emits a non-blocking LogMod event for a cancel outcome (a not-found/not-owned result is not logged). */
+    private void logCancelOutcome(Long id, Long userId, CancelResult result) {
+        if (result instanceof CancelResult.Cancelled cancelled) {
+            logModuleClient.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
+                    "SUCCESS", "Reservation " + id + " cancelled by user " + userId + " -> " + cancelled.newStatus());
+        } else if (!(result instanceof CancelResult.NotFound)) {
+            logModuleClient.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
+                    "FAILED", "Cancel failed for user " + userId + ": " + result.getClass().getSimpleName());
         }
-        sb.append("]");
-
-        if (request.getHotelDetails() != null) {
-            sb.append(", hotelDetails=").append(request.getHotelDetails().toString());
-        }
-        if (request.getFlightDetails() != null) {
-            sb.append(", flightDetails=").append(request.getFlightDetails().toString());
-        }
-
-        sb.append(")");
-        return sb.toString();
     }
 
-    private String maskString(String str) {
-        if (str == null || str.isBlank()) return str;
-        if (str.length() <= 2) return "***";
-        return str.charAt(0) + "***" + str.charAt(str.length() - 1);
-    }
-
-    private String maskEmail(String email) {
-        if (email == null || !email.contains("@")) return "***";
-        String[] parts = email.split("@");
-        if (parts[0].length() <= 2) {
-            return "***@" + parts[1];
-        }
-        return parts[0].charAt(0) + "***" + parts[0].charAt(parts[0].length() - 1) + "@" + parts[1];
-    }
-
-    private String maskPhone(String phone) {
-        if (phone == null || phone.length() <= 4) return "***";
-        return phone.substring(0, 2) + "***" + phone.substring(phone.length() - 2);
+    /** PII-safe one-line summary of a booking command for logs: product mix, amount, traveller count. */
+    private String maskedSummary(PreviewReservationCommand command) {
+        String products = (command.hotel() != null ? "H" : "") + (command.flight() != null ? "F" : "");
+        int travellers = command.travellers() == null ? 0 : command.travellers().size();
+        return "products=" + (products.isEmpty() ? "-" : products)
+                + ", amount=" + command.totalAmount() + " " + command.currency()
+                + ", travellers=" + travellers;
     }
 }
