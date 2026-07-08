@@ -6,6 +6,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -13,8 +14,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paximum.paxassist.auth.dto.AuthResponseDto;
 import com.paximum.paxassist.auth.dto.AuthUserDto;
 import com.paximum.paxassist.auth.dto.LoginRequestDto;
+import com.paximum.paxassist.auth.dto.RefreshRequestDto;
 import com.paximum.paxassist.auth.dto.RegisterRequestDto;
 import com.paximum.paxassist.auth.exception.EmailAlreadyExistsException;
+import com.paximum.paxassist.auth.exception.InvalidRefreshTokenException;
 import com.paximum.paxassist.auth.service.AuthService;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +39,9 @@ class AuthControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService))
                 .setControllerAdvice(new AuthExceptionHandler(), new com.paximum.paxassist.config.GlobalExceptionHandler())
+                // logout uses @AuthenticationPrincipal; register the resolver so standalone MockMvc
+                // supplies null (no auth) instead of trying to instantiate UserPrincipal as a model attr.
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .build();
     }
 
@@ -43,7 +49,7 @@ class AuthControllerTest {
     void register_returns201WithUserAndToken() throws Exception {
         RegisterRequestDto request = new RegisterRequestDto("new@example.com", "password123", "New User");
         AuthResponseDto response = new AuthResponseDto(
-                new AuthUserDto("1", "new@example.com", "New User"), "jwt-token");
+                new AuthUserDto("1", "new@example.com", "New User"), "jwt-token", "refresh-token");
         when(authService.register(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -51,6 +57,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.user.email").value("new@example.com"));
     }
 
@@ -80,7 +87,7 @@ class AuthControllerTest {
     void login_returns200WithUserAndToken() throws Exception {
         LoginRequestDto request = new LoginRequestDto("user@example.com", "password123");
         AuthResponseDto response = new AuthResponseDto(
-                new AuthUserDto("2", "user@example.com", null), "jwt-token");
+                new AuthUserDto("2", "user@example.com", null), "jwt-token", "refresh-token");
         when(authService.login(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -88,6 +95,7 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.refreshToken").value("refresh-token"))
                 .andExpect(jsonPath("$.user.id").value("2"));
     }
 
@@ -102,6 +110,43 @@ class AuthControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.error").value("INVALID_CREDENTIALS"));
+    }
+
+    @Test
+    void refresh_returns200WithRotatedTokens() throws Exception {
+        RefreshRequestDto request = new RefreshRequestDto("old-refresh");
+        AuthResponseDto response = new AuthResponseDto(
+                new AuthUserDto("2", "user@example.com", null), "new-jwt", "new-refresh");
+        when(authService.refresh(any())).thenReturn(response);
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("new-jwt"))
+                .andExpect(jsonPath("$.refreshToken").value("new-refresh"));
+    }
+
+    @Test
+    void refresh_returns400WhenTokenBlank() throws Exception {
+        RefreshRequestDto request = new RefreshRequestDto("");
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void refresh_returns401WhenTokenInvalid() throws Exception {
+        RefreshRequestDto request = new RefreshRequestDto("bad-refresh");
+        when(authService.refresh(any())).thenThrow(new InvalidRefreshTokenException());
+
+        mockMvc.perform(post("/api/v1/auth/refresh")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("INVALID_REFRESH_TOKEN"));
     }
 
     @Test
