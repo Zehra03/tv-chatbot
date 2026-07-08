@@ -135,6 +135,45 @@ class HotelSearchHandlerTest {
     }
 
     @Test
+    void seafrontFeatureKeepsOnlyBeachHotels() {
+        SlotCriteria merged = slots(Map.of(
+                "location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05",
+                "adults", 2, "features", List.of("SEAFRONT")));
+        OrchestrationContext context = contextWith(merged);
+        HotelProduct beach = new HotelProduct("H1", "Rixos", "Antalya", 5, new BigDecimal("1500"), "TRY", "AI", true,
+                null, List.of("Beach Hotel", "Private Beach"));
+        HotelProduct city = new HotelProduct("H2", "City Inn", "Antalya", 4, new BigDecimal("1200"), "TRY", "BB", true,
+                null, List.of("City Hotel", "Business Center"));
+        when(hotelSearchService.searchHotels(any()))
+                .thenReturn(HotelSearchResponse.success(List.of(beach, city)));
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).containsExactly(beach);
+        assertThat(result.reply()).contains("denize sıfır");
+    }
+
+    @Test
+    void seafrontWithNoMatchGivesHonestFeatureMessage() {
+        SlotCriteria merged = slots(Map.of(
+                "location", "Ankara", "checkIn", "2026-08-01", "checkOut", "2026-08-05",
+                "adults", 2, "features", List.of("SEAFRONT")));
+        OrchestrationContext context = contextWith(merged);
+        HotelProduct city1 = new HotelProduct("H1", "Ankara Palace", "Ankara", 5, new BigDecimal("1500"), "TRY", "BB", true,
+                null, List.of("City Hotel"));
+        HotelProduct city2 = new HotelProduct("H2", "Kızılay Inn", "Ankara", 4, new BigDecimal("1200"), "TRY", "BB", true,
+                null, List.of("Business Center"));
+        when(hotelSearchService.searchHotels(any()))
+                .thenReturn(HotelSearchResponse.success(List.of(city1, city2)));
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        // Honest: blame the unmet feature, not the date/city.
+        assertThat(result.reply()).contains("denize sıfır").doesNotContain("Farklı bir tarih veya şehir");
+    }
+
+    @Test
     void boardTypeFiltersHotelsByBoardName() {
         SlotCriteria merged = slots(Map.of(
                 "location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05",

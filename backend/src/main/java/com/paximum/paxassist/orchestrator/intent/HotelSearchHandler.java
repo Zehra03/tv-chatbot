@@ -71,20 +71,33 @@ public class HotelSearchHandler implements IntentHandler {
             return OrchestrationResult.clarify(clarifications.questionForHotel(response.missingParameters()), "hotel");
         }
 
-        // Post-search, in-memory filters over REAL results (no fabrication): budget and board type.
+        // Post-search, in-memory filters over REAL results (no fabrication): budget, board type,
+        // then requested hotel features (denize sıfır / havuz / spa …) confirmed by provider data.
         List<Object> rawCards = toCards(response.results());
         List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.maxPrice());
         cards = ResultFilters.applyBoardType(cards, merged.boardType());
+        List<Object> beforeFeatureFilter = cards;
+        cards = ResultFilters.applyFeatures(cards, merged.features());
 
         context.session().setActiveDomain("HOTEL");
         context.session().setLastResultCards(cards);
 
-        return OrchestrationResult.cards(hotelReply(cards, rawCards, merged), cards);
+        return OrchestrationResult.cards(hotelReply(cards, rawCards, beforeFeatureFilter, merged), cards);
     }
 
-    private String hotelReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged) {
+    private String hotelReply(List<Object> cards, List<Object> rawCards,
+                              List<Object> beforeFeatureFilter, SlotCriteria merged) {
+        String featureLabels = ResultFilters.describeFeatures(merged.features());
+
         if (!cards.isEmpty()) {
-            return "Aramanıza uygun " + cards.size() + " otel buldum:";
+            String suffix = featureLabels.isBlank() ? "" : " (" + featureLabels + ")";
+            return "Aramanıza uygun " + cards.size() + " otel buldum" + suffix + ":";
+        }
+        // The feature filter emptied a non-empty list → name the unmet feature honestly rather than
+        // blaming the date/city. (Only when the list had hotels before feature filtering.)
+        if (!featureLabels.isBlank() && !beforeFeatureFilter.isEmpty()) {
+            return featureLabels + " olarak işaretli otel bulamadım. Bu özellik için uygun sonuç "
+                    + "çıkmadı; kriteri kaldırmayı ya da farklı bir bölge/tarih denemeyi ister misiniz?";
         }
         // Everything was filtered out by budget while the search itself had results → say so honestly.
         if (!rawCards.isEmpty() && merged.maxPrice() != null) {

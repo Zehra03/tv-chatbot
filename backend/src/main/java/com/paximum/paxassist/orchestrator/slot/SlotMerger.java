@@ -34,6 +34,7 @@ public class SlotMerger {
                 pick(update.rooms(), base.rooms()),
                 pick(update.stars(), base.stars()),
                 pick(update.boardType(), base.boardType()),
+                pick(update.features(), base.features()),
                 pick(update.origin(), base.origin()),
                 pick(update.destination(), base.destination()),
                 pick(update.departureDate(), base.departureDate()),
@@ -54,7 +55,8 @@ public class SlotMerger {
         return update != null ? update : base;
     }
 
-    private static List<Integer> pick(List<Integer> update, List<Integer> base) {
+    // Lists (childAges, features): a non-empty update wins; empty/null keeps the accumulated value.
+    private static <E> List<E> pick(List<E> update, List<E> base) {
         return (update != null && !update.isEmpty()) ? update : base;
     }
 }

@@ -222,9 +222,34 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
                 JsonNode thumbNode = hotelNode.path("thumbnailFull");
                 String image = thumbNode.isTextual() && !thumbNode.asText().isBlank() ? thumbNode.asText() : null;
 
-                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image));
+                // Real hotel feature names for the chat feature filter (denize sıfır / havuz / spa …).
+                // Facilities are the rich source ("Beach Hotel", "Private Beach", "Outdoor Pool");
+                // themes ("Deniz Kenarında", "BEACH") are sparse but add signal. Never fabricated.
+                List<String> features = collectNames(hotelNode.path("facilities"), hotelNode.path("themes"));
+
+                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image, features));
             }
         }
         return products;
+    }
+
+    /**
+     * Collects distinct, non-blank {@code name} values from the given JSON arrays (facilities,
+     * themes), preserving first-seen order. Builds a hotel's feature list for the chat feature
+     * filter. Missing/blank names are skipped — never invented.
+     */
+    private static List<String> collectNames(JsonNode... arrays) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
+        for (JsonNode array : arrays) {
+            if (array != null && array.isArray()) {
+                for (JsonNode node : array) {
+                    String name = node.path("name").asText("").trim();
+                    if (!name.isEmpty()) {
+                        names.add(name);
+                    }
+                }
+            }
+        }
+        return new ArrayList<>(names);
     }
 }
