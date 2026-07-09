@@ -17,6 +17,9 @@ class GuardOrchestratorTest {
     @Mock
     private GuardRuleService guardRuleService;
 
+    @Mock
+    private OutOfScopeGuard outOfScopeGuard;
+
     @InjectMocks
     private GuardOrchestrator guardOrchestrator;
 
@@ -49,5 +52,19 @@ class GuardOrchestratorTest {
         // Then
         assertThat(result).isEqualTo(safeInput);
         verify(guardRuleService).evaluate(safeInput);
+    }
+
+    @Test
+    void assertNotBlocked_delegatesToOutOfScopeGuard() {
+        guardOrchestrator.assertNotBlocked(7L);
+
+        verify(outOfScopeGuard).assertNotBlocked(7L);
+    }
+
+    @Test
+    void registerOutOfScope_delegatesToOutOfScopeGuard() {
+        guardOrchestrator.registerOutOfScope(7L, true);
+
+        verify(outOfScopeGuard).registerOutOfScope(7L, true);
     }
 }

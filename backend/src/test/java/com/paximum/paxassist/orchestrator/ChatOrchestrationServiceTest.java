@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -76,6 +77,58 @@ class ChatOrchestrationServiceTest {
         assertThat(outcome.session()).isSameAs(session);
         // user + assistant turns are appended to the session transcript
         assertThat(session.getMessages()).hasSize(2);
+        verify(sessionStore).save(session);
+        // OTHER turn is registered for out-of-scope tracking
+        verify(guard).registerOutOfScope(7L, true);
+    }
+
+    @Test
+    void blockedUser_shortCircuitsBeforeExtraction() {
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(new ChatSession("s1"));
+        doThrow(new GuardBlockedException("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.",
+                "Out-of-scope abuse: user temporarily blocked"))
+                .when(guard).assertNotBlocked(7L);
+
+        OrchestrationResult result = service().handle("s1", "merhaba", 7L).result();
+
+        assertThat(result.reply())
+                .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
+        verify(guardAuditLogger).logBlockedRequestAsync("merhaba", "Out-of-scope abuse: user temporarily blocked");
+        verifyNoInteractions(intentExtraction);
+        verify(intentRouter, never()).route(any());
+        verify(sessionStore, never()).save(any());
+    }
+
+    @Test
+    void outOfScopeThresholdReached_blocksThisTurn_withoutRoutingOrPersisting() {
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(new ChatSession("s1"));
+        when(intentExtraction.extract(eq("nasılsın"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.OTHER, null));
+        doThrow(new GuardBlockedException("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.",
+                "Out-of-scope abuse: user temporarily blocked"))
+                .when(guard).registerOutOfScope(7L, true);
+
+        OrchestrationResult result = service().handle("s1", "nasılsın", 7L).result();
+
+        assertThat(result.reply())
+                .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
+        verify(guardAuditLogger).logBlockedRequestAsync("nasılsın", "Out-of-scope abuse: user temporarily blocked");
+        verify(intentRouter, never()).route(any());
+        verify(sessionStore, never()).save(any());
+    }
+
+    @Test
+    void inScopeTurn_registersAsNonOutOfScope_resettingStreak() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("Antalya'da otel"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null));
+        when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message("8 otel buldum"));
+
+        service().handle("s1", "Antalya'da otel", 7L);
+
+        verify(guard).registerOutOfScope(7L, false);
         verify(sessionStore).save(session);
     }
 }
