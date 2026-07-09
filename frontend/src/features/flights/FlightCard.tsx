@@ -13,11 +13,13 @@ import type { FlightProduct } from '@/types'
  * çizgisi, hover'da teal kenar + 3B eğim (TiltedCard). Fiyat backend'den
  * geldiği gibi gösterilir (AnimatedPrice sr-only ikizinde formatPrice). Seç,
  * ürünü taslağa yazıp kontrollü rezervasyon formuna yönlendirir.
+ *
+ * `tilt` — chat thread'inde eğim istemiyoruz (arama sonrası kartlar); orada
+ * `tilt={false}` geçilir, sonuç sayfalarında varsayılan (eğimli) kalır.
  */
-export function FlightCard({ product }: { product: FlightProduct }) {
+export function FlightCard({ product, tilt = true }: { product: FlightProduct; tilt?: boolean }) {
   const select = useSelectProduct()
-  return (
-    <TiltedCard>
+  const content = (
       <div className="glass-card p-5 transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]">
         <div className="flex items-center justify-between gap-3">
           <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-white/70">
@@ -90,6 +92,6 @@ export function FlightCard({ product }: { product: FlightProduct }) {
           </Button>
         </div>
       </div>
-    </TiltedCard>
   )
+  return tilt ? <TiltedCard>{content}</TiltedCard> : content
 }

@@ -14,13 +14,15 @@ import type { HotelProduct } from '@/types'
  * (thumbnailFull); yoksa/yüklenmezse placeholder. Fiyat/uygunluk backend'den
  * geldiği gibi gösterilir. Seç, ürünü taslağa yazıp kontrollü rezervasyon
  * formuna yönlendirir; müsait değilse devre dışıdır.
+ *
+ * `tilt` — chat thread'inde eğim istemiyoruz (arama sonrası kartlar); orada
+ * `tilt={false}` geçilir, sonuç sayfalarında varsayılan (eğimli) kalır.
  */
-export function HotelCard({ product }: { product: HotelProduct }) {
+export function HotelCard({ product, tilt = true }: { product: HotelProduct; tilt?: boolean }) {
   const select = useSelectProduct()
   const [imageFailed, setImageFailed] = useState(false)
   const showImage = Boolean(product.image) && !imageFailed
-  return (
-    <TiltedCard>
+  const content = (
       <div className="glass-card flex flex-col gap-3 p-5 transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)] sm:flex-row sm:items-center sm:justify-between sm:gap-4">
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
           {showImage ? (
@@ -83,6 +85,6 @@ export function HotelCard({ product }: { product: HotelProduct }) {
           </Button>
         </div>
       </div>
-    </TiltedCard>
   )
+  return tilt ? <TiltedCard>{content}</TiltedCard> : content
 }
