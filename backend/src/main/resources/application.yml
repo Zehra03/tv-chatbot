@@ -123,6 +123,16 @@ app:
     temperature: ${VALIDATOR_TEMPERATURE:0.0}
     max-tokens: ${VALIDATOR_MAX_TOKENS:256}
     model: ${VALIDATOR_MODEL:gemma3:4b}
+  # Stateful guard rule: temporarily blocks a user who sends too many CONSECUTIVE out-of-scope
+  # (OTHER intent) messages. A real hotel/flight (any non-OTHER) turn resets the streak. Redis-backed
+  # (guard.OutOfScopeGuard); fails open when Redis is unavailable so it never blocks a real user.
+  guard:
+    out-of-scope:
+      enabled: ${GUARD_OOS_ENABLED:true}
+      threshold: ${GUARD_OOS_THRESHOLD:5}              # consecutive OTHER turns → block
+      window-seconds: ${GUARD_OOS_WINDOW_SECONDS:1800} # 30 min sliding streak window
+      block-duration-seconds: ${GUARD_OOS_BLOCK_SECONDS:900} # 15 min temporary block
+      fail-open: ${GUARD_OOS_FAIL_OPEN:true}
 
 ratelimit:
   # When true, a rate limiter failure (e.g. Redis unavailable) lets requests through.
