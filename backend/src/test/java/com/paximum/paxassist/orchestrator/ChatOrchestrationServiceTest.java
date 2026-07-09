@@ -102,15 +102,15 @@ class ChatOrchestrationServiceTest {
                 org.mockito.ArgumentCaptor.forClass(java.util.List.class);
         
         when(intentExtraction.extract(eq("Antalya'da 5 yıldızlı otel arıyorum"), historyCaptor.capture()))
-                .thenReturn(new IntentExtractionResult(IntentType.HOTEL_SEARCH, null)); // Criteria normally here
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null)); // Criteria normally here
         
-        when(intentRouter.route(IntentType.HOTEL_SEARCH)).thenReturn(handler);
+        when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
         
         org.mockito.ArgumentCaptor<OrchestrationContext> contextCaptor = 
                 org.mockito.ArgumentCaptor.forClass(OrchestrationContext.class);
                 
         // Handler represents the HotelModule processing and ResponseFormatter
-        when(handler.handle(contextCaptor.capture())).thenReturn(OrchestrationResult.messageWithCards("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.", java.util.List.of(new Object(), new Object())));
+        when(handler.handle(contextCaptor.capture())).thenReturn(OrchestrationResult.cards("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.", java.util.List.of(new Object(), new Object())));
 
         OrchestrationOutcome outcome = service().handle("session-123", "Antalya'da 5 yıldızlı otel arıyorum", 7L);
 
@@ -126,7 +126,7 @@ class ChatOrchestrationServiceTest {
         OrchestrationContext passedContext = contextCaptor.getValue();
         assertThat(passedContext.session()).isSameAs(session);
         assertThat(passedContext.userMessage()).isEqualTo("Antalya'da 5 yıldızlı otel arıyorum");
-        assertThat(passedContext.intent()).isEqualTo(IntentType.HOTEL_SEARCH);
+        assertThat(passedContext.intent()).isEqualTo(IntentType.HOTEL);
         assertThat(passedContext.criteria()).isNull();
 
         assertThat(outcome.result().reply()).isEqualTo("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.");
@@ -149,9 +149,9 @@ class ChatOrchestrationServiceTest {
         when(sessionStore.getOrCreate("session-123", 7L)).thenReturn(session);
         
         when(intentExtraction.extract(eq("Uçak bileti almak istiyorum"), anyList()))
-                .thenReturn(new IntentExtractionResult(IntentType.FLIGHT_SEARCH, null)); // Missing criteria
+                .thenReturn(new IntentExtractionResult(IntentType.FLIGHT, null)); // Missing criteria
         
-        when(intentRouter.route(IntentType.FLIGHT_SEARCH)).thenReturn(handler);
+        when(intentRouter.route(IntentType.FLIGHT)).thenReturn(handler);
         
         // In the real architecture, the FlightSearchHandler detects missing parameters and returns a question
         when(handler.handle(any())).thenReturn(OrchestrationResult.message("Nereye uçmak istersiniz ve hangi tarihte?"));
