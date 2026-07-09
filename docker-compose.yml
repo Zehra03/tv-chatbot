@@ -29,6 +29,13 @@ services:
       - "11434:11434"
     volumes:
       - ollama-data:/root/.ollama
+    # Image ships no curl/wget; `ollama list` returns 0 only when the local server answers.
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   backend:
     build:
@@ -53,12 +60,24 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      # Pipeline chat + intent extraction run on Gemini (spring.ai.model.chat=openai). Ollama is
+      # only used by the currently-disabled Validator, so don't gate backend startup on its health.
       ollama:
         condition: service_started
       redis:
         condition: service_healthy
     ports:
       - "${BACKEND_PORT}:${BACKEND_PORT}"
+    # Container is "healthy" only once Spring's actuator reports UP (datasource + Flyway ok).
+    # start_period is generous: on this host a cold start while other containers boot has been
+    # observed up to ~170s (springdoc init + JIT). Probe failures during start_period don't flip
+    # the container to unhealthy, so err large to avoid false-unhealthy during a slow boot.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:${BACKEND_PORT}/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 180s
 
   redis:
     image: redis:7.2-alpine

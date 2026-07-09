@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  MessageSquare,
   MessageSquarePlus,
   PanelLeftClose,
   PanelLeftOpen,
@@ -41,6 +42,10 @@ function persistCollapsed(collapsed: boolean) {
  * md altında gizlidir (dar ekranda thread'e yer bırakır). Başlıktaki panel
  * düğmesiyle ince ikon-rayına daraltılıp genişletilebilir; tercih
  * localStorage'da saklanır ki sayfa yenilemede korunsun.
+ *
+ * Görsel dil navbar (GooeyNav) ile uyumlu: AKTİF oturum, üst navigasyondaki
+ * gibi beyaz pill + lacivert metindir; pasif satırlar brand-ice tonunda, teal
+ * aksanlı. Cam yüzey (glass-card) header ve diğer panellerle aynı reçete.
  */
 export function SessionSidebar() {
   const sessions = useChatSessions()
@@ -57,23 +62,26 @@ export function SessionSidebar() {
       return next
     })
 
+  const count = sessions.data?.length ?? 0
+
   return (
     <aside
       aria-label="Sohbet geçmişi"
       data-collapsed={collapsed}
       className={cn(
-        'glass-card hidden shrink-0 flex-col gap-3 transition-[width] duration-300 md:flex',
-        collapsed ? 'w-16 p-2' : 'w-64 p-3',
+        'glass-card hidden shrink-0 flex-col overflow-hidden transition-[width] duration-300 md:flex',
+        collapsed ? 'w-16 p-2' : 'w-64 p-2.5',
       )}
     >
+      {/* Üst eylem satırı — Yeni sohbet (pill) + panel daraltma. */}
       <div className={cn('flex items-center gap-2', collapsed && 'flex-col')}>
         <Button
           type="button"
           variant="outline"
           size="sm"
           className={cn(
-            'gap-2',
-            collapsed ? 'h-9 w-9 justify-center px-0' : 'w-full justify-start',
+            'gap-2 rounded-full border-white/15 text-brand-ice transition-colors hover:border-brand-teal/50 hover:text-white',
+            collapsed ? 'h-9 w-9 justify-center px-0' : 'h-9 w-full justify-start px-3',
           )}
           onClick={() => dispatch(chatReset())}
           aria-label="Yeni sohbet"
@@ -86,7 +94,7 @@ export function SessionSidebar() {
           type="button"
           variant="ghost"
           size="icon"
-          className="h-9 w-9 shrink-0 text-brand-ice/60 hover:text-white"
+          className="h-9 w-9 shrink-0 rounded-full text-brand-ice/60 hover:bg-white/10 hover:text-white"
           onClick={toggleCollapsed}
           aria-expanded={!collapsed}
           aria-label={
@@ -104,54 +112,92 @@ export function SessionSidebar() {
 
       {!collapsed && (
         <>
-          <p className="px-1 text-xs font-medium uppercase tracking-wide text-brand-ice/50">
-            Geçmiş
-          </p>
+          {/* Hairline ayraç — header'ın border-b'siyle aynı ton, panele yapı verir. */}
+          <div className="my-2.5 h-px bg-white/10" aria-hidden />
 
-          <div className="-mr-1 flex-1 space-y-1 overflow-y-auto pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]">
+          <div className="flex items-center justify-between px-1.5 pb-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-ice/50">
+              Geçmiş
+            </p>
+            {count > 0 && (
+              <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-brand-ice/60">
+                {count}
+              </span>
+            )}
+          </div>
+
+          <ul
+            className="-mr-1.5 flex-1 space-y-0.5 overflow-y-auto pr-1.5 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
+          >
             {sessions.isPending && (
-              <p className="px-2 py-1 text-sm text-brand-ice/60">Yükleniyor…</p>
+              <li className="px-2 py-1 text-sm text-brand-ice/60">Yükleniyor…</li>
             )}
             {sessions.isError && (
-              <p className="px-2 py-1 text-sm text-brand-ice/60">Geçmiş yüklenemedi.</p>
+              <li className="px-2 py-1 text-sm text-brand-ice/60">Geçmiş yüklenemedi.</li>
             )}
             {sessions.data?.length === 0 && (
-              <p className="px-2 py-1 text-sm text-brand-ice/60">Henüz sohbet yok.</p>
+              <li className="flex flex-col items-center gap-1.5 px-2 py-6 text-center">
+                <MessageSquare className="h-5 w-5 text-brand-ice/30" aria-hidden />
+                <span className="text-sm text-brand-ice/55">Henüz sohbet yok.</span>
+              </li>
             )}
             {sessions.data?.map((session) => {
               const active = session.id === activeSessionId
               return (
-                <div key={session.id} className="group relative">
+                <li key={session.id} className="group relative">
                   <button
                     type="button"
                     aria-current={active ? 'true' : undefined}
                     onClick={() => loadSession.mutate(session.id)}
                     className={cn(
-                      'w-full rounded-lg px-2.5 py-2 pr-8 text-left transition-colors',
+                      'flex w-full items-start gap-2.5 rounded-xl px-2.5 py-2 pr-9 text-left transition-all duration-200',
+                      // Aktif = navbar pill dili: beyaz kapsül + lacivert metin,
+                      // yumuşak mavi parıltı. Pasif = brand-ice, hafif hover.
                       active
-                        ? 'bg-white/10 text-white'
-                        : 'text-brand-ice/80 hover:bg-white/5 hover:text-white',
+                        ? 'bg-white text-brand-navy shadow-[0_2px_14px_theme(colors.brand.blue/25%)]'
+                        : 'text-brand-ice/75 hover:bg-white/[0.06] hover:text-white',
                     )}
                   >
-                    <span className="block truncate text-sm font-medium">
-                      {session.title ?? 'Yeni sohbet'}
-                    </span>
-                    <span className="block truncate text-xs text-brand-ice/50">
-                      {formatDateTime(session.updatedAt)} · {session.messageCount} mesaj
+                    <MessageSquare
+                      aria-hidden
+                      className={cn(
+                        'mt-0.5 h-4 w-4 shrink-0 transition-colors',
+                        active
+                          ? 'text-brand-blue'
+                          : 'text-brand-ice/40 group-hover:text-brand-ice/70',
+                      )}
+                    />
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">
+                        {session.title ?? 'Yeni sohbet'}
+                      </span>
+                      <span
+                        className={cn(
+                          'mt-0.5 block truncate text-xs',
+                          active ? 'text-brand-navy/55' : 'text-brand-ice/45',
+                        )}
+                      >
+                        {formatDateTime(session.updatedAt)} · {session.messageCount} mesaj
+                      </span>
                     </span>
                   </button>
                   <button
                     type="button"
                     aria-label={`Oturumu sil: ${session.title ?? session.id}`}
                     onClick={() => deleteSession.mutate(session.id)}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-brand-ice/40 opacity-0 transition-opacity hover:bg-white/10 hover:text-white focus-visible:opacity-100 group-hover:opacity-100"
+                    className={cn(
+                      'absolute right-1.5 top-1/2 -translate-y-1/2 rounded-lg p-1.5 opacity-0 transition-all focus-visible:opacity-100 group-hover:opacity-100',
+                      active
+                        ? 'text-brand-navy/40 hover:bg-brand-navy/10 hover:text-destructive'
+                        : 'text-brand-ice/40 hover:bg-white/10 hover:text-white',
+                    )}
                   >
                     <Trash2 className="h-3.5 w-3.5" aria-hidden />
                   </button>
-                </div>
+                </li>
               )
             })}
-          </div>
+          </ul>
         </>
       )}
     </aside>

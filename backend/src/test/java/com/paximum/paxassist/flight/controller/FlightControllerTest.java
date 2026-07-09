@@ -18,12 +18,16 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import com.paximum.paxassist.flight.domain.FlightLocation;
 import com.paximum.paxassist.flight.domain.FlightProduct;
+import com.paximum.paxassist.flight.service.FlightLocationService;
 import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 import com.paximum.paxassist.flight.service.FlightSearchService;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -37,6 +41,9 @@ class FlightControllerTest {
 
     @Mock
     private FlightSearchService flightSearchService;
+
+    @Mock
+    private FlightLocationService flightLocationService;
 
     @InjectMocks
     private FlightController flightController;
@@ -86,5 +93,26 @@ class FlightControllerTest {
                         .content("{\"destination\":\"LHR\",\"tripType\":\"one_way\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void locations_returnsSuggestionsForTheRequestedDirection() throws Exception {
+        when(flightLocationService.suggest(eq("Ant"), eq(true)))
+                .thenReturn(List.of(new FlightLocation("AYT", "AYT", "Antalya Havalimanı (AYT)", "airport")));
+
+        mockMvc.perform(get("/api/v1/flights/locations").param("q", "Ant").param("direction", "departure"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value("AYT"))
+                .andExpect(jsonPath("$[0].name").value("Antalya Havalimanı (AYT)"))
+                .andExpect(jsonPath("$[0].type").value("airport"));
+    }
+
+    @Test
+    void locations_shortQueryReturnsEmptyWithoutHittingTheService() throws Exception {
+        mockMvc.perform(get("/api/v1/flights/locations").param("q", "A"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        org.mockito.Mockito.verifyNoInteractions(flightLocationService);
     }
 }

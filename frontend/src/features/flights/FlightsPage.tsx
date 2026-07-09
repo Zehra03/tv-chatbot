@@ -1,8 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { ArrowRightLeft, Plane } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { DatePicker } from '@/components/ui/date-picker'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
@@ -19,7 +17,9 @@ import { flightFiltersChanged } from '@/features/ui/uiSlice'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
 import { FlightList } from '@/features/flights/FlightList'
-import type { FlightSearchCriteria, TripType } from '@/types'
+import { LocationAutocomplete } from '@/features/flights/LocationAutocomplete'
+import { flightApi } from '@/api'
+import type { FlightLocation, FlightSearchCriteria, TripType } from '@/types'
 import flightHero from '@/assets/flight/philip-myrtorp-iiqpxCg2GD4-unsplash.jpg'
 
 /**
@@ -35,6 +35,10 @@ export function FlightsPage() {
 
   const [origin, setOrigin] = useState(prefill?.origin ?? '')
   const [destination, setDestination] = useState(prefill?.destination ?? '')
+  // Autocomplete'ten seçilen TourVisio konum id'si (ör. "AYT"). Serbest metin
+  // yazılınca temizlenir; aramada varsa kod, yoksa yazılan metin gönderilir.
+  const [originCode, setOriginCode] = useState<string | null>(null)
+  const [destinationCode, setDestinationCode] = useState<string | null>(null)
   const [departDate, setDepartDate] = useState(prefill?.departDate ?? '')
   const [returnDate, setReturnDate] = useState(prefill?.returnDate ?? '')
   const [passengers, setPassengers] = useState(prefill?.passengers ?? 1)
@@ -65,8 +69,10 @@ export function FlightsPage() {
     e.preventDefault()
     if (!origin.trim() || !destination.trim() || !departDate) return
     setCriteria({
-      origin: origin.trim(),
-      destination: destination.trim(),
+      // Listeden seçildiyse TourVisio konum id'si; değilse yazılan serbest metin
+      // (backend yine autocomplete ile çözer).
+      origin: originCode ?? origin.trim(),
+      destination: destinationCode ?? destination.trim(),
       departDate,
       passengers,
       currency: 'EUR',
@@ -75,9 +81,21 @@ export function FlightsPage() {
     })
   }
 
+  const handleOriginSelect = (loc: FlightLocation) => {
+    setOrigin(loc.name)
+    setOriginCode(loc.id)
+  }
+
+  const handleDestinationSelect = (loc: FlightLocation) => {
+    setDestination(loc.name)
+    setDestinationCode(loc.id)
+  }
+
   const swapPlaces = () => {
     setOrigin(destination)
     setDestination(origin)
+    setOriginCode(destinationCode)
+    setDestinationCode(originCode)
   }
 
   return (
@@ -115,15 +133,22 @@ export function FlightsPage() {
           </div>
 
           <div className="flex flex-wrap items-end gap-2">
-            <div className="grid flex-1 basis-44 gap-1.5 sm:max-w-56 sm:flex-none sm:basis-auto">
-              <Label htmlFor="flight-origin">Nereden</Label>
-              <Input
+            <div className="flex-1 basis-44 sm:max-w-56 sm:flex-none sm:basis-auto">
+              <LocationAutocomplete
                 id="flight-origin"
+                label="Nereden"
+                fetchSuggestions={(q) => flightApi.locations(q, 'departure')}
+                queryKeyBase="flight-locations-departure"
                 value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
+                onTextChange={(text) => {
+                  setOrigin(text)
+                  setOriginCode(null)
+                }}
+                onSelect={handleOriginSelect}
                 placeholder="Ülke, şehir veya havalimanı"
                 required
-                className={cn('sm:w-56', heroFieldClass)}
+                fieldClassName={heroFieldClass}
+                className="sm:w-56"
               />
             </div>
             <button
@@ -134,15 +159,22 @@ export function FlightsPage() {
             >
               <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
             </button>
-            <div className="grid flex-1 basis-44 gap-1.5 sm:max-w-56 sm:flex-none sm:basis-auto">
-              <Label htmlFor="flight-destination">Nereye</Label>
-              <Input
+            <div className="flex-1 basis-44 sm:max-w-56 sm:flex-none sm:basis-auto">
+              <LocationAutocomplete
                 id="flight-destination"
+                label="Nereye"
+                fetchSuggestions={(q) => flightApi.locations(q, 'arrival')}
+                queryKeyBase="flight-locations-arrival"
                 value={destination}
-                onChange={(e) => setDestination(e.target.value)}
+                onTextChange={(text) => {
+                  setDestination(text)
+                  setDestinationCode(null)
+                }}
+                onSelect={handleDestinationSelect}
                 placeholder="Ülke, şehir veya havalimanı"
                 required
-                className={cn('sm:w-56', heroFieldClass)}
+                fieldClassName={heroFieldClass}
+                className="sm:w-56"
               />
             </div>
             {/* Tarih alanına tıklayınca temalı takvim açılır; gidiş-dönüşte

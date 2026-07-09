@@ -19,7 +19,8 @@ export interface SendMessageRequest {
 
 export interface SendMessageResponse {
   sessionId: string
-  /** Asistan yanıtı — ya açıklayıcı soru ya da `cards` taşıyan sonuç mesajı. */
+  /** Asistan yanıtı — açıklayıcı soru, `cards` taşıyan sonuç, ya da belirsizlikte
+   *  `options` taşıyan seçenekli kart (bkz. ChatMessage.options). */
   reply: ChatMessage
   /** O ana dek toplanmış (eksik olabilen) arama kriterleri. */
   accumulatedCriteria?: PartialCriteria

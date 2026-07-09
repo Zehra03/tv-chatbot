@@ -13,10 +13,13 @@ import com.paximum.paxassist.auth.domain.Role;
 import com.paximum.paxassist.auth.domain.User;
 import com.paximum.paxassist.auth.dto.AuthResponseDto;
 import com.paximum.paxassist.auth.dto.LoginRequestDto;
+import com.paximum.paxassist.auth.dto.RefreshRequestDto;
 import com.paximum.paxassist.auth.dto.RegisterRequestDto;
 import com.paximum.paxassist.auth.exception.EmailAlreadyExistsException;
+import com.paximum.paxassist.auth.exception.InvalidRefreshTokenException;
 import com.paximum.paxassist.auth.repository.UserRepository;
 import com.paximum.paxassist.auth.security.JwtService;
+import com.paximum.paxassist.auth.service.RefreshTokenService.RotatedTokens;
 
 import java.util.Optional;
 
@@ -45,11 +48,15 @@ class AuthServiceTest {
     @Mock
     private JwtService jwtService;
 
+    @Mock
+    private RefreshTokenService refreshTokenService;
+
     private AuthService authService;
 
     @org.junit.jupiter.api.BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, passwordEncoder, authenticationManager, jwtService);
+        authService = new AuthService(
+                userRepository, passwordEncoder, authenticationManager, jwtService, refreshTokenService);
     }
 
     @Test
@@ -63,6 +70,7 @@ class AuthServiceTest {
             return saved;
         });
         when(jwtService.generateToken("new@example.com", "USER")).thenReturn("jwt-token");
+        when(refreshTokenService.issue(any(User.class))).thenReturn("refresh-token");
 
         AuthResponseDto response = authService.register(request);
 
@@ -72,6 +80,7 @@ class AuthServiceTest {
         assertThat(userCaptor.getValue().getRole()).isEqualTo(Role.USER);
 
         assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.refreshToken()).isEqualTo("refresh-token");
         assertThat(response.user().id()).isEqualTo("1");
         assertThat(response.user().email()).isEqualTo("new@example.com");
         assertThat(response.user().name()).isEqualTo("New User");
@@ -100,10 +109,12 @@ class AuthServiceTest {
                 .build();
         when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
         when(jwtService.generateToken("user@example.com", "ADMIN")).thenReturn("jwt-token");
+        when(refreshTokenService.issue(user)).thenReturn("refresh-token");
 
         AuthResponseDto response = authService.login(request);
 
         assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.refreshToken()).isEqualTo("refresh-token");
         assertThat(response.user().id()).isEqualTo("2");
         assertThat(response.user().name()).isEqualTo("Existing User");
     }
@@ -120,5 +131,43 @@ class AuthServiceTest {
 
         verify(userRepository, never()).findByEmailIgnoreCase(anyString());
         verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void refresh_rotatesTokenAndMintsNewAccessToken() {
+        User user = User.builder()
+                .id(3L)
+                .email("user@example.com")
+                .passwordHash("hashed")
+                .displayName("Existing User")
+                .role(Role.USER)
+                .build();
+        when(refreshTokenService.rotate("old-refresh"))
+                .thenReturn(new RotatedTokens(user, "new-refresh"));
+        when(jwtService.generateToken("user@example.com", "USER")).thenReturn("new-jwt");
+
+        AuthResponseDto response = authService.refresh(new RefreshRequestDto("old-refresh"));
+
+        assertThat(response.token()).isEqualTo("new-jwt");
+        assertThat(response.refreshToken()).isEqualTo("new-refresh");
+        assertThat(response.user().id()).isEqualTo("3");
+        assertThat(response.user().email()).isEqualTo("user@example.com");
+    }
+
+    @Test
+    void refresh_propagatesInvalidTokenFailure() {
+        when(refreshTokenService.rotate("bad-refresh")).thenThrow(new InvalidRefreshTokenException());
+
+        assertThatThrownBy(() -> authService.refresh(new RefreshRequestDto("bad-refresh")))
+                .isInstanceOf(InvalidRefreshTokenException.class);
+
+        verifyNoInteractions(jwtService);
+    }
+
+    @Test
+    void logout_revokesAllRefreshTokensForUser() {
+        authService.logout(7L);
+
+        verify(refreshTokenService).revokeAllForUser(7L);
     }
 }

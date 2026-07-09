@@ -16,6 +16,16 @@ export type ResultCard =
   | { productType: 'hotel'; product: HotelProduct }
   | { productType: 'flight'; product: FlightProduct }
 
+/**
+ * Belirsizlik ("hangisini demek istediniz?") kartındaki tıklanabilir seçenek.
+ * `label` butonda görünür; tıklanınca `value` yeni bir kullanıcı mesajı olarak gönderilir
+ * (disambiguation normal sohbet akışını kullanır — özel endpoint yok). Transient: persist edilmez.
+ */
+export interface ChoiceOption {
+  label: string
+  value: string
+}
+
 export interface ChatMessage {
   id: string
   role: ChatRole
@@ -23,6 +33,8 @@ export interface ChatMessage {
   createdAt: IsoDateTime
   /** DB: result_cards jsonb (asistan mesajlarında dolu olabilir). */
   cards?: ResultCard[]
+  /** Belirsizlik kartı seçenekleri (transient; yalnız asistan turunda dolabilir). */
+  options?: ChoiceOption[]
 }
 
 /**

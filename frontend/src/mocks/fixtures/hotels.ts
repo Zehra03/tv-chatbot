@@ -1,4 +1,4 @@
-import type { HotelProduct } from '@/types'
+import type { HotelLocation, HotelProduct } from '@/types'
 
 /**
  * ⚠️ MOCK VERİ — TAMAMEN UYDURMA. Gerçek TourVisio otel/fiyat/uygunluk değildir.
@@ -64,4 +64,20 @@ export const hotelFixtures: HotelProduct[] = [
     availability: true,
     image: 'https://picsum.photos/seed/htl-mock-005/400/300',
   },
+]
+
+/**
+ * ⚠️ MOCK destination önerileri — otel "Nereye" otomatik tamamlaması için. Gerçek
+ * şehir adları ama liste dev-mock'tur (backend `HotelSearchServiceImpl.suggestLocations`
+ * paritesi). GET /api/v1/hotels/locations handler'ı bunları isim ile filtreler.
+ */
+export const hotelLocationFixtures: HotelLocation[] = [
+  { id: '23494', name: 'Antalya', type: 'city' },
+  { id: '100', name: 'Antakya', type: 'city' },
+  { id: '200', name: 'Bodrum', type: 'city' },
+  { id: '300', name: 'İstanbul', type: 'city' },
+  { id: '400', name: 'İzmir', type: 'city' },
+  { id: '500', name: 'Nevşehir', type: 'city' },
+  { id: '600', name: 'Muğla', type: 'city' },
+  { id: '700', name: 'Bursa', type: 'city' },
 ]

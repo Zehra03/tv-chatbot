@@ -63,13 +63,15 @@ describe.skipIf(!baseUrl)('Gerçek backend auth E2E', () => {
     }
   })
 
-  it('kayıt: { user, token } döner, kullanıcı bilgisi eşleşir', async () => {
+  it('kayıt: { user, token, refreshToken } döner, kullanıcı bilgisi eşleşir', async () => {
     session = await authApi.register({ email, password, name })
     expect(session.user.email.toLowerCase()).toBe(email.toLowerCase())
     expect(session.user.name).toBe(name)
     expect(session.user.id).toEqual(expect.any(String))
     expect(session.token).toEqual(expect.any(String))
     expect(session.token.length).toBeGreaterThan(0)
+    expect(session.refreshToken).toEqual(expect.any(String))
+    expect(session.refreshToken.length).toBeGreaterThan(0)
   })
 
   it('aynı e-postayla ikinci kayıt: 409 + mesaj', async () => {
@@ -90,7 +92,21 @@ describe.skipIf(!baseUrl)('Gerçek backend auth E2E', () => {
     const login = await authApi.login({ email, password })
     expect(login.user.id).toBe(session.user.id)
     expect(login.token.length).toBeGreaterThan(0)
+    expect(login.refreshToken.length).toBeGreaterThan(0)
     session = login
+  })
+
+  it('refresh: yeni access + refresh çifti döner; eski refresh jetonu rotation ile geçersizleşir', async () => {
+    const before = session
+    const refreshed = await authApi.refresh(before.refreshToken)
+    expect(refreshed.user.id).toBe(before.user.id)
+    expect(refreshed.token.length).toBeGreaterThan(0)
+    expect(refreshed.refreshToken.length).toBeGreaterThan(0)
+    expect(refreshed.refreshToken).not.toBe(before.refreshToken)
+
+    // Rotation: rotate edilmiş eski refresh jetonu artık kabul edilmez (401).
+    await expect(authApi.refresh(before.refreshToken)).rejects.toMatchObject({ status: 401 })
+    session = refreshed
   })
 
   it('jetonlu GET /auth/me: interceptor Authorization ekler, kullanıcı döner', async () => {

@@ -26,9 +26,20 @@ spring:
     # Spring AI 1.0 model selection: main chat + intent extraction run on the OpenAI-compatible
     # Gemini endpoint; embeddings off. The Validator keeps its OWN Ollama client (validator/config),
     # which reads OLLAMA_BASE_URL directly and is unaffected by this selection.
+    #
+    # PaxAssist only uses the CHAT model. The OpenAI starter also auto-configures audio-speech,
+    # audio-transcription, image and moderation models with matchIfMissing=true, and each of those
+    # beans throws "OpenAI API key must be set" at construction when no key is present. We never use
+    # them, so switch them off — otherwise the context fails to start whenever GEMINI_API_KEY is
+    # unset (e.g. the hermetic mock/mock-ai/loadtest test profiles on CI).
     model:
       chat: openai
       embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
     openai:
       api-key: ${GEMINI_API_KEY:}
       # Gemini's OpenAI-compatible base already ends in /v1beta/openai, so completions-path is just
@@ -84,10 +95,22 @@ app:
       secret: ${AUTH_JWT_SECRET:dev-only-insecure-secret-change-me-please-32bytes+}
       expiration-minutes: ${AUTH_JWT_EXPIRATION_MINUTES:60}
       issuer: paxassist
+    refresh-token:
+      # Long-lived, DB-persisted, rotated on every /auth/refresh and revoked on logout.
+      # Keep the access token short (jwt.expiration-minutes) and lean on this for continuity.
+      expiration-days: ${AUTH_REFRESH_EXPIRATION_DAYS:30}
   cache:
     default-ttl-minutes: 10
     hotel-ttl-minutes: 5
     flight-ttl-minutes: 5
+  # Chat "başka hangi tarihte müsait?" (DATE_ALTERNATIVES) probe. After an empty hotel search the
+  # handler price-searches candidate check-in dates stepping forward from the requested date and
+  # offers the ones TourVisio confirms as available. Bounded so a single ask makes at most
+  # ceil(window-days / step-days) provider calls (location is resolved only once).
+  date-suggestion:
+    step-days: ${DATE_SUGGESTION_STEP_DAYS:2}
+    window-days: ${DATE_SUGGESTION_WINDOW_DAYS:14}
+    max-suggestions: ${DATE_SUGGESTION_MAX:3}
   # Validator (second LLM layer, judges the main LLM's draft answer before it reaches the user —
   # FallbackHandler wires it over OTHER-intent conversational replies). Runs on its own dedicated
   # ChatClient (validator/config/ValidatorConfig.java), independent of the main chat engine's bean.

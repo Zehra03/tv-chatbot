@@ -61,6 +61,48 @@ class TourVisioHotelApiClientImplTest {
     }
 
     @Test
+    void mapToHotelProducts_collectsFacilityAndThemeNamesAsFeatures() throws Exception {
+        String raw = """
+                {
+                  "body": {
+                    "hotels": [
+                      {
+                        "id": "5001", "name": "SEA HOTEL", "stars": 5, "city": { "name": "Antalya" },
+                        "facilities": [
+                          { "id": "8", "name": "Beach Hotel" },
+                          { "id": "48", "name": "Private Beach" },
+                          { "id": "8", "name": "Beach Hotel" }
+                        ],
+                        "themes": [ { "id": "32", "name": "Deniz Kenarında" }, { "id": "", "name": "" } ],
+                        "offers": [ { "isAvailable": true, "price": { "amount": 100, "currency": "TRY" } } ]
+                      }
+                    ]
+                  }
+                }
+                """;
+        Object body = objectMapper.readValue(raw, Object.class);
+
+        List<HotelProduct> products = client.mapToHotelProducts(body);
+
+        assertThat(products).hasSize(1);
+        // Distinct, order-preserving, blanks skipped; facilities then themes.
+        assertThat(products.get(0).features())
+                .containsExactly("Beach Hotel", "Private Beach", "Deniz Kenarında");
+    }
+
+    @Test
+    void mapToHotelProducts_noFacilitiesOrThemes_yieldsEmptyFeatures() throws Exception {
+        String raw = """
+                { "body": { "hotels": [
+                  { "id": "1", "name": "BARE HOTEL", "stars": 3, "city": { "name": "Izmir" } }
+                ] } }
+                """;
+        Object body = objectMapper.readValue(raw, Object.class);
+
+        assertThat(client.mapToHotelProducts(body).get(0).features()).isEmpty();
+    }
+
+    @Test
     void mapToHotelProducts_mapsThumbnailFullToImage() throws Exception {
         String raw = """
                 {
