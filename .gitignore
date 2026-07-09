@@ -44,3 +44,7 @@ postgres-data/
 # Personal Dev Files
 deniz_tasks.md
 emre_scope.md
+zehra_scope.md
+
+# Scratch / debug API dumps
+ps.json
