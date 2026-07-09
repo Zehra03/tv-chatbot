@@ -1,4 +1,4 @@
--- V2__refresh_tokens.sql
+-- V4__refresh_tokens.sql
 -- Persisted, rotating refresh tokens for the auth module.
 --
 -- The access token (JWT) stays short-lived and stateless; this table backs the long-lived
