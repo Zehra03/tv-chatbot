@@ -47,7 +47,7 @@ spring:
         options:
           model: ${AI_PROVIDER_MODEL:gemini-flash-latest}
           temperature: 0.0
-    # Consumed only by the (currently disabled) Validator via OLLAMA_BASE_URL; ollama chat
+    # Consumed only by the Validator via OLLAMA_BASE_URL; ollama chat
     # autoconfig is off because spring.ai.model.chat=openai.
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
