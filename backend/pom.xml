@@ -49,9 +49,10 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
-        <!-- OpenAI-compatible client, reused to hit any OpenAI-compatible endpoint (Groq, etc.) by
-        overriding the base-url — not tied to actual OpenAI. Used experimentally by the Validator's
-        A/B harness to compare cloud-hosted candidate models against the local Ollama validator. -->
+        <!-- OpenAI-compatible client used to talk to Google Gemini's OpenAI endpoint
+        (https://generativelanguage.googleapis.com/v1beta/openai). Main chat + intent extraction
+        run on Gemini; the Validator keeps its own Ollama client. Provider is selected via
+        spring.ai.model.chat=openai so the two chat starters don't both create a ChatModel bean. -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-openai</artifactId>

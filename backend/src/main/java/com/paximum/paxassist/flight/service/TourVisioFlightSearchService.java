@@ -1,6 +1,7 @@
 package com.paximum.paxassist.flight.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import feign.FeignException;
 
@@ -15,6 +16,7 @@ import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.event.FlightSearchEvent;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioFlightClient;
+import com.paximum.paxassist.flight.infrastructure.client.TourVisioLocationResolver;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioSearchException;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioTokenProvider;
 import com.paximum.paxassist.flight.infrastructure.dto.request.TourVisioPriceSearchRequest;
@@ -33,18 +35,21 @@ public class TourVisioFlightSearchService implements FlightSearchService {
     private final TourVisioFlightResponseMapper responseMapper;
     private final ApplicationEventPublisher eventPublisher;
     private final TourVisioTokenProvider tokenProvider;
+    private final TourVisioLocationResolver locationResolver;
 
     public TourVisioFlightSearchService(
             TourVisioFlightClient tourVisioFlightClient,
             TourVisioFlightRequestMapper requestMapper,
             TourVisioFlightResponseMapper responseMapper,
             ApplicationEventPublisher eventPublisher,
-            TourVisioTokenProvider tokenProvider) {
+            TourVisioTokenProvider tokenProvider,
+            TourVisioLocationResolver locationResolver) {
         this.tourVisioFlightClient = tourVisioFlightClient;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.eventPublisher = eventPublisher;
         this.tokenProvider = tokenProvider;
+        this.locationResolver = locationResolver;
     }
 
     @Override
@@ -56,10 +61,28 @@ public class TourVisioFlightSearchService implements FlightSearchService {
             return FlightSearchOutcome.incomplete(missingFields);
         }
 
-        log.info("Starting flight search: origin={}, destination={}, tripType={}",
-                criteria.getOrigin(), criteria.getDestination(), criteria.getTripType());
+        // TourVisio price search matches locations by id ("AYT"), not the free text the user types
+        // ("Antalya"). Resolve both ends via autocomplete first; an unresolvable place is treated as
+        // "no flights" (empty, HTTP 200) rather than a TourVisio failure (502).
+        Optional<String> originId = locationResolver.resolveDeparture(criteria.getOrigin());
+        Optional<String> destinationId = locationResolver.resolveArrival(criteria.getDestination());
+        if (originId.isEmpty() || destinationId.isEmpty()) {
+            log.info("Flight search could not resolve locations: origin='{}'->{}, destination='{}'->{}",
+                    criteria.getOrigin(), originId.orElse("<none>"),
+                    criteria.getDestination(), destinationId.orElse("<none>"));
+            return FlightSearchOutcome.complete(List.of());
+        }
 
-        TourVisioPriceSearchRequest request = requestMapper.toRequest(criteria);
+        FlightSearchCriteria resolvedCriteria = criteria.toBuilder()
+                .origin(originId.get())
+                .destination(destinationId.get())
+                .build();
+
+        log.info("Starting flight search: origin={} (from '{}'), destination={} (from '{}'), tripType={}",
+                originId.get(), criteria.getOrigin(), destinationId.get(), criteria.getDestination(),
+                criteria.getTripType());
+
+        TourVisioPriceSearchRequest request = requestMapper.toRequest(resolvedCriteria);
         TourVisioPriceSearchResponse response;
         try {
             response = tourVisioFlightClient.priceSearch(request);

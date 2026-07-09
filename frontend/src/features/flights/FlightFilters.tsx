@@ -19,7 +19,7 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
   const dispatch = useAppDispatch()
 
   return (
-    <div className="glass-card flex flex-wrap items-center gap-3 p-4">
+    <div className="glass-card relative z-30 flex flex-wrap items-center gap-3 p-4">
       <label className="flex items-center gap-2 text-sm text-white">
         <input
           type="checkbox"

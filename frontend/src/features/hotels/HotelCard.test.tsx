@@ -46,6 +46,17 @@ describe('HotelCard', () => {
     expect(screen.getByText(/1\.200/)).toBeTruthy()
   })
 
+  it('image verildiğinde otel görselini render eder', () => {
+    renderCard({ ...hotel, image: 'https://example.test/otel.jpg' })
+    const img = screen.getByRole('img', { name: /otel görseli/i }) as HTMLImageElement
+    expect(img.src).toBe('https://example.test/otel.jpg')
+  })
+
+  it('image yoksa görsel yerine placeholder gösterir', () => {
+    renderCard({ ...hotel, image: null })
+    expect(screen.queryByRole('img')).toBeNull()
+  })
+
   it('müsait olmayan otelde rozet gösterir ve Seç devre dışıdır', () => {
     renderCard({ ...hotel, availability: false })
     expect(screen.getByText('Müsait değil')).toBeTruthy()

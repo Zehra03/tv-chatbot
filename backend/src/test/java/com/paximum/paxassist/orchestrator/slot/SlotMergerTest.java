@@ -33,6 +33,16 @@ class SlotMergerTest {
     }
 
     @Test
+    void bothNull_returnsEmptyNotNull() {
+        // A HOTEL/FLIGHT intent with no slots ("otel arıyorum") + empty session → merge must not
+        // return null, or the criteria mappers NPE. Returns an all-null empty criteria instead.
+        SlotCriteria merged = merger.merge(null, null);
+        assertThat(merged).isNotNull();
+        assertThat(merged.location()).isNull();
+        assertThat(merged.adults()).isNull();
+    }
+
+    @Test
     void updateNonNullWins_baseKeptOtherwise() {
         SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2));
         SlotCriteria update = slots(Map.of("checkIn", "2026-08-01", "adults", 3));
@@ -42,6 +52,17 @@ class SlotMergerTest {
         assertThat(merged.location()).isEqualTo("Antalya");     // kept from base
         assertThat(merged.checkIn()).isEqualTo("2026-08-01");   // added by update
         assertThat(merged.adults()).isEqualTo(3);               // overwritten by update
+    }
+
+    @Test
+    void maxPriceFromUpdateIsMergedAndBaseKept() {
+        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2));
+        SlotCriteria update = slots(Map.of("maxPrice", 1800));
+
+        SlotCriteria merged = merger.merge(base, update);
+
+        assertThat(merged.location()).isEqualTo("Antalya"); // kept from base
+        assertThat(merged.maxPrice()).isEqualTo(1800);       // added by update
     }
 
     @Test

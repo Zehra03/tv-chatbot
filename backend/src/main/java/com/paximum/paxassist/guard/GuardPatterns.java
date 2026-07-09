@@ -32,7 +32,9 @@ final class GuardPatterns {
 
     private static final List<String> PROFANITY_WORDS = List.of(
             "stupid", "idiot", "moron", "dumb", "damn", "shit", "fuck", "bitch", "asshole",
-            "aptal", "salak", "gerizekalı", "ahmak", "şerefsiz", "orospu", "piç");
+            "aptal", "salak", "gerizekalı", "ahmak", "şerefsiz", "orospu", "piç",
+            // Common Turkish profanity abbreviations (word-boundary matched → low false-positive risk).
+            "aq", "amk", "amq");
 
     // \b relies on ASCII \w by default, which misclassifies Turkish letters (ı, ş, ğ...) as
     // non-word characters; UNICODE_CHARACTER_CLASS makes word-boundary detection Unicode-aware.
