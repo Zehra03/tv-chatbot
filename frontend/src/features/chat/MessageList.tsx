@@ -64,11 +64,17 @@ export function MessageList({ pending, error, onRetry, onSelectOption }: Message
   }, [messages.length, pending])
 
   // overflow-x-hidden: TiltedCard hover büyümesi yatay scrollbar titretmesin.
+  // relative ŞART: mesaj balonlarındaki sr-only etiketleri position:absolute'tur;
+  // kap konumlandırılmazsa bunların kapsayan bloğu <main> olur (en yakın
+  // konumlandırılmış ata), böylece bu kabın overflow kırpmasından KAÇARLAR ve
+  // main.scrollHeight'i tüm konuşma boyuna şişirirler — sonra scrollIntoView
+  // main'i kaydırıp başlığı iter, altta boşluk bırakır. relative ile sr-only'ler
+  // bu kaba kapsanıp kırpılır; main sabit yükseklikte kalır.
   return (
     <div
       role="log"
       aria-label="Sohbet mesajları"
-      className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
+      className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
     >
       {messages.length === 0 && (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center">

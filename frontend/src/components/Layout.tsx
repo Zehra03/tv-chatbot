@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { NavLink, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, UserRound, X } from 'lucide-react'
@@ -72,48 +72,6 @@ export function Layout() {
     navigate('/login', { replace: true })
   }
 
-  // ——— GEÇİCİ TEŞHİS — kaydırma sorununu ölçer, sonra kaldırılacak. ———
-  const [dbg, setDbg] = useState('ölçülüyor…')
-  useEffect(() => {
-    const measure = () => {
-      const mainEl = document.querySelector('main') as HTMLElement | null
-      const sidebars = document.querySelectorAll('[aria-label="Sohbet geçmişi"]')
-      const log = document.querySelector('[role="log"]') as HTMLElement | null
-      const h = (el: Element | null) =>
-        el ? Math.round(el.getBoundingClientRect().height) : -1
-      // main içindeki, KIRPILMAYAN (arada overflow-hidden/auto yok) en uzun eleman.
-      let worst: { cls: string; h: number } | null = null
-      if (mainEl) {
-        mainEl.querySelectorAll('*').forEach((el) => {
-          const r = (el as HTMLElement).getBoundingClientRect()
-          if (r.height > (worst?.h ?? 800) && r.height > 800) {
-            worst = {
-              cls: (el.className?.toString?.() ?? '').slice(0, 45) || el.tagName,
-              h: Math.round(r.height),
-            }
-          }
-        })
-      }
-      setDbg(
-        [
-          `vh=${window.innerHeight}`,
-          `main=${h(mainEl)} sc=${mainEl?.scrollHeight ?? -1}`,
-          `#sidebar=${sidebars.length} #log=${document.querySelectorAll('[role="log"]').length}`,
-          `log h=${h(log)} sc=${log?.scrollHeight ?? -1}(${log ? getComputedStyle(log).overflowY : '?'})`,
-          worst ? `TALL[${(worst as { cls: string; h: number }).h}]=${(worst as { cls: string; h: number }).cls}` : 'TALL=none',
-        ].join(' | '),
-      )
-    }
-    measure()
-    const id = window.setInterval(measure, 400)
-    window.addEventListener('resize', measure)
-    return () => {
-      window.clearInterval(id)
-      window.removeEventListener('resize', measure)
-    }
-  }, [])
-  // ——— /GEÇİCİ TEŞHİS ———
-
   return (
     <div
       className={cn(
@@ -127,25 +85,6 @@ export function Layout() {
         dark ? 'dark bg-brand-navy text-white' : 'bg-background text-foreground',
       )}
     >
-      {/* GEÇİCİ TEŞHİS katmanı — ölçümü göster, sonra kaldırılacak. */}
-      <div
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          zIndex: 99999,
-          background: 'rgba(0,0,0,0.85)',
-          color: '#7CFF7C',
-          font: '12px monospace',
-          padding: '3px 8px',
-          textAlign: 'center',
-          pointerEvents: 'none',
-        }}
-      >
-        {dbg}
-      </div>
-
       {/* Gece uçuşu arka planı — yalnızca AI bölgesinde, yumuşak giriş/çıkışla. */}
       <AnimatePresence>
         {dark && (
