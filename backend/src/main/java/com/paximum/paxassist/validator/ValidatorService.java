@@ -183,9 +183,9 @@ public class ValidatorService {
         if (result == null) {
             return failClosedResult();
         }
-        log.info("validator.call latencyMs={} verdict={} promptTokens={} completionTokens={} totalTokens={}",
+        log.info("validator.call latencyMs={} verdict={} promptTokens={} completionTokens={} totalTokens={} feedback=\"{}\"",
                 metrics.latencyMs(), result.verdict(), metrics.promptTokens(), metrics.completionTokens(),
-                metrics.totalTokens());
+                metrics.totalTokens(), singleLine(result.feedback()));
         return result;
     }
 
@@ -215,6 +215,11 @@ public class ValidatorService {
             return null;
         }
         return REASONING_BLOCK.matcher(content).replaceFirst("").strip();
+    }
+
+    /** Feedback is LLM-generated free text; collapse line breaks so the log entry stays on one line. */
+    private String singleLine(String text) {
+        return text == null ? "" : text.replaceAll("\\R+", " ").strip();
     }
 
     private ValidationResult failClosedResult() {
