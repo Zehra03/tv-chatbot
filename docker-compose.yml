@@ -60,8 +60,9 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      # Pipeline chat + intent extraction run on Gemini (spring.ai.model.chat=openai). Ollama is
-      # only used by the currently-disabled Validator, so don't gate backend startup on its health.
+      # Pipeline chat + intent extraction run on Gemini (spring.ai.model.chat=openai). The Validator
+      # defaults to DeepSeek's cloud API; Ollama is only used when VALIDATOR_PROVIDER=ollama, so
+      # don't gate backend startup on its health.
       ollama:
         condition: service_started
       redis:
