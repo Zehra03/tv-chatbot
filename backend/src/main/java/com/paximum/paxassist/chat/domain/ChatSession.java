@@ -8,6 +8,8 @@ import java.util.Map;
 /**
  * In-memory session state. Swapped for a JPA entity once the DB teammate
  * delivers the chat_sessions entity + repository (Zehra koordinasyonu).
+ * Fields align to DB columns: accumulated_criteria (chat_sessions),
+ * last_result_cards (chat_messages.result_cards).
  */
 public class ChatSession {
 
@@ -16,8 +18,6 @@ public class ChatSession {
     // never crosses users. Null only for legacy/in-memory sessions with no principal.
     private Long userId;
     private Map<String, Object> accumulatedCriteria;
-    private String flowState;
-    private String pendingQuestion;
     private List<Object> lastResultCards;
     private final List<ChatMessage> messages = new ArrayList<>();
     // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
@@ -28,8 +28,6 @@ public class ChatSession {
     public ChatSession(String id) {
         this.id = id;
         this.accumulatedCriteria = new HashMap<>();
-        this.flowState = "IDLE";
-        this.pendingQuestion = null;
         this.lastResultCards = new ArrayList<>();
     }
 
@@ -42,12 +40,6 @@ public class ChatSession {
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
         this.accumulatedCriteria = accumulatedCriteria;
     }
-
-    public String getFlowState() { return flowState; }
-    public void setFlowState(String flowState) { this.flowState = flowState; }
-
-    public String getPendingQuestion() { return pendingQuestion; }
-    public void setPendingQuestion(String pendingQuestion) { this.pendingQuestion = pendingQuestion; }
 
     public List<Object> getLastResultCards() { return lastResultCards; }
     public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }
