@@ -92,25 +92,50 @@ class ChatOrchestrationServiceTest {
     @Test
     void shouldProcessValidMessageAndReturnHotelResults() {
         ChatSession session = new ChatSession("session-123");
+        // Test 1: Geçmiş mesajların doğru çevrildiğini test etmek için önceden mesaj ekliyoruz
+        session.addMessage("user", "eski mesaj");
+        session.addMessage("assistant", "eski cevap");
+        
         when(sessionStore.getOrCreate("session-123", 7L)).thenReturn(session);
         
-        when(intentExtraction.extract(eq("Antalya'da 5 yıldızlı otel arıyorum"), anyList()))
+        org.mockito.ArgumentCaptor<java.util.List<com.paximum.paxassist.ai.ChatHistoryEntry>> historyCaptor = 
+                org.mockito.ArgumentCaptor.forClass(java.util.List.class);
+        
+        when(intentExtraction.extract(eq("Antalya'da 5 yıldızlı otel arıyorum"), historyCaptor.capture()))
                 .thenReturn(new IntentExtractionResult(IntentType.HOTEL_SEARCH, null)); // Criteria normally here
         
         when(intentRouter.route(IntentType.HOTEL_SEARCH)).thenReturn(handler);
         
+        org.mockito.ArgumentCaptor<OrchestrationContext> contextCaptor = 
+                org.mockito.ArgumentCaptor.forClass(OrchestrationContext.class);
+                
         // Handler represents the HotelModule processing and ResponseFormatter
-        when(handler.handle(any())).thenReturn(OrchestrationResult.messageWithCards("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.", java.util.List.of(new Object(), new Object())));
+        when(handler.handle(contextCaptor.capture())).thenReturn(OrchestrationResult.messageWithCards("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.", java.util.List.of(new Object(), new Object())));
 
         OrchestrationOutcome outcome = service().handle("session-123", "Antalya'da 5 yıldızlı otel arıyorum", 7L);
+
+        // Test 1 Doğrulama: Geçmiş mesajlar LLM'e (intentExtraction) doğru aktarıldı mı?
+        java.util.List<com.paximum.paxassist.ai.ChatHistoryEntry> passedHistory = historyCaptor.getValue();
+        assertThat(passedHistory).hasSize(2);
+        assertThat(passedHistory.get(0).role()).isEqualTo("user");
+        assertThat(passedHistory.get(0).content()).isEqualTo("eski mesaj");
+        assertThat(passedHistory.get(1).role()).isEqualTo("assistant");
+        assertThat(passedHistory.get(1).content()).isEqualTo("eski cevap");
+
+        // Test 2 Doğrulama: OrchestrationContext doğru inşa edildi mi?
+        OrchestrationContext passedContext = contextCaptor.getValue();
+        assertThat(passedContext.session()).isSameAs(session);
+        assertThat(passedContext.userMessage()).isEqualTo("Antalya'da 5 yıldızlı otel arıyorum");
+        assertThat(passedContext.intent()).isEqualTo(IntentType.HOTEL_SEARCH);
+        assertThat(passedContext.criteria()).isNull();
 
         assertThat(outcome.result().reply()).isEqualTo("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.");
         assertThat(outcome.result().cards()).hasSize(2);
         
-        // user + assistant turns are appended to the session transcript
-        assertThat(session.getMessages()).hasSize(2);
-        assertThat(session.getMessages().get(0).role()).isEqualTo("user");
-        assertThat(session.getMessages().get(1).role()).isEqualTo("assistant");
+        // user + assistant turns are appended to the session transcript (2 eski + 2 yeni = 4 mesaj)
+        assertThat(session.getMessages()).hasSize(4);
+        assertThat(session.getMessages().get(2).role()).isEqualTo("user");
+        assertThat(session.getMessages().get(3).role()).isEqualTo("assistant");
         
         verify(sessionStore).save(session);
     }
