@@ -25,9 +25,9 @@ public class ChatViewMapper {
 
     /** Frontend criteria keys (see {@code CriteriaChips.tsx}); everything else is dropped. */
     private static final Set<String> KNOWN_KEYS = Set.of(
-            "destination", "hotelName", "checkIn", "checkOut", "adults", "children", "childAges",
-            "rooms", "nationality", "currency", "origin", "departDate", "returnDate", "passengers",
-            "tripType");
+            "destination", "hotelName", "checkIn", "checkOut", "nights", "adults", "children",
+            "childAges", "rooms", "nationality", "currency", "origin", "departDate", "returnDate",
+            "passengers", "tripType");
 
     /** SlotCriteria field names that differ from the frontend's criteria field names. */
     private static final Map<String, String> KEY_RENAMES = Map.of(

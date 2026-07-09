@@ -57,6 +57,47 @@ class TourVisioHotelApiClientImplTest {
         assertThat(p.currency()).isEqualTo("EUR");
         assertThat(p.boardType()).isEqualTo("ALL INCLUSIVE");
         assertThat(p.availability()).isTrue();
+        assertThat(p.image()).isNull(); // no thumbnailFull in this fixture
+    }
+
+    @Test
+    void mapToHotelProducts_mapsThumbnailFullToImage() throws Exception {
+        String raw = """
+                {
+                  "body": {
+                    "hotels": [
+                      {
+                        "id": "9302",
+                        "name": "SALE DENEME",
+                        "stars": 5,
+                        "city": { "name": "Antalya" },
+                        "thumbnail": "/images/product/1/362/9302/sale_deneme.jpg",
+                        "thumbnailFull": "https://test-service.tourvisio.com/media/images/product/1/362/9302/sale_deneme.jpg",
+                        "offers": [ { "isAvailable": true, "price": { "amount": 42.00, "currency": "EUR" } } ]
+                      }
+                    ]
+                  }
+                }
+                """;
+        Object body = objectMapper.readValue(raw, Object.class);
+
+        List<HotelProduct> products = client.mapToHotelProducts(body);
+
+        assertThat(products).hasSize(1);
+        assertThat(products.get(0).image())
+                .isEqualTo("https://test-service.tourvisio.com/media/images/product/1/362/9302/sale_deneme.jpg");
+    }
+
+    @Test
+    void mapToHotelProducts_blankThumbnailFull_mapsToNullImage() throws Exception {
+        String raw = """
+                { "body": { "hotels": [
+                  { "id": "1", "name": "NO IMAGE", "stars": 3, "city": { "name": "Izmir" }, "thumbnailFull": "" }
+                ] } }
+                """;
+        Object body = objectMapper.readValue(raw, Object.class);
+
+        assertThat(client.mapToHotelProducts(body).get(0).image()).isNull();
     }
 
     @Test

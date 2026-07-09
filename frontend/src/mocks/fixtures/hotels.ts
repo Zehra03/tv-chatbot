@@ -16,6 +16,8 @@ export const hotelFixtures: HotelProduct[] = [
     currency: 'EUR',
     boardType: 'AI',
     availability: true,
+    // Placeholder görsel (picsum) — gerçek otel fotoğrafı DEĞİL, yalnızca kart düzenini doldurur.
+    image: 'https://picsum.photos/seed/htl-mock-001/400/300',
   },
   {
     id: 'htl-mock-002',
@@ -26,6 +28,7 @@ export const hotelFixtures: HotelProduct[] = [
     currency: 'EUR',
     boardType: 'HB',
     availability: true,
+    image: 'https://picsum.photos/seed/htl-mock-002/400/300',
   },
   {
     id: 'htl-mock-003',
@@ -36,6 +39,7 @@ export const hotelFixtures: HotelProduct[] = [
     currency: 'EUR',
     boardType: 'BB',
     availability: true,
+    image: 'https://picsum.photos/seed/htl-mock-003/400/300',
   },
   {
     id: 'htl-mock-004',
@@ -46,6 +50,8 @@ export const hotelFixtures: HotelProduct[] = [
     currency: 'EUR',
     boardType: 'RO',
     availability: false,
+    // Görselsiz — kartın placeholder davranışını gösterir (TourVisio'da görseli olmayan otel gibi).
+    image: null,
   },
   {
     id: 'htl-mock-005',
@@ -56,5 +62,6 @@ export const hotelFixtures: HotelProduct[] = [
     currency: 'EUR',
     boardType: 'UAI',
     availability: true,
+    image: 'https://picsum.photos/seed/htl-mock-005/400/300',
   },
 ]

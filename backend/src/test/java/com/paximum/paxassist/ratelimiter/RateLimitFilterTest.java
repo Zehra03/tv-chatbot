@@ -1,6 +1,5 @@
 package com.paximum.paxassist.ratelimiter;
 
-import io.github.bucket4j.Bucket;
 import io.github.bucket4j.ConsumptionProbe;
 import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
 import io.lettuce.core.RedisException;

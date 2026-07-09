@@ -12,6 +12,7 @@ const FIELD_LABELS: Record<string, string> = {
   hotelName: 'Otel',
   checkIn: 'Giriş',
   checkOut: 'Çıkış',
+  nights: 'Gece',
   adults: 'Yetişkin',
   children: 'Çocuk',
   childAges: 'Çocuk yaşları',

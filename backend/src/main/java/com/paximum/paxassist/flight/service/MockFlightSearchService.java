@@ -57,6 +57,7 @@ public class MockFlightSearchService implements FlightSearchService {
                 .returnDepartTime(returnDepart)
                 .returnArriveTime(returnArrive)
                 .stops(stops)
+                .durationMinutes(durationHours * 60)
                 .baggage(baggage)
                 .price(new BigDecimal(price))
                 .currency(cur)

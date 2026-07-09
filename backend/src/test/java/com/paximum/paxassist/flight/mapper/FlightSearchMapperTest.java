@@ -1,7 +1,6 @@
 package com.paximum.paxassist.flight.mapper;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;

@@ -37,7 +37,32 @@ class HotelCriteriaMapperTest {
     }
 
     @Test
-    void nightIsNullWhenCheckOutMissing() {
+    void usesExplicitNightsWhenCheckOutMissing() {
+        // User answered "5 gece" instead of a checkout date — the count must map straight to night.
+        SlotCriteria criteria = slots(Map.of(
+                "location", "Antalya",
+                "checkIn", "2026-08-08",
+                "nights", 5,
+                "adults", 1));
+
+        HotelSearchRequest request = mapper.toRequest(criteria);
+
+        assertThat(request.night()).isEqualTo(5);
+    }
+
+    @Test
+    void checkOutSpanWinsOverExplicitNights() {
+        // Both present: the precise date span is authoritative, the loose count is ignored.
+        SlotCriteria criteria = slots(Map.of(
+                "checkIn", "2026-08-01",
+                "checkOut", "2026-08-05",
+                "nights", 9));
+
+        assertThat(mapper.toRequest(criteria).night()).isEqualTo(4);
+    }
+
+    @Test
+    void nightIsNullWhenNeitherCheckOutNorNightsGiven() {
         SlotCriteria criteria = slots(Map.of("location", "Antalya", "checkIn", "2026-08-01"));
 
         HotelSearchRequest request = mapper.toRequest(criteria);
