@@ -30,7 +30,7 @@ spring:
       chat: openai
       embedding: none
     openai:
-      api-key: ${GEMINI_API_KEY:}
+      api-key: ${GEMINI_API_KEY:dummy}
       # Gemini's OpenAI-compatible base already ends in /v1beta/openai, so completions-path is just
       # /chat/completions (Spring AI requests base-url + completions-path).
       base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com/v1beta/openai}
