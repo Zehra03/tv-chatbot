@@ -41,7 +41,7 @@ class ValidatorServiceTest {
         when(requestSpec.options(any())).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(callResponseSpec);
 
-        properties = new ValidatorProperties(true, false, 2, 0.0, 256, "qwen2.5:3b", "ollama");
+        properties = new ValidatorProperties(true, false, 2, 0.0, 256, "deepseek-chat", "deepseek");
         service = new ValidatorService(chatClient, properties);
     }
 
