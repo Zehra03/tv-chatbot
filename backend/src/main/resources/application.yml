@@ -25,9 +25,20 @@ spring:
     # Spring AI 1.0 model selection: main chat + intent extraction run on the OpenAI-compatible
     # Gemini endpoint; embeddings off. The Validator keeps its OWN Ollama client (validator/config),
     # which reads OLLAMA_BASE_URL directly and is unaffected by this selection.
+    #
+    # PaxAssist only uses the CHAT model. The OpenAI starter also auto-configures audio-speech,
+    # audio-transcription, image and moderation models with matchIfMissing=true, and each of those
+    # beans throws "OpenAI API key must be set" at construction when no key is present. We never use
+    # them, so switch them off — otherwise the context fails to start whenever GEMINI_API_KEY is
+    # unset (e.g. the hermetic mock/mock-ai/loadtest test profiles on CI).
     model:
       chat: openai
       embedding: none
+      image: none
+      moderation: none
+      audio:
+        speech: none
+        transcription: none
     openai:
       api-key: ${GEMINI_API_KEY:}
       # Gemini's OpenAI-compatible base already ends in /v1beta/openai, so completions-path is just
