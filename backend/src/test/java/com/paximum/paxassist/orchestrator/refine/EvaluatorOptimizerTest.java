@@ -54,7 +54,7 @@ class EvaluatorOptimizerTest {
     @Test
     void acceptsCandidateThatPassesOnFirstRound() {
         when(generator.generate(anyList())).thenReturn("good");
-        when(evaluator.evaluate("good", "")).thenReturn(pass(90));
+        when(evaluator.evaluate("", "good", "")).thenReturn(pass(90));
 
         String result = optimizer(true, 2, 70).refine(generator, evaluator, "", "FALLBACK");
 
@@ -66,8 +66,8 @@ class EvaluatorOptimizerTest {
     void feedsFeedbackBackAndAcceptsImprovedCandidate() {
         when(generator.generate(List.of())).thenReturn("bad");
         when(generator.generate(List.of("fiyat uydurma"))).thenReturn("good");
-        when(evaluator.evaluate("bad", "")).thenReturn(fail(40, "fiyat uydurma"));
-        when(evaluator.evaluate("good", "")).thenReturn(pass(85));
+        when(evaluator.evaluate("", "bad", "")).thenReturn(fail(40, "fiyat uydurma"));
+        when(evaluator.evaluate("", "good", "")).thenReturn(pass(85));
 
         String result = optimizer(true, 2, 70).refine(generator, evaluator, "", "FALLBACK");
 
@@ -78,7 +78,7 @@ class EvaluatorOptimizerTest {
     @Test
     void returnsSafeFallbackWhenNoCandidatePasses() {
         when(generator.generate(anyList())).thenReturn("bad");
-        when(evaluator.evaluate(eq("bad"), any())).thenReturn(fail(10, "kötü"));
+        when(evaluator.evaluate(any(), eq("bad"), any())).thenReturn(fail(10, "kötü"));
 
         String result = optimizer(true, 2, 70).refine(generator, evaluator, "", "SAFE");
 
@@ -89,7 +89,7 @@ class EvaluatorOptimizerTest {
     @Test
     void rejectsCandidateBelowMinScoreEvenIfMarkedPass() {
         when(generator.generate(anyList())).thenReturn("meh");
-        when(evaluator.evaluate(eq("meh"), any())).thenReturn(pass(50)); // pass=true but score < 70
+        when(evaluator.evaluate(any(), eq("meh"), any())).thenReturn(pass(50)); // pass=true but score < 70
 
         String result = optimizer(true, 1, 70).refine(generator, evaluator, "", "SAFE");
 
@@ -99,7 +99,7 @@ class EvaluatorOptimizerTest {
     @Test
     void failsOpenToCandidateWhenEvaluatorThrows() {
         when(generator.generate(anyList())).thenReturn("candidate");
-        when(evaluator.evaluate(any(), any())).thenThrow(new RuntimeException("critic LLM down"));
+        when(evaluator.evaluate(any(), any(), any())).thenThrow(new RuntimeException("critic LLM down"));
 
         String result = optimizer(true, 2, 70).refine(generator, evaluator, "", "SAFE");
 

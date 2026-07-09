@@ -57,7 +57,8 @@ public class FallbackHandler implements IntentHandler {
         };
 
         // No source facts for a general conversational reply → empty context (pure guardrail check).
-        String reply = evaluatorOptimizer.refine(generator, evaluator, "", SAFE_FALLBACK);
+        // The user message is forwarded so question-aware critics (Validator) can apply their rules.
+        String reply = evaluatorOptimizer.refine(generator, evaluator, userMessage, "", SAFE_FALLBACK);
         return OrchestrationResult.message(reply);
     }
 }

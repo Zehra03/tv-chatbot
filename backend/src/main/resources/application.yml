@@ -21,6 +21,18 @@ spring:
     # then JPA ddl-auto=validate checks the entities against it. Test profiles that use H2 or an
     # empty DB exclude FlywayAutoConfiguration (see application-loadtest.yml / application-mock.yml).
     enabled: true
+  autoconfigure:
+    exclude:
+      # spring-ai-starter-model-openai is on the classpath only so the Validator can build its own
+      # OpenAiApi/OpenAiChatModel manually for the "groq" provider (ValidatorConfig) — without this
+      # exclusion, Boot also auto-wires its own openAiChatModel bean, which collides with the main
+      # chat module's single-ChatModel injection (chat/config/AiConfig.java).
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiChatAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiEmbeddingAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioTranscriptionAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiAudioSpeechAutoConfiguration
+      - org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration
   ai:
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}
@@ -87,6 +99,8 @@ app:
     temperature: ${VALIDATOR_TEMPERATURE:0.0}
     max-tokens: ${VALIDATOR_MAX_TOKENS:256}
     model: ${VALIDATOR_MODEL:qwen2.5:3b}
+    # "ollama" (default) or "groq" — experimental A/B harness switch, see ValidatorConfig.
+    provider: ${VALIDATOR_PROVIDER:ollama}
   orchestrator:
     evaluator:
       # Runtime guardrail loop over the assistant's free-text replies (generate → evaluate → refine).

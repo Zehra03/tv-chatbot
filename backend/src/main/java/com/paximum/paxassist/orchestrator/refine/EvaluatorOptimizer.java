@@ -41,6 +41,15 @@ public class EvaluatorOptimizer {
      * @return an accepted candidate, or {@code safeFallback} if none passed
      */
     public String refine(Generator generator, Evaluator evaluator, String context, String safeFallback) {
+        return refine(generator, evaluator, "", context, safeFallback);
+    }
+
+    /**
+     * Variant that also forwards the user's original message to the evaluator, for critics whose
+     * rules depend on what the user actually asked (see {@link Evaluator#evaluate(String, String, String)}).
+     */
+    public String refine(Generator generator, Evaluator evaluator, String userPrompt, String context,
+                          String safeFallback) {
         if (!properties.isEnabled()) {
             return generator.generate(List.of());
         }
@@ -53,7 +62,7 @@ public class EvaluatorOptimizer {
 
             EvaluationResult result;
             try {
-                result = evaluator.evaluate(candidate, context);
+                result = evaluator.evaluate(userPrompt, candidate, context);
             } catch (RuntimeException e) {
                 log.warn("Evaluator unavailable on round {}, accepting candidate as-is: {}",
                         round, e.getMessage());

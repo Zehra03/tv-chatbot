@@ -9,7 +9,6 @@ import org.springframework.ai.chat.metadata.ChatResponseMetadata;
 import org.springframework.ai.chat.metadata.DefaultUsage;
 import org.springframework.ai.chat.model.ChatResponse;
 import org.springframework.ai.chat.model.Generation;
-import org.springframework.ai.ollama.api.OllamaOptions;
 
 import java.util.List;
 
@@ -42,7 +41,7 @@ class ValidatorServiceTest {
         when(requestSpec.options(any())).thenReturn(requestSpec);
         when(requestSpec.call()).thenReturn(callResponseSpec);
 
-        properties = new ValidatorProperties(true, false, 2, 0.0, 256, "qwen2.5:3b");
+        properties = new ValidatorProperties(true, false, 2, 0.0, 256, "qwen2.5:3b", "ollama");
         service = new ValidatorService(chatClient, properties);
     }
 
@@ -87,16 +86,16 @@ class ValidatorServiceTest {
         // Given
         when(callResponseSpec.chatResponse())
                 .thenReturn(response("{\"verdict\":\"APPROVED\",\"feedback\":\"ok\"}", 10, 5));
-        var captor = org.mockito.ArgumentCaptor.forClass(OllamaOptions.class);
+        var captor = org.mockito.ArgumentCaptor.forClass(org.springframework.ai.chat.prompt.ChatOptions.class);
 
         // When
         service.validate("soru", "aday yanıt", "bağlam");
 
         // Then
         verify(requestSpec).options(captor.capture());
-        OllamaOptions captured = captor.getValue();
+        org.springframework.ai.chat.prompt.ChatOptions captured = captor.getValue();
         assertThat(captured.getTemperature()).isEqualTo(properties.temperature());
-        assertThat(captured.getNumPredict()).isEqualTo(properties.maxTokens());
+        assertThat(captured.getMaxTokens()).isEqualTo(properties.maxTokens());
     }
 
     @Test
@@ -113,6 +112,36 @@ class ValidatorServiceTest {
         assertThat(callResult.metrics().completionTokens()).isEqualTo(45);
         assertThat(callResult.metrics().totalTokens()).isEqualTo(168);
         assertThat(callResult.metrics().latencyMs()).isGreaterThanOrEqualTo(0);
+    }
+
+    @Test
+    void shouldStripReasoningBlockFromReasoningModelOutput() {
+        // Given — reasoning models (Qwen3, DeepSeek-R1) prepend a <think>…</think> block to the JSON
+        when(callResponseSpec.chatResponse()).thenReturn(response(
+                "<think>\nKullanıcı otel soruyor, aday yanıt makul bir takip sorusu.\n</think>\n"
+                        + "{\"verdict\":\"APPROVED\",\"feedback\":\"ok\"}", 50, 40));
+
+        // When
+        ValidatorCallResult callResult = service.validate("soru", "aday yanıt", "bağlam");
+
+        // Then
+        assertThat(callResult.result().verdict()).isEqualTo(ValidationResult.Verdict.APPROVED);
+        assertThat(callResult.result().feedback()).isEqualTo("ok");
+    }
+
+    @Test
+    void shouldStripReasoningBlockCaseInsensitivelyAndWithSpacing() {
+        // Given — some providers emit </THINK> or </ think > variants of the close tag
+        when(callResponseSpec.chatResponse()).thenReturn(response(
+                "<THINK>\ndeğerlendirme...\n</ THINK >\n{\"verdict\":\"REJECTED\",\"feedback\":\"criterion 2\"}",
+                50, 40));
+
+        // When
+        ValidatorCallResult callResult = service.validate("soru", "aday yanıt", "bağlam");
+
+        // Then
+        assertThat(callResult.result().verdict()).isEqualTo(ValidationResult.Verdict.REJECTED);
+        assertThat(callResult.result().feedback()).isEqualTo("criterion 2");
     }
 
     @Test

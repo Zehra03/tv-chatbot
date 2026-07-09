@@ -22,7 +22,7 @@ class ValidationOrchestratorTest {
     private ValidationOrchestrator orchestrator(boolean enabled, boolean abTestEnabled, int maxRetries,
                                                  boolean cohortCoinFlipResult) {
         ValidatorProperties properties = new ValidatorProperties(enabled, abTestEnabled, maxRetries, 0.0, 256,
-                "qwen2.5:3b");
+                "qwen2.5:3b", "ollama");
         return new ValidationOrchestrator(validatorService, properties, () -> cohortCoinFlipResult);
     }
 

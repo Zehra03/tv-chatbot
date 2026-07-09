@@ -39,7 +39,7 @@ class FallbackHandlerTest {
     @Test
     void returnsRefinedReplyFromTheEvaluatorLoop() {
         FallbackHandler handler = new FallbackHandler(chatService, evaluatorOptimizer, evaluator);
-        when(evaluatorOptimizer.refine(any(Generator.class), eq(evaluator), any(), any()))
+        when(evaluatorOptimizer.refine(any(Generator.class), eq(evaluator), eq("merhaba"), any(), any()))
                 .thenReturn("Size otel veya uçuş aramasında yardımcı olabilirim.");
 
         OrchestrationResult result = handler.handle(

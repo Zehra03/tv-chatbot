@@ -13,5 +13,8 @@ public record ValidatorProperties(
         int maxRetries,
         double temperature,
         int maxTokens,
-        String model) {
+        String model,
+        // "ollama" (default, fully local) or "groq" — experimental, used by the A/B harness to
+        // compare cloud-hosted candidate models against the local validator. See ValidatorConfig.
+        String provider) {
 }
