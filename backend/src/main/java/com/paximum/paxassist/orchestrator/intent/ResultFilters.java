@@ -3,6 +3,7 @@ package com.paximum.paxassist.orchestrator.intent;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import com.paximum.paxassist.hotel.HotelProduct;
@@ -54,6 +55,56 @@ final class ResultFilters {
                 .filter(card -> matchesBoard(card, boardType))
                 .collect(Collectors.toList());
         return filtered.isEmpty() ? cards : filtered;
+    }
+
+    /**
+     * Keep hotel cards that confirm ALL requested {@link HotelFeature}s against their REAL provider
+     * data ({@link HotelProduct#features()} = TourVisio facilities ∪ themes). Unlike
+     * {@link #applyBoardType}, an empty result IS meaningful here: for a hard constraint like
+     * "denize sıfır" we surface only confirmed matches rather than pretending every hotel qualifies,
+     * and the caller words the "none matched" case honestly. Non-hotel cards are left untouched, and
+     * unrecognised feature keys are ignored (nothing to evaluate → no filtering).
+     */
+    static List<Object> applyFeatures(List<Object> cards, List<String> requested) {
+        if (requested == null || requested.isEmpty() || cards == null || cards.isEmpty()) {
+            return cards;
+        }
+        List<HotelFeature> features = requested.stream()
+                .map(HotelFeature::fromKey)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        if (features.isEmpty()) {
+            return cards;
+        }
+        return cards.stream()
+                .filter(card -> matchesAllFeatures(card, features))
+                .collect(Collectors.toList());
+    }
+
+    /** Human Turkish labels for the recognised requested features, e.g. "denize sıfır, havuzlu". */
+    static String describeFeatures(List<String> requested) {
+        if (requested == null || requested.isEmpty()) {
+            return "";
+        }
+        return requested.stream()
+                .map(HotelFeature::fromKey)
+                .filter(Objects::nonNull)
+                .map(HotelFeature::label)
+                .distinct()
+                .collect(Collectors.joining(", "));
+    }
+
+    private static boolean matchesAllFeatures(Object card, List<HotelFeature> features) {
+        if (!(card instanceof HotelProduct hotel)) {
+            return true; // features apply to hotels only; leave other cards untouched
+        }
+        String blob = String.join(" | ", hotel.features()).toLowerCase(Locale.ROOT);
+        for (HotelFeature feature : features) {
+            if (!feature.matches(blob)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static boolean matchesBoard(Object card, String requested) {

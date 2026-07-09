@@ -22,6 +22,16 @@ public class IntentExtractionService {
                      Uçuş süresi sorusu ("kaç saat sürer") de FLIGHT'tır.
             FILTER : Daha önce listelenen sonuçları filtrelemek veya sıralamak istiyor.
             SELECT : Listeden belirli bir ürünü seçmek istiyor.
+            DATE_ALTERNATIVES : Önceki (çoğunlukla sonuçsuz) aramadan sonra, BELİRLİ yeni bir tarih
+                     VERMEDEN "başka/farklı hangi tarihte müsaitlik var" diye soruyor
+                     ("farklı tarihte var mı", "başka hangi tarihte var", "hangi tarihlerde müsait/boş",
+                     "başka tarih öner"). Kullanıcı NET bir tarih verirse bu DEĞİL → HOTEL/FLIGHT olarak
+                     o tarihle devam et. Sohbet geçmişinde süregelen bir otel/uçuş araması yoksa → OTHER.
+            AMBIGUOUS : Kullanıcı yalnızca bir yer/şehir adı ya da otel/uçuş ayrımı yapılamayan kısa
+                     bir ifade verdi (ör. tek başına "Antalya", "tatil düşünüyorum") ve otel mi
+                     yoksa uçuş mu istediği ANLAŞILMIYOR. Selamlama (merhaba) buraya GİRMEZ → OTHER.
+                     Sohbet geçmişinde devam eden bir otel/uçuş araması varsa bu değeri KULLANMA
+                     (o aramayı sürdür).
             OTHER  : Yukarıdakilerden hiçbiri. Selamlama, genel sohbet VE arama olmayan bilgi/servis
                      soruları buraya girer: otel yorumları/puanı, temizlik, otel olanağı
                      (havuz/oyun alanı/à la carte), evcil hayvan/tekerlekli sandalye politikası,
@@ -35,6 +45,16 @@ public class IntentExtractionService {
             rooms       : Oda sayısı (integer)
             stars       : Minimum yıldız sayısı 1-5 (integer)
             boardType   : Pansiyon tipi — AI | HB | BB | RO (string)
+            features    : Kullanıcının istediği otel özellikleri — SABİT anahtar listesinden seçilen
+                          bir dizi (string[]). Yalnızca aşağıdakileri kullan, açıkça istenmeyeni EKLEME:
+                            SEAFRONT     → denize sıfır, deniz kenarı, sahilde, plaja sıfır, sahil oteli
+                            POOL         → havuz, havuzlu
+                            AQUAPARK     → kaydıraklı, aquapark, su parkı, su kaydırağı
+                            SPA          → spa, hamam, sauna, masaj, kaplıca, wellness
+                            KIDS_CLUB    → çocuk kulübü, çocuk dostu, mini club, kids club
+                            FITNESS      → fitness, spor salonu, gym
+                            PETS_ALLOWED → evcil hayvan kabul, köpeğimle/kedimle kalabileceğim
+                          Listede karşılığı olmayan özel bir istek varsa onu features'a EKLEME (uydurma).
 
             ── FLIGHT KRİTERLERİ ────────────────────────────────────────────────
             origin        : Kalkış şehri veya havalimanı (string)
@@ -78,6 +98,10 @@ public class IntentExtractionService {
             - Etiketsiz ve belirsiz birden çok sayı ("2 2") varsa adults ve children'ı NULL bırak
               (asistan tek soruyla netleştirecek). Uydurma sayı atama.
             - "çocuksuz" / "çocuk yok" → children:0.
+            - Otel özelliği (denize sıfır, havuzlu, spa'lı vb.) HOTEL intent'inin parçasıdır: devam
+              eden bir otel aramasında kullanıcı yalnızca özellik eklerse intent HOTEL kalır ve
+              istenen anahtar(lar) features dizisine yazılır. Olumsuz ifadede ("havuz olmasın")
+              o özelliği features'a EKLEME.
             - Kişileri sayarken akrabalık ifadelerini çöz: "eşim ve ben" = 2 yetişkin,
               "ikiz bebekler" = 2 çocuk, "üçüz" = 3 çocuk. İNSAN OLMAYAN varlıkları
               (inek, timsah, köpek vb.) yolcu/kişi olarak SAYMA.
@@ -101,6 +125,18 @@ public class IntentExtractionService {
             Mesaj: "2026-08-08"
             Çıktı: {"intent":"HOTEL","criteria":{"checkIn":"2026-08-08"}}
 
+            Sohbet Geçmişi: assistant: Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?
+            Mesaj: "farklı tarihte var mı"
+            Çıktı: {"intent":"DATE_ALTERNATIVES","criteria":null}
+
+            Sohbet Geçmişi: assistant: Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?
+            Mesaj: "başka hangi tarihlerde müsait"
+            Çıktı: {"intent":"DATE_ALTERNATIVES","criteria":null}
+
+            Sohbet Geçmişi: assistant: Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?
+            Mesaj: "11 ağustos olsun"
+            Çıktı: {"intent":"HOTEL","criteria":{"checkIn":"2026-08-11"}}
+
             Mesaj: "İstanbul'dan Paris'e önümüzdeki cuma uçuş var mı"
             Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"Paris","departureDate":"<cuma YYYY-MM-DD>"}}
 
@@ -115,6 +151,13 @@ public class IntentExtractionService {
 
             Mesaj: "çocuksuz otel"
             Çıktı: {"intent":"HOTEL","criteria":{"children":0}}
+
+            Mesaj: "Eylülde Antalya'da denize sıfır bir otel, 2 yetişkin"
+            Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","checkIn":"<eylül YYYY-MM-DD>","adults":2,"features":["SEAFRONT"]}}
+
+            Sohbet Geçmişi: assistant: Aramanıza uygun 8 otel buldum:
+            Mesaj: "havuzlu ve çocuk kulüplü olsun"
+            Çıktı: {"intent":"HOTEL","criteria":{"features":["POOL","KIDS_CLUB"]}}
 
             Mesaj: "eşim, ben ve ikiz bebeklerimle otel"
             Çıktı: {"intent":"HOTEL","criteria":{"adults":2,"children":2}}
@@ -142,6 +185,13 @@ public class IntentExtractionService {
 
             Mesaj: "Merhaba"
             Çıktı: {"intent":"OTHER","criteria":null}
+
+            Mesaj: "Antalya"
+            Çıktı: {"intent":"AMBIGUOUS","criteria":null}
+
+            Sohbet Geçmişi: assistant: Nereden kalkmak istersiniz?
+            Mesaj: "Antalya"
+            Çıktı: {"intent":"FLIGHT","criteria":{"origin":"Antalya"}}
             """;
 
     private final ChatClient chatClient;

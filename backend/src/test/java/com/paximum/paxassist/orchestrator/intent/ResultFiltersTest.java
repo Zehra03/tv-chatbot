@@ -16,6 +16,11 @@ class ResultFiltersTest {
         return new HotelProduct(id, "Hotel " + id, "Antalya", 5, p, "TRY", board, true);
     }
 
+    private HotelProduct hotelWith(String id, String... features) {
+        return new HotelProduct(id, "Hotel " + id, "Antalya", 5, new BigDecimal("1000"), "TRY", "AI", true,
+                null, List.of(features));
+    }
+
     // ── applyMaxPrice ────────────────────────────────────────────────────────
 
     @Test
@@ -87,5 +92,58 @@ class ResultFiltersTest {
     void boardType_unrecognizedCode_doesNotFilter() {
         List<Object> cards = List.of(hotel("A", "1000", "Herşey Dahil"), hotel("B", "2000", "Yarım Pansiyon"));
         assertThat(ResultFilters.applyBoardType(cards, "XYZ")).containsExactlyElementsOf(cards);
+    }
+
+    // ── applyFeatures ────────────────────────────────────────────────────────
+
+    @Test
+    void featuresNull_returnsListUnchanged() {
+        List<Object> cards = List.of(hotelWith("A", "Beach Hotel"));
+        assertThat(ResultFilters.applyFeatures(cards, null)).isSameAs(cards);
+    }
+
+    @Test
+    void seafront_keepsOnlyHotelsWithBeachOrSeaData() {
+        HotelProduct beach = hotelWith("A", "Beach Hotel", "Private Beach", "Outdoor Pool");
+        HotelProduct sea100 = hotelWith("B", "100m to Sea", "Sand Beach");
+        HotelProduct denizTheme = hotelWith("C", "Deniz Kenarında");
+        HotelProduct city = hotelWith("D", "City Hotel", "Indoor Pool");
+        List<Object> result = ResultFilters.applyFeatures(List.of(beach, sea100, denizTheme, city), List.of("SEAFRONT"));
+        assertThat(result).containsExactly(beach, sea100, denizTheme);
+    }
+
+    @Test
+    void features_canReturnEmpty_whenNoneMatch() {
+        // Hard constraint: for "denize sıfır" we show only confirmed matches, never pretend.
+        List<Object> cards = List.of(hotelWith("A", "City Hotel"), hotelWith("B", "Business Center"));
+        assertThat(ResultFilters.applyFeatures(cards, List.of("SEAFRONT"))).isEmpty();
+    }
+
+    @Test
+    void features_requireAllOfThem_andSemantics() {
+        HotelProduct both = hotelWith("A", "Outdoor Pool", "Kids Club");
+        HotelProduct poolOnly = hotelWith("B", "Outdoor Pool");
+        List<Object> result = ResultFilters.applyFeatures(List.of(both, poolOnly), List.of("POOL", "KIDS_CLUB"));
+        assertThat(result).containsExactly(both);
+    }
+
+    @Test
+    void features_hotelWithNoProviderData_isNotConfirmed() {
+        HotelProduct bare = hotelWith("A"); // no facilities/themes → cannot confirm seafront
+        HotelProduct beach = hotelWith("B", "Sand Beach");
+        assertThat(ResultFilters.applyFeatures(List.of(bare, beach), List.of("SEAFRONT"))).containsExactly(beach);
+    }
+
+    @Test
+    void features_unrecognizedKey_doesNotFilter() {
+        List<Object> cards = List.of(hotelWith("A", "City Hotel"), hotelWith("B", "Business Center"));
+        assertThat(ResultFilters.applyFeatures(cards, List.of("HELIPAD"))).isSameAs(cards);
+    }
+
+    @Test
+    void describeFeatures_mapsKeysToTurkishLabels() {
+        assertThat(ResultFilters.describeFeatures(List.of("SEAFRONT", "POOL"))).isEqualTo("denize sıfır, havuzlu");
+        assertThat(ResultFilters.describeFeatures(List.of("HELIPAD"))).isEmpty();
+        assertThat(ResultFilters.describeFeatures(List.of())).isEmpty();
     }
 }

@@ -74,4 +74,26 @@ class SlotMergerTest {
 
         assertThat(merged.childAges()).containsExactly(5, 8);
     }
+
+    @Test
+    void featuresAddedByUpdateWhileBaseSearchKept() {
+        // User adds "havuzlu" mid-search: features arrive on the update, location stays from base.
+        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2));
+        SlotCriteria update = slots(Map.of("features", List.of("POOL")));
+
+        SlotCriteria merged = merger.merge(base, update);
+
+        assertThat(merged.location()).isEqualTo("Antalya");
+        assertThat(merged.features()).containsExactly("POOL");
+    }
+
+    @Test
+    void emptyFeaturesDoesNotOverwriteExistingList() {
+        SlotCriteria base = slots(Map.of("features", List.of("SEAFRONT")));
+        SlotCriteria update = slots(Map.of("features", List.of()));
+
+        SlotCriteria merged = merger.merge(base, update);
+
+        assertThat(merged.features()).containsExactly("SEAFRONT");
+    }
 }

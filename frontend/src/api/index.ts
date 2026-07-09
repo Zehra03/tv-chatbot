@@ -3,7 +3,13 @@
  *   `import { hotelApi, apiClient } from '@/api'`
  * Endpoint modülleri backend sözleşmesini birebir yansıtır (§6).
  */
-export { apiClient, setAuthToken, UNAUTHORIZED_EVENT } from './client'
+export {
+  apiClient,
+  setAuthToken,
+  setRefreshToken,
+  UNAUTHORIZED_EVENT,
+  TOKENS_REFRESHED_EVENT,
+} from './client'
 export type { ApiError } from './client'
 
 export { chatApi } from './chatApi'
@@ -11,6 +17,7 @@ export type { SendMessageRequest, SendMessageResponse } from './chatApi'
 
 export { hotelApi } from './hotelApi'
 export { flightApi } from './flightApi'
+export type { LocationDirection } from './flightApi'
 
 export { reservationApi } from './reservationApi'
 export type { CreateReservationRequest, ReservationPreview } from './reservationApi'

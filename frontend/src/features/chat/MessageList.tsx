@@ -3,6 +3,7 @@ import { motion, type Variants } from 'framer-motion'
 import { ErrorState } from '@/components/ErrorState'
 import { SplitText } from '@/components/SplitText'
 import { ResultCards } from '@/features/chat/ResultCards'
+import { ChoiceCard } from '@/features/chat/ChoiceCard'
 import { TypingIndicator } from '@/features/chat/TypingIndicator'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
@@ -19,6 +20,8 @@ interface MessageListProps {
   pending: boolean
   error: ApiError | null
   onRetry?: () => void
+  /** Belirsizlik kartındaki bir seçenek seçilince çağrılır (value yeni tur olarak gönderilir). */
+  onSelectOption?: (value: string) => void
 }
 
 const listVariants: Variants = {
@@ -51,7 +54,7 @@ function Bubble({ message }: { message: ChatMessage }) {
   )
 }
 
-export function MessageList({ pending, error, onRetry }: MessageListProps) {
+export function MessageList({ pending, error, onRetry, onSelectOption }: MessageListProps) {
   const messages = useAppSelector((s) => s.chat.messages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -61,11 +64,17 @@ export function MessageList({ pending, error, onRetry }: MessageListProps) {
   }, [messages.length, pending])
 
   // overflow-x-hidden: TiltedCard hover büyümesi yatay scrollbar titretmesin.
+  // relative ŞART: mesaj balonlarındaki sr-only etiketleri position:absolute'tur;
+  // kap konumlandırılmazsa bunların kapsayan bloğu <main> olur (en yakın
+  // konumlandırılmış ata), böylece bu kabın overflow kırpmasından KAÇARLAR ve
+  // main.scrollHeight'i tüm konuşma boyuna şişirirler — sonra scrollIntoView
+  // main'i kaydırıp başlığı iter, altta boşluk bırakır. relative ile sr-only'ler
+  // bu kaba kapsanıp kırpılır; main sabit yükseklikte kalır.
   return (
     <div
       role="log"
       aria-label="Sohbet mesajları"
-      className="flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
+      className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
     >
       {messages.length === 0 && (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
@@ -92,6 +101,13 @@ export function MessageList({ pending, error, onRetry }: MessageListProps) {
           <motion.div key={m.id} variants={itemVariants} className="space-y-2">
             <Bubble message={m} />
             {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
+            {m.options && m.options.length > 0 && (
+              <ChoiceCard
+                options={m.options}
+                onSelect={(value) => onSelectOption?.(value)}
+                disabled={pending}
+              />
+            )}
           </motion.div>
         ))}
       </motion.div>

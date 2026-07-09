@@ -4,12 +4,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
 import { Toaster } from 'sonner'
-import { authApi, UNAUTHORIZED_EVENT } from '@/api'
+import { authApi, TOKENS_REFRESHED_EVENT, UNAUTHORIZED_EVENT } from '@/api'
 import { useAppDispatch } from '@/app/hooks'
 import { LiquidGlassFilter } from '@/components/ui/button'
 import { store, type RootState } from '@/app/store'
 import { router } from '@/app/router'
-import { logout, userRefreshed } from '@/features/auth/authSlice'
+import { logout, tokensRefreshed, userRefreshed } from '@/features/auth/authSlice'
 
 /**
  * Uygulama sarmalı: Redux (istemci state) + React Query (sunucu state) + Router.
@@ -38,8 +38,17 @@ function SessionManager() {
 
   useEffect(() => {
     const onUnauthorized = () => dispatch(logout())
+    // client.ts sessiz refresh'i başardığında yeni jeton çiftini Redux'a + localStorage'a yaz.
+    const onTokensRefreshed = (event: Event) => {
+      const detail = (event as CustomEvent<{ token: string; refreshToken: string }>).detail
+      if (detail) dispatch(tokensRefreshed(detail))
+    }
     window.addEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
-    return () => window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
+    window.addEventListener(TOKENS_REFRESHED_EVENT, onTokensRefreshed)
+    return () => {
+      window.removeEventListener(UNAUTHORIZED_EVENT, onUnauthorized)
+      window.removeEventListener(TOKENS_REFRESHED_EVENT, onTokensRefreshed)
+    }
   }, [dispatch])
 
   useEffect(() => {

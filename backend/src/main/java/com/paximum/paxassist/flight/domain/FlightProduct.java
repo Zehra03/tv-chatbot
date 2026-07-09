@@ -16,6 +16,9 @@ public class FlightProduct {
     private final String flightNumber;
     private final String origin;
     private final String destination;
+    /** City the origin/destination airport belongs to (e.g. code SAW → "Istanbul"), from TourVisio. */
+    private final String originCity;
+    private final String destinationCity;
     private final Instant departTime;
     private final Instant arriveTime;
     private final Instant returnDepartTime;

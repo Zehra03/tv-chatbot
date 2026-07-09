@@ -1,11 +1,17 @@
-import axios, { type AxiosError, type AxiosResponse } from 'axios'
+import axios, {
+  type AxiosError,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from 'axios'
 
 /**
  * Tek Axios instance — tüm backend çağrıları buradan geçer.
  * - baseURL env'den gelir; MSW aktifken boş bırakılır → istekler aynı origin'e
  *   gider ve mock worker tarafından yakalanır.
- * - Response interceptor tüm hataları tek tip `ApiError`'a normalize eder;
- *   JSON beklenirken ham string dönen yanıtlar da ApiError'a çevrilir.
+ * - Request interceptor kısa ömürlü access jetonunu ekler.
+ * - Response interceptor: (1) jetonlu bir istek 401 dönerse önce SESSİZCE refresh
+ *   jetonuyla yeni access jetonu almayı dener ve isteği tekrarlar; refresh yoksa/
+ *   başarısızsa oturumu düşürür. (2) Tüm hataları tek tip `ApiError`'a normalize eder.
  * - Burada HİÇBİR API anahtarı YOK; AI/TourVisio kimlik bilgileri backend'de (CLAUDE.md).
  */
 export interface ApiError {
@@ -14,20 +20,42 @@ export interface ApiError {
 }
 
 /**
- * Jetonlu bir istek 401 dönünce yayınlanan olay — SessionManager (providers.tsx)
- * dinler ve Redux oturumunu kapatır. Store'u buradan import etmek döngü yaratırdı;
- * olay köprüsü katmanları ayrık tutar.
+ * Jetonlu bir istek 401 dönünce (ve sessiz refresh de başarısızsa) yayınlanan olay —
+ * SessionManager (providers.tsx) dinler ve Redux oturumunu kapatır. Store'u buradan
+ * import etmek döngü yaratırdı; olay köprüsü katmanları ayrık tutar.
  */
 export const UNAUTHORIZED_EVENT = 'pax:unauthorized'
 
+/**
+ * Sessiz refresh jeton çiftini döndürünce yayınlanan olay — SessionManager yeni
+ * { token, refreshToken } çiftini Redux'a + localStorage'a yazar. detail = TokenPair.
+ */
+export const TOKENS_REFRESHED_EVENT = 'pax:tokens-refreshed'
+
+interface TokenPair {
+  token: string
+  refreshToken: string
+}
+
+/** Sessiz refresh sonrası ikinci kez denenmemesi için işaretlenen istek. */
+interface RetriableRequestConfig extends InternalAxiosRequestConfig {
+  _retried?: boolean
+}
+
 let authToken: string | null = null
+let refreshTokenValue: string | null = null
 
 /**
- * Oturum jetonunu istemciye tanıtır (null = oturum kapalı). Tek çağıran
- * authSlice'tır; jeton OPAK'tır, içeriği burada yorumlanmaz (CLAUDE.md).
+ * Access jetonunu istemciye tanıtır (null = oturum kapalı). authSlice çağırır;
+ * jeton OPAK'tır, içeriği burada yorumlanmaz (CLAUDE.md).
  */
 export function setAuthToken(token: string | null) {
   authToken = token
+}
+
+/** Refresh jetonunu istemciye tanıtır (null = refresh yok). authSlice çağırır. */
+export function setRefreshToken(token: string | null) {
+  refreshTokenValue = token
 }
 
 export const apiClient = axios.create({
@@ -39,6 +67,38 @@ apiClient.interceptors.request.use((config) => {
   if (authToken) config.headers.Authorization = `Bearer ${authToken}`
   return config
 })
+
+/**
+ * Access jetonu 401 olunca refresh jetonuyla yeni bir çift alır. Tek-uçuş (single
+ * flight): eşzamanlı 401'ler tek bir refresh çağrısını paylaşır — rotation gereği
+ * refresh jetonu tek kullanımlıktır, paralel refresh'ler birbirini geçersiz kılardı.
+ * apiClient DEĞİL çıplak axios kullanılır: /auth/refresh'in kendi 401'i bu
+ * interceptor'a geri düşüp sonsuz döngü yaratmasın. Başarısızlıkta null döner.
+ */
+let refreshInFlight: Promise<string | null> | null = null
+
+function performTokenRefresh(): Promise<string | null> {
+  if (!refreshTokenValue) return Promise.resolve(null)
+  if (!refreshInFlight) {
+    const base = apiClient.defaults.baseURL ?? ''
+    refreshInFlight = axios
+      .post<TokenPair>(`${base}/api/v1/auth/refresh`, { refreshToken: refreshTokenValue })
+      .then((res) => {
+        const pair = res.data
+        authToken = pair.token
+        refreshTokenValue = pair.refreshToken
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent<TokenPair>(TOKENS_REFRESHED_EVENT, { detail: pair }))
+        }
+        return pair.token
+      })
+      .catch(() => null)
+      .finally(() => {
+        refreshInFlight = null
+      })
+  }
+  return refreshInFlight
+}
 
 /**
  * JSON beklenen çağrıda gövde ham string kaldıysa yanıt geçersizdir — tipik
@@ -66,16 +126,33 @@ apiClient.interceptors.response.use(
     }
     return response
   },
-  (error: AxiosError<{ message?: string }>) => {
+  async (error: AxiosError<{ message?: string }>) => {
     const status = error.response?.status ?? null
+    const original = error.config as RetriableRequestConfig | undefined
+    const url = original?.url ?? ''
 
-    // Elimizde jeton varken gelen 401 = oturum düşmüş (süre dolumu / geçersiz
-    // jeton). Login/register'ın kendi 401'i (hatalı şifre) oturum düşmesi
-    // değildir — o formda inline gösterilir.
-    const url = error.config?.url ?? ''
-    const isAuthAttempt = url.includes('/auth/login') || url.includes('/auth/register')
-    if (status === 401 && authToken && !isAuthAttempt && typeof window !== 'undefined') {
-      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+    // Elimizde jeton varken gelen 401 = oturum düşmüş (süre dolumu / geçersiz jeton).
+    // login/register/refresh'in kendi 401'i (hatalı şifre / geçersiz refresh) oturum
+    // düşmesi değildir — refresh yeni bir jeton çiftini denemez, çağıran ele alır.
+    const isAuthEndpoint =
+      url.includes('/auth/login') ||
+      url.includes('/auth/register') ||
+      url.includes('/auth/refresh')
+
+    if (status === 401 && authToken && !isAuthEndpoint) {
+      // Bir kez sessiz refresh dene, sonra isteği şeffafça tekrarla.
+      if (original && !original._retried && refreshTokenValue) {
+        original._retried = true
+        const newToken = await performTokenRefresh()
+        if (newToken) {
+          original.headers.Authorization = `Bearer ${newToken}`
+          return apiClient(original)
+        }
+      }
+      // Refresh jetonu yok ya da refresh başarısız → oturum gerçekten bitti.
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+      }
     }
 
     const normalized: ApiError = {

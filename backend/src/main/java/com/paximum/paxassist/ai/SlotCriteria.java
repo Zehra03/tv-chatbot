@@ -9,7 +9,7 @@ import java.util.List;
  * routing to hotel.HotelSearchCriteria or flight.FlightSearchCriteria.
  *
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
- *                nationality, currency, rooms, stars, boardType, sortBy
+ *                nationality, currency, rooms, stars, boardType, features, sortBy
  * Flight fields: origin, destination, departureDate, returnDate, cabinClass
  * Shared        : adults, children, childAges, nationality, currency, maxPrice
  * SELECT intent : selectionReference
@@ -25,6 +25,7 @@ public record SlotCriteria(
         Integer rooms,
         Integer stars,            // minimum star rating
         String boardType,         // AI | HB | BB | RO
+        List<String> features,    // requested hotel features, e.g. ["SEAFRONT","POOL"] — see orchestrator.intent.HotelFeature
 
         // ── Flight ───────────────────────────────────────────────────────────
         String origin,            // departure city or airport
@@ -55,6 +56,7 @@ public record SlotCriteria(
     public static SlotCriteria empty() {
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null,
+                null);
     }
 }
