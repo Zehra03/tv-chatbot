@@ -109,7 +109,7 @@ class TourVisioHotelApiClientTest {
         ReflectionTestUtils.setField(apiClient, "tokenExpiry", java.time.Instant.now().plusSeconds(3600));
 
         HotelSearchRequest criteria = new HotelSearchRequest("Antalya", "2024-01-01", 5, 2, List.of(), "TR", "TRY", "tr-TR");
-        Object mockResponse = new Object();
+        Object mockResponse = java.util.Map.of("body", java.util.Map.of("hotels", java.util.List.of()));
         ResponseEntity<Object> responseEntity = new ResponseEntity<>(mockResponse, HttpStatus.OK);
 
         when(restTemplate.postForEntity(

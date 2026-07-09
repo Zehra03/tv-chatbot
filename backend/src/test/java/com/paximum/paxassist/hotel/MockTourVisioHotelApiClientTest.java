@@ -46,13 +46,13 @@ class MockTourVisioHotelApiClientTest {
     }
 
     @Test
-    void priceSearch_ReturnsEmptyList() {
+    void priceSearch_ReturnsMockResultsFiltered() {
         MockTourVisioHotelApiClient client = new MockTourVisioHotelApiClient();
         HotelSearchRequest criteria = new HotelSearchRequest("Antalya", "2024-01-01", 5, 2, List.of(), "TR", "TRY", "tr-TR");
         
         Object result = client.priceSearch(criteria, "123");
         
         assertThat(result).isInstanceOf(List.class);
-        assertThat((List<?>) result).isEmpty();
+        assertThat((List<?>) result).isNotEmpty();
     }
 }
