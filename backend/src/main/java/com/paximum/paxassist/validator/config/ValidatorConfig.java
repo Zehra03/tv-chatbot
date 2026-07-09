@@ -17,13 +17,14 @@ import org.springframework.context.annotation.Configuration;
  * {@code chat} module ends up using (that module is migrating to the Gemini API) — the Validator never
  * shares a bean with the main chat engine.
  *
- * Default provider ({@code app.validator.provider=ollama}) is a fully local {@link OllamaChatModel} —
- * no marginal API cost. {@code provider=groq} and {@code provider=deepseek} are EXPERIMENTAL
- * alternatives added for the A/B harness's cost/benefit comparison: both point the same
- * {@code ChatClient} contract at an OpenAI-compatible endpoint (Groq: LPU-hosted open-weight models,
- * free tier but 6k tokens/min; DeepSeek: official API, pay-as-you-go, no hard rate limit). They
- * require {@code GROQ_API_KEY} / {@code DEEPSEEK_API_KEY} respectively. Not wired into any default
- * profile; opt-in via {@code VALIDATOR_PROVIDER}.
+ * Default provider ({@code app.validator.provider=deepseek}) is the official DeepSeek
+ * OpenAI-compatible API — chosen over the local Ollama setup after the A/B harness's cost/benefit
+ * comparison (Jul 2026: ~+2s/req, ~$0.0002/msg, 92% verdict accuracy with {@code deepseek-chat}).
+ * It requires {@code DEEPSEEK_API_KEY} and fails fast at startup without it. Alternatives via
+ * {@code VALIDATOR_PROVIDER}: {@code groq} (OpenAI-compatible, LPU-hosted open-weight models, free
+ * tier but 6k tokens/min, requires {@code GROQ_API_KEY}) and {@code ollama} — a fully local
+ * {@link OllamaChatModel} with no marginal API cost, which the hermetic mock/mock-ai/loadtest
+ * profiles pin so tests and CI need no key.
  */
 @Configuration
 @EnableConfigurationProperties(ValidatorProperties.class)

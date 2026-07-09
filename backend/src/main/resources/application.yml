@@ -117,20 +117,20 @@ app:
   # Validator (second LLM layer, judges the main LLM's draft answer before it reaches the user —
   # FallbackHandler wires it over OTHER-intent conversational replies). Runs on its own dedicated
   # ChatClient (validator/config/ValidatorConfig.java), independent of the main chat engine's bean.
-  # Default model is gemma3:4b so it reuses the model already pulled locally; override VALIDATOR_MODEL
-  # (e.g. a smaller qwen2.5:3b) once that model is available in Ollama.
   validator:
     enabled: ${VALIDATOR_ENABLED:true}
     ab-test-enabled: ${VALIDATOR_AB_TEST_ENABLED:false}
     max-retries: ${VALIDATOR_MAX_RETRIES:2}
     temperature: ${VALIDATOR_TEMPERATURE:0.0}
     max-tokens: ${VALIDATOR_MAX_TOKENS:256}
-    model: ${VALIDATOR_MODEL:gemma3:4b}
-    # Provider for the validator's dedicated ChatClient: "ollama" (default, fully local, no API cost),
-    # "groq" or "deepseek" (OpenAI-compatible cloud endpoints; require GROQ_API_KEY / DEEPSEEK_API_KEY).
+    model: ${VALIDATOR_MODEL:deepseek-chat}
+    # Provider for the validator's dedicated ChatClient: "deepseek" (default — official OpenAI-compatible
+    # API, requires DEEPSEEK_API_KEY and fails fast at startup without it), "groq" (requires GROQ_API_KEY)
+    # or "ollama" (fully local, no API cost; pair with e.g. VALIDATOR_MODEL=gemma3:4b).
     # A/B harness result (Jul 2026): deepseek + deepseek-chat is the recommended production combo
     # (~+2s/req, ~$0.0002/msg, 92% verdict accuracy) — see ValidatorAbComparisonHarness.
-    provider: ${VALIDATOR_PROVIDER:ollama}
+    # The hermetic mock/mock-ai/loadtest profiles pin provider=ollama so CI needs no key.
+    provider: ${VALIDATOR_PROVIDER:deepseek}
 
 ratelimit:
   # When true, a rate limiter failure (e.g. Redis unavailable) lets requests through.

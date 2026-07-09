@@ -12,3 +12,10 @@ spring:
     exclude:
       - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
       - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+
+app:
+  validator:
+    # Keep the validator client fully local in this hermetic profile: the default provider is now
+    # deepseek, whose ChatClient bean fails fast at startup when DEEPSEEK_API_KEY is unset (CI).
+    # Constructing the Ollama client needs no key and makes no network call at startup.
+    provider: ollama
