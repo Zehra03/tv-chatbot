@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import reducer, { assistantReplied, chatReset, userMessageSent } from './chatSlice'
+import reducer, {
+  assistantReplied,
+  chatReset,
+  sessionLoaded,
+  userMessageSent,
+} from './chatSlice'
 import type { SendMessageResponse } from '@/api'
-import type { ChatMessage } from '@/types'
+import type { ChatMessage, ChatSession } from '@/types'
 
 const reply = (over: Partial<SendMessageResponse> = {}): SendMessageResponse => ({
   sessionId: 'sess-1',
@@ -63,10 +68,30 @@ describe('chatSlice', () => {
     expect(state.pendingQuestion).toBeUndefined()
   })
 
-  it('chatReset tüm konuşma durumunu sıfırlar', () => {
+  it('chatReset tüm konuşma durumunu sıfırlar (epoch artar)', () => {
     let state = reducer(undefined, userMessageSent('merhaba'))
     state = reducer(state, assistantReplied(reply({ pendingQuestion: 'Kaç kişi?' })))
     state = reducer(state, chatReset())
-    expect(state).toEqual({ sessionId: null, messages: [] })
+    expect(state).toEqual({ sessionId: null, messages: [], epoch: 1 })
+  })
+
+  it('yeni sohbet ve oturum yükleme epoch\'u artırır (bekleyen isteği geçersiz kılar)', () => {
+    // İlk mesaj uçuştayken (sessionId hâlâ null) yeni sohbet: epoch değişmeli ki
+    // useSendMessage composer kilidini açsın — sessionId aynı kaldığı için
+    // sıfırlamayı yalnızca sessionId'e bağlamak yetmez.
+    let state = reducer(undefined, userMessageSent('merhaba'))
+    expect(state.epoch).toBe(0)
+    state = reducer(state, chatReset())
+    expect(state.epoch).toBe(1)
+
+    const session: ChatSession = {
+      id: 'sess-2',
+      messages: [],
+      accumulatedCriteria: undefined,
+      pendingQuestion: undefined,
+    }
+    state = reducer(state, sessionLoaded(session))
+    expect(state.epoch).toBe(2)
+    expect(state.sessionId).toBe('sess-2')
   })
 })

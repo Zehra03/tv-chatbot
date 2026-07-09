@@ -21,6 +21,7 @@ public class FlightProduct {
     private final Instant returnDepartTime;
     private final Instant returnArriveTime;
     private final int stops;
+    private final int durationMinutes;
     private final String baggage;
     private final BigDecimal price;
     private final String currency;

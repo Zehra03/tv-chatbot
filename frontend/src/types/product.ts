@@ -21,6 +21,11 @@ export interface HotelProduct {
   /** DB: board_type varchar(50) — serbest metin (ör. "BB", "AI"). */
   boardType: string
   availability: boolean
+  /**
+   * Otel görseli — TourVisio pricesearch `thumbnailFull` (mutlak URL). Sağlayıcıda
+   * görsel yoksa null/undefined gelir; kart placeholder gösterir. Asla uydurulmaz.
+   */
+  image?: string | null
 }
 
 export interface FlightProduct {

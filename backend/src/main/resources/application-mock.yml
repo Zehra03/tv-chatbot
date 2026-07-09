@@ -6,6 +6,11 @@ spring:
   flyway:
     enabled: false
   ai:
+    # No real chat model in this profile — AiConfig provides a mock ChatModel. 'none' keeps both the
+    # OpenAI(Gemini) and Ollama chat autoconfigs from creating a competing ChatModel bean.
+    model:
+      chat: none
+      embedding: none
     ollama:
       chat:
         enabled: false
