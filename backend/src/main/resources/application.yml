@@ -58,7 +58,7 @@ tourvisio:
   password: ${TOURVISIO_PASSWORD:}
 
 server:
-  port: ${SERVER_PORT:${BACKEND_PORT:8080}}
+  port: ${SERVER_PORT:${BACKEND_PORT:8081}}
 
 management:
   endpoints:
