@@ -9,9 +9,11 @@ import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.dto.ChatMessageDto;
+import com.paximum.paxassist.chat.dto.ChoiceOptionDto;
 import com.paximum.paxassist.chat.dto.PartialCriteriaDto;
 import com.paximum.paxassist.chat.dto.ResultCardDto;
 import com.paximum.paxassist.chat.dto.SendMessageResponseDto;
+import com.paximum.paxassist.orchestrator.ChoiceOption;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 
 /**
@@ -34,17 +36,28 @@ public class ChatResponseAssembler {
 
     public SendMessageResponseDto toResponse(OrchestrationResult result, ChatSession session) {
         List<ResultCardDto> cards = viewMapper.toResultCards(result.cards());
+        List<ChoiceOptionDto> options = toChoiceOptions(result.options());
         ChatMessageDto reply = new ChatMessageDto(
                 UUID.randomUUID().toString(),
                 "assistant",
                 result.reply(),
                 Instant.now().toString(),
-                cards.isEmpty() ? null : cards);
+                cards.isEmpty() ? null : cards,
+                options.isEmpty() ? null : options);
 
         String domain = (result.domain() != null) ? result.domain() : lower(session.getActiveDomain());
         PartialCriteriaDto criteria = viewMapper.toPartialCriteria(session.getAccumulatedCriteria(), domain);
 
         return new SendMessageResponseDto(result.sessionId(), reply, criteria, result.pendingQuestion());
+    }
+
+    private List<ChoiceOptionDto> toChoiceOptions(List<ChoiceOption> options) {
+        if (options == null || options.isEmpty()) {
+            return List.of();
+        }
+        return options.stream()
+                .map(o -> new ChoiceOptionDto(o.label(), o.value()))
+                .toList();
     }
 
     private String lower(String value) {

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { NavLink, useLocation, useMatches, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, UserRound, X } from 'lucide-react'
@@ -53,6 +53,12 @@ export function Layout() {
   const zone = zoneFromMatches(matches)
   const dark = zone === 'ai'
 
+  // Chat, viewport'a oturan bir "uygulama" görünümü: geniş dikey oluk (py-8)
+  // yüksekliği çalar ve panel/thread'i fold'un altına itebilir. Bu rotada oluğu
+  // kısarak tüm chat + geçmiş sayfayı kaydırmadan görünür tutarız; diğer
+  // (kayan) sayfalar rahat py-8'i korur.
+  const isChat = location.pathname.startsWith('/chat')
+
   // GooeyNav'ın aktif öğesi rotadan türer; '/reservation/new' da Rezervasyonlar
   // sekmesini işaretler. Eşleşme yoksa (-1, ör. /profile) pill gizlenir.
   const activeNavIndex = NAV.findIndex((item) =>
@@ -66,15 +72,80 @@ export function Layout() {
     navigate('/login', { replace: true })
   }
 
+  // ——— GEÇİCİ TEŞHİS — kaydırma sorununu ölçer, sonra kaldırılacak. ———
+  const [dbg, setDbg] = useState('ölçülüyor…')
+  useEffect(() => {
+    const measure = () => {
+      const mainEl = document.querySelector('main') as HTMLElement | null
+      const sidebars = document.querySelectorAll('[aria-label="Sohbet geçmişi"]')
+      const log = document.querySelector('[role="log"]') as HTMLElement | null
+      const h = (el: Element | null) =>
+        el ? Math.round(el.getBoundingClientRect().height) : -1
+      // main içindeki, KIRPILMAYAN (arada overflow-hidden/auto yok) en uzun eleman.
+      let worst: { cls: string; h: number } | null = null
+      if (mainEl) {
+        mainEl.querySelectorAll('*').forEach((el) => {
+          const r = (el as HTMLElement).getBoundingClientRect()
+          if (r.height > (worst?.h ?? 800) && r.height > 800) {
+            worst = {
+              cls: (el.className?.toString?.() ?? '').slice(0, 45) || el.tagName,
+              h: Math.round(r.height),
+            }
+          }
+        })
+      }
+      setDbg(
+        [
+          `vh=${window.innerHeight}`,
+          `main=${h(mainEl)} sc=${mainEl?.scrollHeight ?? -1}`,
+          `#sidebar=${sidebars.length} #log=${document.querySelectorAll('[role="log"]').length}`,
+          `log h=${h(log)} sc=${log?.scrollHeight ?? -1}(${log ? getComputedStyle(log).overflowY : '?'})`,
+          worst ? `TALL[${(worst as { cls: string; h: number }).h}]=${(worst as { cls: string; h: number }).cls}` : 'TALL=none',
+        ].join(' | '),
+      )
+    }
+    measure()
+    const id = window.setInterval(measure, 400)
+    window.addEventListener('resize', measure)
+    return () => {
+      window.clearInterval(id)
+      window.removeEventListener('resize', measure)
+    }
+  }, [])
+  // ——— /GEÇİCİ TEŞHİS ———
+
   return (
     <div
       className={cn(
-        'min-h-screen transition-colors duration-700',
+        // Viewport'a kilitli kabuk: gövde ASLA kaymaz (overflow-hidden), yalnızca
+        // <main> kayar. Böylece fixed gece-uçuşu arka planı, içerik bittikten sonra
+        // "boş kaydırılabilir alan" olarak sızamaz. h-[100dvh] mobilde dinamik
+        // araç çubuğuna da uyar; header + main flex sütununu paylaşır.
+        'flex h-screen flex-col overflow-hidden transition-colors duration-700 supports-[height:100dvh]:h-[100dvh]',
         // 'dark' sınıfı semantik token'ları (bg-card, muted-foreground, border…)
         // koyu palete çevirir — token'la yazılmış sayfalar otomatik okunur kalır.
         dark ? 'dark bg-brand-navy text-white' : 'bg-background text-foreground',
       )}
     >
+      {/* GEÇİCİ TEŞHİS katmanı — ölçümü göster, sonra kaldırılacak. */}
+      <div
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 99999,
+          background: 'rgba(0,0,0,0.85)',
+          color: '#7CFF7C',
+          font: '12px monospace',
+          padding: '3px 8px',
+          textAlign: 'center',
+          pointerEvents: 'none',
+        }}
+      >
+        {dbg}
+      </div>
+
       {/* Gece uçuşu arka planı — yalnızca AI bölgesinde, yumuşak giriş/çıkışla. */}
       <AnimatePresence>
         {dark && (
@@ -91,7 +162,9 @@ export function Layout() {
 
       <header
         className={cn(
-          'sticky top-0 z-40 border-b backdrop-blur-md transition-colors duration-700',
+          // Kabuğun sabit üst satırı — flex sütununda küçülmez (shrink-0); sticky
+          // yerine gerçek akış elemanı, çünkü main artık tek kaydırma kabı.
+          'relative z-40 shrink-0 border-b backdrop-blur-md transition-colors duration-700',
           dark ? 'border-white/10 bg-brand-navy/70' : 'border-border bg-background/80',
         )}
       >
@@ -154,8 +227,8 @@ export function Layout() {
           </div>
         </div>
 
-        {/* Mobil panel — overlay olarak açılır (header yüksekliği sabit kalır,
-            /chat'in 100vh hesabı bozulmaz); linke tıklayınca kapanır. */}
+        {/* Mobil panel — overlay olarak açılır (header shrink-0 yüksekliği
+            sabit kalır, kabuk düzeni bozulmaz); linke tıklayınca kapanır. */}
         {menuOpen && (
           <div
             className={cn(
@@ -210,23 +283,39 @@ export function Layout() {
         )}
       </header>
 
-      {/* container'ın sm padding'i tailwind container.screens={'2xl'} yüzünden
-          uygulanmıyor ve 1400px'e dek genişlik sınırsız kalıyordu — header'ın
-          px-4/sm:px-8 oluklarıyla hizalı, max-w-7xl ile sınırlı sarmalayıcı. */}
-      <main className="relative z-10 mx-auto w-full max-w-7xl px-4 py-8 sm:px-8">
-        {/* Rota geçişi: mode="wait" + pathname key — AnimatedOutlet ayrılan
-            kopyada eski sayfayı dondurur (frozen outlet deseni). */}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.div
-            key={location.pathname}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            transition={{ duration: 0.22, ease: 'easeOut' }}
-          >
-            <AnimatedOutlet />
-          </motion.div>
-        </AnimatePresence>
+      {/* İçerik kabı (flex-1). Chat = TEK SAYFA: main kaydırılamaz (overflow-hidden),
+          böylece sayfa hiç kaymaz — geçmiş paneli ve mesaj thread'i yalnızca kendi
+          içlerinde kayar. Diğer (sonuç/form) sayfaları uzun olabilir; onlarda main
+          tek kaydırma kabı olarak kayar, header sabit kalır, arka plan sızmaz.
+          İç sarmalayıcı header'ın px-4/sm:px-8 oluklarıyla hizalı, max-w-7xl sınırlı. */}
+      <main
+        className={cn(
+          'relative z-10 flex min-h-0 flex-1 flex-col',
+          isChat ? 'overflow-hidden' : 'overflow-y-auto',
+        )}
+      >
+        <div
+          className={cn(
+            'mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-4 sm:px-8',
+            isChat ? 'py-4' : 'py-8',
+          )}
+        >
+          {/* Rota geçişi: mode="wait" + pathname key — AnimatedOutlet ayrılan
+              kopyada eski sayfayı dondurur (frozen outlet deseni). flex-1 +
+              min-h-0: chat kabı dikeyde oturur, sonuç sayfaları taşıp main'i kaydırır. */}
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={location.pathname}
+              className="flex min-h-0 flex-1 flex-col"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+            >
+              <AnimatedOutlet />
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </main>
     </div>
   )

@@ -14,7 +14,9 @@ import { useSendMessage } from '@/features/chat/useSendMessage'
  * Hero kendi arka planını çizmez — Layout'taki NightSkyBackground arkada kalır.
  * Bekleyen açıklayıcı soru composer placeholder'ında ipucu olarak görünür.
  * Chatbot yalnızca arar/listeler/yönlendirir; booking'i kontrollü form yapar.
- * Yükseklik: header 6rem (Layout h-24) + main dikey padding 4rem = 10rem.
+ * Yükseklik: Layout kabuğu viewport'a kilitli; kap flex-1 ile main'in kalan
+ * alanını tam doldurur (sabit 100vh-hesabı yok — header değişse de bozulmaz).
+ * Kendi iç alanları (geçmiş paneli, mesaj thread'i) bağımsız kayar.
  */
 export function ChatPage() {
   const sendMessage = useSendMessage()
@@ -22,15 +24,16 @@ export function ChatPage() {
   const isEmpty = useAppSelector((s) => s.chat.messages.length === 0)
 
   return (
-    <div className="mx-auto flex h-[calc(100vh-10rem)] max-w-5xl gap-4 supports-[height:100dvh]:h-[calc(100dvh-10rem)]">
+    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 gap-4">
       <SessionSidebar />
-      <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
         {!isEmpty && (
           <>
             <MessageList
               pending={sendMessage.isPending}
               error={sendMessage.error}
               onRetry={sendMessage.retry}
+              onSelectOption={sendMessage.send}
             />
             <CriteriaChips />
           </>

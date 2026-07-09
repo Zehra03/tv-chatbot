@@ -80,6 +80,26 @@ describe('FlightsPage (MSW ile)', () => {
     expect(screen.getByText('3 sonuç')).toBeTruthy()
   })
 
+  it('konum otomatik tamamlamadan öneri seçince alanı doldurur', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    // "Anta" yaz → backend (MSW) TourVisio önerilerini döndürür → listeden seç.
+    await user.type(screen.getByLabelText('Nereye'), 'Anta')
+    const option = await screen.findByRole(
+      'option',
+      { name: /Antalya Havalimanı/ },
+      { timeout: 3000 },
+    )
+    await user.click(option)
+
+    expect((screen.getByLabelText('Nereye') as HTMLInputElement).value).toContain(
+      'Antalya Havalimanı',
+    )
+    // Seçimden sonra liste kapanır.
+    expect(screen.queryByRole('option', { name: /Antalya Havalimanı/ })).toBeNull()
+  })
+
   it('Seç, uçuş taslağını yazıp rezervasyon formuna yönlendirir', async () => {
     const user = userEvent.setup()
     const { store } = renderPage()

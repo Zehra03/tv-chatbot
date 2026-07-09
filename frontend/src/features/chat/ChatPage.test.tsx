@@ -79,6 +79,25 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
   })
 
+  it('belirsiz girdide seçenekli kart çıkar; "Otel ara"ya tıklamak şehri koruyarak otel akışını sürdürür', async () => {
+    const user = userEvent.setup()
+    renderChat()
+
+    // Sadece şehir adı → intent belirsiz → asistan seçenekli kart gösterir.
+    await send(user, 'Antalya')
+    expect(
+      await screen.findByText('Otel araması mı yoksa uçuş araması mı yapmak istersiniz?', {}, { timeout: 3000 }),
+    ).toBeTruthy()
+    const otelAra = await screen.findByRole('button', { name: 'Otel ara' })
+    expect(screen.getByRole('button', { name: 'Uçuş ara' })).toBeTruthy()
+
+    // "Otel ara" → "Antalya için otel arıyorum" yeni tur olarak gider: otel akışı, şehir korunur.
+    await user.click(otelAra)
+    expect(await screen.findByText('Giriş tarihi nedir? (örn. 2026-08-01)', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText('Otel araması')).toBeTruthy() // kriter rozeti (kart butonu değil)
+    expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
+  })
+
   it('istek uçuştayken "Yeni sohbet"e geçilince composer yeniden yazılabilir olur', async () => {
     const user = userEvent.setup()
     // İlk yanıtı askıda tut: sessionId hâlâ null iken yeni sohbet senaryosu —

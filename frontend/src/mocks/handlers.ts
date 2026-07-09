@@ -8,7 +8,13 @@ import type {
   ReservationPreview,
   SendMessageRequest,
 } from '@/api'
-import { flightFixtures, hotelFixtures, reservationFixtures } from './fixtures'
+import {
+  flightFixtures,
+  flightLocationFixtures,
+  hotelFixtures,
+  hotelLocationFixtures,
+  reservationFixtures,
+} from './fixtures'
 import {
   deleteSessionState,
   getSessionState,
@@ -128,6 +134,16 @@ export const handlers: RequestHandler[] = [
   }),
 
   // ── Hotel ───────────────────────────────────────────────────────────────
+  // Destination otomatik tamamlama: q'yu şehir adıyla eşleştirir (backend
+  // HotelSearchService.suggestLocations paritesi). 2 karakterden kısa sorgu boş döner.
+  http.get('/api/v1/hotels/locations', ({ request }) => {
+    const q = new URL(request.url).searchParams.get('q') ?? ''
+    const needle = norm(q)
+    if (needle.length < 2) return HttpResponse.json([])
+    const matches = hotelLocationFixtures.filter((l) => norm(l.name).includes(needle))
+    return HttpResponse.json(matches.slice(0, 8))
+  }),
+
   http.post('/api/v1/hotels/search', async ({ request }) => {
     const criteria = (await request.json()) as HotelSearchCriteria
     const nd = criteria?.destination ? norm(criteria.destination) : ''
@@ -142,6 +158,18 @@ export const handlers: RequestHandler[] = [
   }),
 
   // ── Flight ──────────────────────────────────────────────────────────────
+  // Kalkış/varış otomatik tamamlama: q'yu isim/id ile eşleştirir (backend
+  // FlightLocationService paritesi). 2 karakterden kısa sorgu boş döner.
+  http.get('/api/v1/flights/locations', ({ request }) => {
+    const q = new URL(request.url).searchParams.get('q') ?? ''
+    const needle = norm(q)
+    if (needle.length < 2) return HttpResponse.json([])
+    const matches = flightLocationFixtures.filter(
+      (l) => norm(l.name).includes(needle) || norm(l.id).includes(needle),
+    )
+    return HttpResponse.json(matches.slice(0, 8))
+  }),
+
   http.post('/api/v1/flights/search', async ({ request }) => {
     const criteria = (await request.json()) as FlightSearchCriteria
     const nd = criteria?.destination ? norm(criteria.destination) : ''

@@ -33,6 +33,9 @@ export interface FlightProduct {
   airline: string
   origin: string
   destination: string
+  /** origin/destination havalimanı kodunun ait olduğu şehir (ör. SAW → "Istanbul"), TourVisio'dan. */
+  originCity?: string | null
+  destinationCity?: string | null
   departTime: IsoDateTime
   arriveTime: IsoDateTime | null
   tripType: TripType

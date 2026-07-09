@@ -1,8 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Hotel } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
@@ -16,6 +14,8 @@ import { cn } from '@/lib/utils'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
 import { HotelFilters } from '@/features/hotels/HotelFilters'
 import { HotelList } from '@/features/hotels/HotelList'
+import { LocationAutocomplete } from '@/features/flights/LocationAutocomplete'
+import { hotelApi } from '@/api'
 import type { HotelSearchCriteria } from '@/types'
 import hotelHero from '@/assets/hotel/valeriia-bugaiova-_pPHgeHz1uk-unsplash.jpg'
 
@@ -95,15 +95,19 @@ export function HotelsPage() {
         subtitle="Bir sonraki konaklamanı bul — sonuçları yıldız, pansiyon ve fiyata göre daralt."
       >
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-2">
-          <div className="grid flex-1 basis-52 gap-1.5 sm:max-w-72 sm:flex-none sm:basis-auto">
-            <Label htmlFor="hotel-destination">Nereye</Label>
-            <Input
+          <div className="flex-1 basis-52 sm:max-w-72 sm:flex-none sm:basis-auto">
+            <LocationAutocomplete
               id="hotel-destination"
+              label="Nereye"
+              fetchSuggestions={(q) => hotelApi.locations(q)}
+              queryKeyBase="hotel-locations"
               value={destination}
-              onChange={(e) => setDestination(e.target.value)}
+              onTextChange={setDestination}
+              onSelect={(loc) => setDestination(loc.name)}
               placeholder="Şehir, bölge veya otel adı"
               required
-              className={cn('sm:w-72', heroFieldClass)}
+              fieldClassName={heroFieldClass}
+              className="sm:w-72"
             />
           </div>
           {/* Giriş/Çıkış alanına tıklayınca takvim açılır (ayrı buton yok). */}

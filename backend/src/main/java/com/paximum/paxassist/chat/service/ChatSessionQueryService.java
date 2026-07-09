@@ -64,12 +64,14 @@ public class ChatSessionQueryService {
 
     private ChatMessageDto toMessageDto(ChatMessageEntity message) {
         List<ResultCardDto> cards = viewMapper.toResultCards(message.getResultCards());
+        // options (disambiguation card) are transient working state, never persisted → null on GET.
         return new ChatMessageDto(
                 String.valueOf(message.getId()),
                 message.getRole(),
                 message.getContent(),
                 iso(message.getCreatedAt()),
-                cards.isEmpty() ? null : cards);
+                cards.isEmpty() ? null : cards,
+                null);
     }
 
     private String iso(OffsetDateTime value) {

@@ -35,6 +35,9 @@ export function FlightCard({ product }: { product: FlightProduct }) {
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-2xl font-bold text-white">{product.origin}</p>
+            {product.originCity && (
+              <p className="truncate text-xs font-medium text-white/80">{product.originCity}</p>
+            )}
             <p className="mt-0.5 text-xs text-white/70">{formatDateTime(product.departTime)}</p>
           </div>
           <div className="flex min-w-16 flex-1 flex-col items-center px-2">
@@ -51,6 +54,9 @@ export function FlightCard({ product }: { product: FlightProduct }) {
           </div>
           <div className="min-w-0 text-right">
             <p className="truncate text-2xl font-bold text-white">{product.destination}</p>
+            {product.destinationCity && (
+              <p className="truncate text-xs font-medium text-white/80">{product.destinationCity}</p>
+            )}
             {product.tripType === 'round_trip' && product.returnDepartTime && (
               <p className="mt-0.5 text-xs text-white/70">
                 Dönüş: {formatDateTime(product.returnDepartTime)}

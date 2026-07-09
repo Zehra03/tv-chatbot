@@ -17,6 +17,7 @@ export type { SendMessageRequest, SendMessageResponse } from './chatApi'
 
 export { hotelApi } from './hotelApi'
 export { flightApi } from './flightApi'
+export type { LocationDirection } from './flightApi'
 
 export { reservationApi } from './reservationApi'
 export type { CreateReservationRequest, ReservationPreview } from './reservationApi'

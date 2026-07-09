@@ -3,6 +3,7 @@ import { motion, type Variants } from 'framer-motion'
 import { ErrorState } from '@/components/ErrorState'
 import { SplitText } from '@/components/SplitText'
 import { ResultCards } from '@/features/chat/ResultCards'
+import { ChoiceCard } from '@/features/chat/ChoiceCard'
 import { TypingIndicator } from '@/features/chat/TypingIndicator'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
@@ -19,6 +20,8 @@ interface MessageListProps {
   pending: boolean
   error: ApiError | null
   onRetry?: () => void
+  /** Belirsizlik kartındaki bir seçenek seçilince çağrılır (value yeni tur olarak gönderilir). */
+  onSelectOption?: (value: string) => void
 }
 
 const listVariants: Variants = {
@@ -51,7 +54,7 @@ function Bubble({ message }: { message: ChatMessage }) {
   )
 }
 
-export function MessageList({ pending, error, onRetry }: MessageListProps) {
+export function MessageList({ pending, error, onRetry, onSelectOption }: MessageListProps) {
   const messages = useAppSelector((s) => s.chat.messages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -92,6 +95,13 @@ export function MessageList({ pending, error, onRetry }: MessageListProps) {
           <motion.div key={m.id} variants={itemVariants} className="space-y-2">
             <Bubble message={m} />
             {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
+            {m.options && m.options.length > 0 && (
+              <ChoiceCard
+                options={m.options}
+                onSelect={(value) => onSelectOption?.(value)}
+                disabled={pending}
+              />
+            )}
           </motion.div>
         ))}
       </motion.div>

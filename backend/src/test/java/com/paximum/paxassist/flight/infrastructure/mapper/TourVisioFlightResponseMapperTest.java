@@ -11,6 +11,7 @@ import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAirline;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAirport;
+import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioCity;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightItem;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightPoint;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightResult;
@@ -33,8 +34,10 @@ class TourVisioFlightResponseMapperTest {
                 120,
                 0,
                 new TourVisioAirline("TK", "Turkish Airlines"),
-                new TourVisioFlightPoint(new TourVisioAirport("IST"), "2026-08-01T10:00:00"),
-                new TourVisioFlightPoint(new TourVisioAirport("LHR"), "2026-08-01T12:00:00"),
+                new TourVisioFlightPoint(new TourVisioAirport("IST"), "2026-08-01T10:00:00",
+                        new TourVisioCity("IST", "Istanbul")),
+                new TourVisioFlightPoint(new TourVisioAirport("LHR"), "2026-08-01T12:00:00",
+                        new TourVisioCity("LON", "London")),
                 List.of());
     }
 
@@ -56,8 +59,8 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightItem item = new TourVisioFlightItem(
                 "TK123", 120, 0,
                 new TourVisioAirline("TK", "Turkish Airlines"),
-                new TourVisioFlightPoint(null, "2026-08-01T10:00:00"),
-                new TourVisioFlightPoint(new TourVisioAirport("LHR"), "2026-08-01T12:00:00"),
+                new TourVisioFlightPoint(null, "2026-08-01T10:00:00", null),
+                new TourVisioFlightPoint(new TourVisioAirport("LHR"), "2026-08-01T12:00:00", null),
                 List.of());
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
@@ -71,8 +74,8 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightItem item = new TourVisioFlightItem(
                 "TK123", 120, 0,
                 new TourVisioAirline("TK", "Turkish Airlines"),
-                new TourVisioFlightPoint(new TourVisioAirport("IST"), "2026-08-01T10:00:00"),
-                new TourVisioFlightPoint(null, "2026-08-01T12:00:00"),
+                new TourVisioFlightPoint(new TourVisioAirport("IST"), "2026-08-01T10:00:00", null),
+                new TourVisioFlightPoint(null, "2026-08-01T12:00:00", null),
                 List.of());
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
@@ -104,6 +107,8 @@ class TourVisioFlightResponseMapperTest {
         FlightProduct product = products.get(0);
         assertThat(product.getOrigin()).isEqualTo("IST");
         assertThat(product.getDestination()).isEqualTo("LHR");
+        assertThat(product.getOriginCity()).isEqualTo("Istanbul");
+        assertThat(product.getDestinationCity()).isEqualTo("London");
         assertThat(product.getAirline()).isEqualTo("TK");
         assertThat(product.getDepartTime()).isEqualTo(
                 Instant.parse("2026-08-01T07:00:00Z"));

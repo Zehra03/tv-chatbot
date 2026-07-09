@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.flight.config.TourVisioProperties;
+import com.paximum.paxassist.flight.domain.FlightLocation;
 import com.paximum.paxassist.flight.infrastructure.dto.request.TourVisioAutocompleteRequest;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Item;
@@ -55,9 +56,14 @@ public class TourVisioLocationResolver {
         return resolve(place, false);
     }
 
-    private Optional<String> resolve(String place, boolean departure) {
+    /**
+     * Returns the location suggestions TourVisio offers for a free-text {@code place}, mapped to the
+     * shape the UI dropdown needs. Same autocomplete call {@link #resolve} uses; an empty/blank query
+     * or no suggestions yields an empty list (never an error) so the caller can degrade gracefully.
+     */
+    public List<FlightLocation> suggest(String place, boolean departure) {
         if (place == null || place.isBlank()) {
-            return Optional.empty();
+            return List.of();
         }
         String query = place.trim();
         TourVisioAutocompleteRequest request =
@@ -74,15 +80,25 @@ public class TourVisioLocationResolver {
 
         if (response == null || response.body() == null || response.body().items() == null
                 || response.body().items().isEmpty()) {
-            return Optional.empty();
+            return List.of();
         }
 
-        List<Item> items = response.body().items();
+        return response.body().items().stream()
+                .map(TourVisioLocationResolver::toLocation)
+                .filter(loc -> loc != null && loc.id() != null && !loc.id().isBlank())
+                .toList();
+    }
+
+    private Optional<String> resolve(String place, boolean departure) {
+        List<FlightLocation> suggestions = suggest(place, departure);
+        if (suggestions.isEmpty()) {
+            return Optional.empty();
+        }
+        String query = place.trim();
         // Prefer an exact id/code match (user typed a real code), else fall back to the top suggestion.
-        return items.stream().filter(item -> matchesExactly(item, query)).findFirst()
-                .or(() -> items.stream().findFirst())
-                .map(TourVisioLocationResolver::idOf)
-                .filter(id -> id != null && !id.isBlank());
+        return suggestions.stream().filter(loc -> matchesExactly(loc, query)).findFirst()
+                .or(() -> suggestions.stream().findFirst())
+                .map(FlightLocation::id);
     }
 
     private TourVisioAutocompleteResponse autocomplete(boolean departure, TourVisioAutocompleteRequest request) {
@@ -91,20 +107,19 @@ public class TourVisioLocationResolver {
                 : flightClient.arrivalAutocomplete(request);
     }
 
-    private static boolean matchesExactly(Item item, String query) {
-        if (item.city() != null && query.equalsIgnoreCase(item.city().id())) {
-            return true;
-        }
-        return item.airport() != null
-                && (query.equalsIgnoreCase(item.airport().id()) || query.equalsIgnoreCase(item.airport().code()));
+    private static boolean matchesExactly(FlightLocation loc, String query) {
+        return query.equalsIgnoreCase(loc.id()) || query.equalsIgnoreCase(loc.code());
     }
 
-    private static String idOf(Item item) {
+    private static FlightLocation toLocation(Item item) {
         if (item.city() != null && item.city().id() != null) {
-            return item.city().id();
+            return new FlightLocation(item.city().id(), null, item.city().name(), FlightLocation.TYPE_CITY);
         }
         if (item.airport() != null && item.airport().id() != null) {
-            return item.airport().id();
+            // TourVisio's airport name already carries the code (e.g. "Antalya ... (AYT)"), so use it
+            // verbatim — appending the code here would double it. The UI shows code() separately.
+            return new FlightLocation(item.airport().id(), item.airport().code(),
+                    item.airport().name(), FlightLocation.TYPE_AIRPORT);
         }
         return null;
     }
