@@ -1,6 +1,7 @@
 package com.paximum.paxassist.hotel.controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -20,6 +21,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import com.paximum.paxassist.hotel.HotelProduct;
 import com.paximum.paxassist.hotel.HotelSearchService;
+import com.paximum.paxassist.hotel.dto.HotelSearchApiRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 
@@ -27,14 +29,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-/**
- * Verifies the hotel search HTTP contract matches the frontend ({@code frontend/src/api/hotelApi.ts}):
- * the frontend {@code HotelSearchCriteria} is accepted (checkOut→nights, adults→adult) and a bare
- * {@code HotelProduct[]} is returned (the internal status envelope is unwrapped).
- */
 @ExtendWith(MockitoExtension.class)
 class HotelControllerTest {
 
@@ -45,6 +43,7 @@ class HotelControllerTest {
     private HotelController hotelController;
 
     private MockMvc mockMvc;
+    private ObjectMapper objectMapper;
 
     private static final String BODY = "{\"destination\":\"Antalya\",\"checkIn\":\"2026-08-01\","
             + "\"checkOut\":\"2026-08-05\",\"adults\":2,\"childAges\":[],\"nationality\":\"TR\","
@@ -52,11 +51,13 @@ class HotelControllerTest {
 
     @BeforeEach
     void setUp() {
-        ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+        objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         mockMvc = MockMvcBuilders.standaloneSetup(hotelController)
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
     }
+
+    // --- DEVELOP BRANCH TESTS ---
 
     @Test
     void search_returnsBareHotelArray() throws Exception {
@@ -92,5 +93,45 @@ class HotelControllerTest {
         assertThat(internal.night()).isEqualTo(4); // 2026-08-05 − 2026-08-01
         assertThat(internal.adult()).isEqualTo(2);
         assertThat(internal.currency()).isEqualTo("EUR");
+    }
+
+    // --- USER'S ORIGINAL TESTS (ADAPTED) ---
+
+    @Test
+    void shouldReturnOkForValidHotelSearchRequest() throws Exception {
+        // Given
+        HotelSearchApiRequest request = new HotelSearchApiRequest(
+                "Antalya", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 6), 2, List.of(), "TR", "TRY"
+        );
+        String requestBody = objectMapper.writeValueAsString(request);
+
+        HotelSearchResponse mockResponse = HotelSearchResponse.success(List.of());
+        when(hotelSearchService.searchHotels(any(HotelSearchRequest.class))).thenReturn(mockResponse);
+
+        // When/Then
+        mockMvc.perform(post("/api/v1/hotels/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]")); // Adapted to bare array
+    }
+
+    @Test
+    void shouldReturnOkWithIncompleteStatusWhenDestinationIsMissing() throws Exception {
+        // Given
+        HotelSearchApiRequest request = new HotelSearchApiRequest(
+                "", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 6), 2, List.of(), "TR", "TRY"
+        );
+        String requestBody = objectMapper.writeValueAsString(request);
+        
+        HotelSearchResponse mockResponse = HotelSearchResponse.incomplete(List.of("destination"));
+        when(hotelSearchService.searchHotels(any(HotelSearchRequest.class))).thenReturn(mockResponse);
+
+        // When/Then
+        mockMvc.perform(post("/api/v1/hotels/search")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(requestBody))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]")); // Adapted to bare array (Frontend contract)
     }
 }
