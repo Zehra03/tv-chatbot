@@ -5,9 +5,11 @@ import java.time.Instant;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.extern.jackson.Jacksonized;
 
 @Getter
 @Builder
+@Jacksonized
 public class FlightProduct {
     private final String id;
     private final String airline;
@@ -19,6 +21,7 @@ public class FlightProduct {
     private final Instant returnDepartTime;
     private final Instant returnArriveTime;
     private final int stops;
+    private final int durationMinutes;
     private final String baggage;
     private final BigDecimal price;
     private final String currency;

@@ -14,12 +14,6 @@ jobs:
       run:
         working-directory: backend
     env:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/paxassist
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: postgres
-      SPRING_FLYWAY_URL: jdbc:postgresql://localhost:5432/paxassist
-      SPRING_FLYWAY_USER: postgres
-      SPRING_FLYWAY_PASSWORD: postgres
       SPRING_REDIS_HOST: localhost
       SPRING_REDIS_PORT: 6379
     services:
@@ -27,12 +21,12 @@ jobs:
         image: postgres:16-alpine
         env:
           POSTGRES_DB: paxassist
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
+          POSTGRES_USER: paxassist_user
+          POSTGRES_PASSWORD: paxassist_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U postgres -d paxassist"
+          --health-cmd="pg_isready -U paxassist_user -d paxassist"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5

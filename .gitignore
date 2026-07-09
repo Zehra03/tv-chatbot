@@ -27,6 +27,14 @@ frontend/.vite/
 # Playwright MCP ekran goruntusu / cikti artiklari (tasarim dongusu)
 .playwright-mcp/
 
+# Claude Code yerel ayar/oturum dosyalari (kisisel arac konfigurasyonu, commitlenmez)
+.claude/
+
+# Kok dizindeki gelistirme ekran goruntuleri (tasarim/QA artiklari, commitlenmez)
+/*.jpeg
+/*.jpg
+/*.png
+
 # Test outputs
 coverage/
 

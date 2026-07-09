@@ -1,16 +1,26 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { ArrowRightLeft, Plane } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { NativeSelect } from '@/components/ui/native-select'
+import { DropdownSelect } from '@/components/ui/dropdown-select'
+import { DatePicker } from '@/components/ui/date-picker'
+import { DateRangePicker } from '@/components/ui/date-range-picker'
+import { PeoplePicker } from '@/components/ui/people-picker'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
-import { useAppSelector } from '@/app/hooks'
+import { SearchHero } from '@/components/SearchHero'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { heroFieldClass } from '@/lib/field-styles'
+import { cn } from '@/lib/utils'
+import { flightFiltersChanged } from '@/features/ui/uiSlice'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
 import { FlightList } from '@/features/flights/FlightList'
 import type { FlightSearchCriteria, TripType } from '@/types'
+import flightHero from '@/assets/flight/philip-myrtorp-iiqpxCg2GD4-unsplash.jpg'
 
 /**
  * /flights — filtrelenebilir uçuş sonuç ekranı (docs/frontend-architecture.md §3).
@@ -21,6 +31,7 @@ import type { FlightSearchCriteria, TripType } from '@/types'
 export function FlightsPage() {
   const chatCriteria = useAppSelector((s) => s.chat.accumulatedCriteria)
   const prefill = chatCriteria?.intent === 'flight' ? chatCriteria.criteria : undefined
+  const dispatch = useAppDispatch()
 
   const [origin, setOrigin] = useState(prefill?.origin ?? '')
   const [destination, setDestination] = useState(prefill?.destination ?? '')
@@ -64,85 +75,143 @@ export function FlightsPage() {
     })
   }
 
+  const swapPlaces = () => {
+    setOrigin(destination)
+    setDestination(origin)
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Uçuşlar</h1>
-        <p className="text-sm text-muted-foreground">
-          Kriterlere göre ara; sonuçları aktarma, havayolu ve fiyata göre daralt.
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-3">
-        <div className="grid gap-1.5">
-          <Label htmlFor="flight-origin">Nereden</Label>
-          <Input
-            id="flight-origin"
-            value={origin}
-            onChange={(e) => setOrigin(e.target.value)}
-            placeholder="Kalkış şehri"
-            required
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="flight-destination">Nereye</Label>
-          <Input
-            id="flight-destination"
-            value={destination}
-            onChange={(e) => setDestination(e.target.value)}
-            placeholder="Varış şehri"
-            required
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="flight-depart">Gidiş tarihi</Label>
-          <Input
-            id="flight-depart"
-            type="date"
-            value={departDate}
-            onChange={(e) => setDepartDate(e.target.value)}
-            required
-          />
-        </div>
-        <div className="grid gap-1.5">
-          <Label htmlFor="flight-triptype">Yön</Label>
-          <NativeSelect
-            id="flight-triptype"
-            value={tripType}
-            onChange={(e) => setTripType(e.target.value as TripType)}
-          >
-            <option value="one_way">Tek yön</option>
-            <option value="round_trip">Gidiş-dönüş</option>
-          </NativeSelect>
-        </div>
-        {tripType === 'round_trip' && (
-          <div className="grid gap-1.5">
-            <Label htmlFor="flight-return">Dönüş tarihi</Label>
-            <Input
-              id="flight-return"
-              type="date"
-              value={returnDate}
-              onChange={(e) => setReturnDate(e.target.value)}
+      {/* Skyscanner tarzı hero: fotoğraf + örtü üzerinde arama formu.
+          Alanlar beyaz (heroFieldClass), takvim/yolcu popover'ları koyu cam. */}
+      <SearchHero
+        image={flightHero}
+        title="Uçuşlar"
+        subtitle="Milyonlarca rota, tek basit arama — sonuçları aktarma, havayolu ve fiyata göre daralt."
+      >
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          {/* Skyscanner'daki gibi yön seçimi ve direkt uçuş tercihi alanların üstünde. */}
+          <div className="flex flex-wrap items-center gap-4">
+            <DropdownSelect
+              id="flight-triptype"
+              aria-label="Yön"
+              value={tripType}
+              options={[
+                { value: 'one_way', label: 'Tek yön' },
+                { value: 'round_trip', label: 'Gidiş-dönüş' },
+              ]}
+              onChange={(v) => setTripType(v as TripType)}
             />
+            {/* Sonuç filtre çubuğuyla aynı uiSlice alanına yazar — ikisi senkron kalır. */}
+            <label className="flex items-center gap-2 text-sm font-medium text-white">
+              <input
+                type="checkbox"
+                checked={filters.nonstopOnly}
+                onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
+                className="h-4 w-4 rounded border-white/30 accent-brand-teal"
+              />
+              Direkt uçuşlar
+            </label>
           </div>
-        )}
-        <div className="grid gap-1.5">
-          <Label htmlFor="flight-passengers">Yolcu</Label>
-          <Input
-            id="flight-passengers"
-            type="number"
-            min={1}
-            className="w-24"
-            value={passengers}
-            onChange={(e) => setPassengers(Math.max(1, Number(e.target.value)))}
-          />
+
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="grid flex-1 basis-44 gap-1.5 sm:max-w-56 sm:flex-none sm:basis-auto">
+              <Label htmlFor="flight-origin">Nereden</Label>
+              <Input
+                id="flight-origin"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                placeholder="Ülke, şehir veya havalimanı"
+                required
+                className={cn('sm:w-56', heroFieldClass)}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={swapPlaces}
+              aria-label="Kalkış ve varış yerlerini değiştir"
+              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 sm:flex"
+            >
+              <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
+            </button>
+            <div className="grid flex-1 basis-44 gap-1.5 sm:max-w-56 sm:flex-none sm:basis-auto">
+              <Label htmlFor="flight-destination">Nereye</Label>
+              <Input
+                id="flight-destination"
+                value={destination}
+                onChange={(e) => setDestination(e.target.value)}
+                placeholder="Ülke, şehir veya havalimanı"
+                required
+                className={cn('sm:w-56', heroFieldClass)}
+              />
+            </div>
+            {/* Tarih alanına tıklayınca temalı takvim açılır; gidiş-dönüşte
+                gidiş + dönüş yan yana tek aralık takvimini paylaşır. */}
+            {tripType === 'round_trip' ? (
+              <DateRangePicker
+                checkIn={departDate}
+                checkOut={returnDate}
+                onChange={(depart, ret) => {
+                  setDepartDate(depart)
+                  setReturnDate(ret)
+                }}
+                checkInId="flight-depart"
+                checkOutId="flight-return"
+                checkInLabel="Gidiş tarihi"
+                checkOutLabel="Dönüş tarihi"
+                fieldClassName={heroFieldClass}
+                required
+                // Uçuşta gidiş-dönüş bir konaklama aralığı değil — ara günler boyanmaz.
+                endpointsOnly
+                // Tarih alanları formun sağına yakın — sola hizalı panel taşar.
+                align="right"
+              />
+            ) : (
+              <DatePicker
+                id="flight-depart"
+                label="Gidiş tarihi"
+                value={departDate}
+                onChange={setDepartDate}
+                required
+                fieldClassName={heroFieldClass}
+              />
+            )}
+            <PeoplePicker
+              id="flight-passengers"
+              label="Yolcu"
+              summary={`${passengers} yolcu`}
+              rows={[
+                { key: 'passengers', label: 'Yolcu', value: passengers, min: 1, max: 9 },
+              ]}
+              onRowChange={(_, v) => setPassengers(v)}
+              fieldClassName={cn('w-32', heroFieldClass)}
+              align="right"
+            />
+            {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
+            <Button type="submit" className="h-12">
+              Ara
+            </Button>
+          </div>
+        </form>
+      </SearchHero>
+
+      {!criteria && (
+        <EmptyState tone="dark" title="Aramaya hazır" icon={<Plane className="h-5 w-5" />}>
+          Sonuçları görmek için arama kriterlerini girin.
+        </EmptyState>
+      )}
+
+      {query.isFetching && (
+        <div className="space-y-3">
+          <LoadingState label="Aranıyor…" className="text-brand-ice/70" />
+          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          <div aria-hidden="true" className="grid gap-3">
+            <Skeleton className="h-36" />
+            <Skeleton className="h-36" />
+            <Skeleton className="h-36" />
+          </div>
         </div>
-        <Button type="submit">Ara</Button>
-      </form>
-
-      {!criteria && <EmptyState>Sonuçları görmek için arama kriterlerini girin.</EmptyState>}
-
-      {query.isFetching && <LoadingState label="Aranıyor…" />}
+      )}
 
       {query.isError && !query.isFetching && (
         <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
@@ -151,7 +220,7 @@ export function FlightsPage() {
       {query.data && (
         <>
           <FlightFilters airlines={airlines} />
-          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
+          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
           <FlightList products={visible} />
         </>
       )}

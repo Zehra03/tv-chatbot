@@ -1,5 +1,5 @@
 import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
-import type { ChatMessage, PartialCriteria } from '@/types'
+import type { ChatMessage, ChatSession, PartialCriteria } from '@/types'
 import type { SendMessageResponse } from '@/api'
 
 /**
@@ -15,11 +15,16 @@ export interface ChatState {
   accumulatedCriteria?: PartialCriteria
   /** Asistanın yanıt beklediği açık soru; kriterler tamamlanınca temizlenir. */
   pendingQuestion?: string
+  /** Aktif konuşmanın kimliği — her "yeni sohbet"/oturum-yükleme ile artar.
+   * useSendMessage bunu izleyip uçuştaki isteği (composer kilidini) sıfırlar ve
+   * bayat yanıtın yeni sohbete düşmesini engeller. */
+  epoch: number
 }
 
 const initialState: ChatState = {
   sessionId: null,
   messages: [],
+  epoch: 0,
 }
 
 const chatSlice = createSlice({
@@ -52,12 +57,23 @@ const chatSlice = createSlice({
       if (accumulatedCriteria) state.accumulatedCriteria = accumulatedCriteria
       state.pendingQuestion = pendingQuestion
     },
-    /** Yeni sohbet — tüm konuşma durumunu sıfırlar. */
-    chatReset() {
-      return initialState
+    /** Geçmişten seçilen oturumu olduğu gibi yükler (thread + kriterler + soru).
+     * epoch artar → önceki sohbetin uçuştaki isteği bu thread'e sızmaz. */
+    sessionLoaded(state, action: PayloadAction<ChatSession>) {
+      const { id, messages, accumulatedCriteria, pendingQuestion } = action.payload
+      state.sessionId = id
+      state.messages = messages
+      state.accumulatedCriteria = accumulatedCriteria
+      state.pendingQuestion = pendingQuestion
+      state.epoch += 1
+    },
+    /** Yeni sohbet — tüm konuşma durumunu sıfırlar; epoch artarak önceki
+     * sohbetin bekleyen isteğini geçersiz kılar (composer kilidi açılır). */
+    chatReset(state) {
+      return { ...initialState, epoch: state.epoch + 1 }
     },
   },
 })
 
-export const { userMessageSent, assistantReplied, chatReset } = chatSlice.actions
+export const { userMessageSent, assistantReplied, sessionLoaded, chatReset } = chatSlice.actions
 export default chatSlice.reducer

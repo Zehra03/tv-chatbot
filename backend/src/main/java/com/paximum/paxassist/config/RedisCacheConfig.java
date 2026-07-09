@@ -12,9 +12,10 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 
 @Configuration
 @EnableCaching
@@ -36,12 +37,34 @@ public class RedisCacheConfig {
                 .entryTtl(Duration.ofMinutes(defaultTtlMinutes))
                 .disableCachingNullValues()
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
-                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(new GenericJackson2JsonRedisSerializer()));
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonRedisSerializer()));
 
         return RedisCacheManager.builder(connectionFactory)
                 .cacheDefaults(defaultConfig)
                 .withCacheConfiguration("hotelSearch", defaultConfig.entryTtl(Duration.ofMinutes(hotelTtlMinutes)))
                 .withCacheConfiguration("flightSearch", defaultConfig.entryTtl(Duration.ofMinutes(flightTtlMinutes)))
                 .build();
+    }
+
+    /**
+     * JSON value serializer with Java 8 date/time support. The default
+     * {@link GenericJackson2JsonRedisSerializer} builds a plain ObjectMapper without the
+     * {@link JavaTimeModule}, so caching a FlightProduct (Instant departTime/arriveTime) threw
+     * "Java 8 date/time type not supported" on the cache write and the flight search 500'd after
+     * already fetching results. Default typing is preserved (matching the no-arg default) so cached
+     * values still deserialize back to their concrete types; dates are written as ISO strings.
+     */
+    // Package-private for RedisCacheConfigTest (exercises the FlightProduct/Instant round-trip).
+    static GenericJackson2JsonRedisSerializer jsonRedisSerializer() {
+        GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer();
+        // Keep the serializer's own @class default typing (needed to deserialize cached values back
+        // to their concrete types, incl. the final FlightSearchOutcome root); only teach its
+        // ObjectMapper about Java 8 dates so FlightProduct's Instant fields serialize as ISO strings
+        // instead of throwing "Java 8 date/time type not supported" on the cache write.
+        serializer.configure(mapper -> {
+            mapper.registerModule(new JavaTimeModule());
+            mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+        });
+        return serializer;
     }
 }

@@ -7,8 +7,8 @@ import { apiClient } from './client'
  *   POST /api/v1/auth/register
  *   POST /api/v1/auth/login
  *   POST /api/v1/auth/logout
- *   GET  /api/v1/auth/me
- * LoginPage bağlanması Epic 3'te.
+ *   GET  /api/v1/auth/me   (Authorization: Bearer <token> — interceptor ekler)
+ * LoginPage bu API'ye bağlıdır; jeton authSlice → setAuthToken ile taşınır.
  */
 
 export interface AuthUser {

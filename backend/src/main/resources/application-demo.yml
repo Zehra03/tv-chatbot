@@ -1,0 +1,16 @@
+# 'demo' profile — local end-to-end with MOCK hotel/flight data but REAL infrastructure.
+#
+# Activates MockTourVisioHotelApiClient + MockFlightSearchService (their @Profile is "mock | demo"),
+# so hotel/flight search return demo cards WITHOUT TourVisio credentials, while everything else runs
+# for real: Postgres + Flyway (chat/session persistence), Redis (rate limit/cache), and the Ollama
+# chat model (real replies — needs the ollama service up with the model pulled).
+#
+# Contrast with the 'mock' profile (CI context test): that one turns Flyway OFF, ddl-auto=none, and
+# the Ollama chat OFF (empty mock model). 'demo' keeps all of those ON — only the TourVisio-backed
+# search DATA is mocked. Run with SPRING_PROFILES_ACTIVE=demo.
+spring:
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate

@@ -2,6 +2,7 @@ package com.paximum.paxassist.flight.service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import feign.FeignException;
 import feign.Request;
@@ -20,6 +21,7 @@ import com.paximum.paxassist.flight.domain.PassengerCount;
 import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.event.FlightSearchEvent;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioFlightClient;
+import com.paximum.paxassist.flight.infrastructure.client.TourVisioLocationResolver;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioSearchException;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioTokenProvider;
 import com.paximum.paxassist.flight.infrastructure.dto.request.TourVisioPriceSearchRequest;
@@ -51,10 +53,18 @@ class FlightSearchServiceTest {
     private ApplicationEventPublisher eventPublisher;
     @Mock
     private TourVisioTokenProvider tokenProvider;
+    @Mock
+    private TourVisioLocationResolver locationResolver;
 
     private FlightSearchService service() {
-        return new FlightSearchService(
-                tourVisioFlightClient, requestMapper, responseMapper, eventPublisher, tokenProvider);
+        return new TourVisioFlightSearchService(
+                tourVisioFlightClient, requestMapper, responseMapper, eventPublisher, tokenProvider, locationResolver);
+    }
+
+    /** Stubs autocomplete to resolve the completeCriteria() origin/destination to themselves. */
+    private void resolveLocationsIdentity() {
+        when(locationResolver.resolveDeparture("IST")).thenReturn(Optional.of("IST"));
+        when(locationResolver.resolveArrival("LHR")).thenReturn(Optional.of("LHR"));
     }
 
     private FlightSearchCriteria completeCriteria() {
@@ -87,7 +97,8 @@ class FlightSearchServiceTest {
                 new TourVisioResponseHeader(true), new TourVisioResponseBody("search-1", List.of()));
         List<FlightProduct> mappedProducts = List.of(FlightProduct.builder().id("p1").build());
 
-        when(requestMapper.toRequest(criteria)).thenReturn(request);
+        resolveLocationsIdentity();
+        when(requestMapper.toRequest(any())).thenReturn(request);
         when(tourVisioFlightClient.priceSearch(request)).thenReturn(response);
         when(responseMapper.toFlightProducts(response, TripType.ONE_WAY)).thenReturn(mappedProducts);
 
@@ -96,6 +107,19 @@ class FlightSearchServiceTest {
         assertThat(outcome.complete()).isTrue();
         assertThat(outcome.results()).isEqualTo(mappedProducts);
         verify(eventPublisher).publishEvent(any(FlightSearchEvent.class));
+    }
+
+    @Test
+    void search_returnsEmptyResultWhenLocationUnresolvable() {
+        FlightSearchCriteria criteria = completeCriteria();
+        when(locationResolver.resolveDeparture("IST")).thenReturn(Optional.of("IST"));
+        when(locationResolver.resolveArrival("LHR")).thenReturn(Optional.empty());
+
+        FlightSearchOutcome outcome = service().search(criteria);
+
+        assertThat(outcome.complete()).isTrue();
+        assertThat(outcome.results()).isEmpty();
+        verify(tourVisioFlightClient, never()).priceSearch(any());
     }
 
     @Test
@@ -109,7 +133,8 @@ class FlightSearchServiceTest {
         FeignException.Unauthorized unauthorized =
                 new FeignException.Unauthorized("unauthorized", feignRequest, null, null);
 
-        when(requestMapper.toRequest(criteria)).thenReturn(request);
+        resolveLocationsIdentity();
+        when(requestMapper.toRequest(any())).thenReturn(request);
         when(tourVisioFlightClient.priceSearch(request))
                 .thenThrow(unauthorized)
                 .thenReturn(response);
@@ -129,7 +154,8 @@ class FlightSearchServiceTest {
         TourVisioPriceSearchResponse response = new TourVisioPriceSearchResponse(
                 new TourVisioResponseHeader(false), new TourVisioResponseBody("search-1", List.of()));
 
-        when(requestMapper.toRequest(criteria)).thenReturn(request);
+        resolveLocationsIdentity();
+        when(requestMapper.toRequest(any())).thenReturn(request);
         when(tourVisioFlightClient.priceSearch(request)).thenReturn(response);
 
         assertThatThrownBy(() -> service().search(criteria))

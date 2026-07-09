@@ -1,0 +1,68 @@
+/* GooeyNav — pill navigasyon (reactbits.dev uyarlaması, PaxAssist gece uçuşu
+   teması). Parçacık/goo efekti kaldırıldı; aktif öğeyi saran beyaz pill
+   scale+opacity geçişiyle belirir. */
+
+.gooey-nav-container {
+  position: relative;
+}
+
+.gooey-nav-container nav ul {
+  display: flex;
+  gap: 0.5em;
+  list-style: none;
+  padding: 0 0.5em;
+  margin: 0;
+  color: white;
+  font-size: 0.875rem; /* text-sm — header ölçeği */
+  font-weight: 500;
+  text-shadow: 0 1px 1px hsl(205deg 30% 10% / 0.2);
+}
+
+.gooey-nav-container nav ul li {
+  border-radius: 100vw;
+  position: relative;
+  cursor: pointer;
+  transition:
+    color 0.3s ease,
+    box-shadow 0.3s ease;
+  box-shadow: 0 0 0.5px 1.5px transparent;
+  color: theme(colors.brand.ice / 80%);
+}
+
+.gooey-nav-container nav ul li:hover {
+  color: white;
+}
+
+.gooey-nav-container nav ul li a {
+  display: inline-block;
+  padding: 0.6em 1em;
+  color: inherit;
+  text-decoration: none;
+}
+
+.gooey-nav-container nav ul li:focus-within:has(:focus-visible) {
+  box-shadow: 0 0 0.5px 1.5px theme(colors.brand.teal);
+}
+
+/* Aktif pill — beyaz kapsül, scale ile yumuşak belirme. */
+.gooey-nav-container nav ul li::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 100vw;
+  background: white;
+  opacity: 0;
+  transform: scale(0);
+  transition: all 0.3s ease;
+  z-index: -1;
+}
+
+.gooey-nav-container nav ul li.active {
+  color: theme(colors.brand.navy);
+  text-shadow: none;
+}
+
+.gooey-nav-container nav ul li.active::after {
+  opacity: 1;
+  transform: scale(1);
+}

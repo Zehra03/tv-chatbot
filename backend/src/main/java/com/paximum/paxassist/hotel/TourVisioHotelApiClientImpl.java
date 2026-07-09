@@ -14,22 +14,22 @@ import java.time.Instant;
 import java.util.*;
 
 @Service
-@Profile("!mock")
+@Profile("!mock & !demo")
 public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    @Value("${app.tourvisio.url}")
+    @Value("${tourvisio.url}")
     private String baseUrl;
 
-    @Value("${app.tourvisio.agency}")
+    @Value("${tourvisio.agency}")
     private String agency;
 
-    @Value("${app.tourvisio.user}")
+    @Value("${tourvisio.user}")
     private String username;
 
-    @Value("${app.tourvisio.password}")
+    @Value("${tourvisio.password}")
     private String password;
 
     private String cachedToken;
@@ -132,7 +132,10 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
         ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
 
         if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
-            return response.getBody();
+            // Map the raw TourVisio response (body.hotels[]) into typed HotelProduct cards, matching
+            // what MockTourVisioHotelApiClient returns. Returning the raw map made
+            // HotelController.toProducts() (and the chat/MCP pipeline) silently drop every result to [].
+            return mapToHotelProducts(response.getBody());
         }
 
         throw new RuntimeException("TourVisio PriceSearch failed!");
@@ -169,37 +172,59 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
                 "tr-TR"
             );
 
-            Object rawResult = priceSearch(request, locationId);
-            JsonNode root = objectMapper.valueToTree(rawResult);
-            JsonNode hotelsNode = root.path("body").path("hotels");
-            List<HotelProduct> products = new ArrayList<>();
-            if (hotelsNode.isArray()) {
-                for (JsonNode hotelNode : hotelsNode) {
-                    String id = hotelNode.path("id").asText();
-                    String name = hotelNode.path("name").asText();
-                    String city = hotelNode.path("city").path("name").asText();
-                    int stars = hotelNode.path("stars").asInt();
-
-                    JsonNode firstOffer = hotelNode.path("offers").path(0);
-                    BigDecimal price = BigDecimal.ZERO;
-                    String currency = "TRY";
-                    String board = "Unknown";
-                    boolean available = false;
-
-                    if (!firstOffer.isMissingNode()) {
-                        price = new BigDecimal(firstOffer.path("price").path("amount").asText("0"));
-                        currency = firstOffer.path("price").path("currency").asText("TRY");
-                        board = firstOffer.path("rooms").path(0).path("boardName").asText("Unknown");
-                        available = firstOffer.path("isAvailable").asBoolean(true);
-                    }
-
-                    products.add(new HotelProduct(id, name, city, stars, price, currency, board, available));
-                }
-            }
-            return products;
+            // priceSearch already maps to HotelProduct cards; just unwrap defensively.
+            Object result = priceSearch(request, locationId);
+            return (result instanceof List<?> list)
+                    ? list.stream()
+                            .filter(HotelProduct.class::isInstance)
+                            .map(HotelProduct.class::cast)
+                            .toList()
+                    : List.of();
         } catch (Exception e) {
             System.err.println("Legacy searchHotels failed: " + e.getMessage());
             return List.of();
         }
+    }
+
+    /**
+     * Maps a raw TourVisio PriceSearch response ({@code body.hotels[]}) into the typed
+     * {@link HotelProduct} cards the {@code /api/v1/hotels/search} endpoint, chat handler and
+     * MCP tool consume. Takes the first offer's price / board / availability per hotel.
+     *
+     * <p>Package-private so {@code TourVisioHotelApiClientImplTest} can exercise the mapping
+     * without a live TourVisio call (the RestTemplate calls are not unit-testable here).
+     */
+    List<HotelProduct> mapToHotelProducts(Object rawResult) {
+        JsonNode root = objectMapper.valueToTree(rawResult);
+        JsonNode hotelsNode = root.path("body").path("hotels");
+        List<HotelProduct> products = new ArrayList<>();
+        if (hotelsNode.isArray()) {
+            for (JsonNode hotelNode : hotelsNode) {
+                String id = hotelNode.path("id").asText();
+                String name = hotelNode.path("name").asText();
+                String city = hotelNode.path("city").path("name").asText();
+                int stars = hotelNode.path("stars").asInt();
+
+                JsonNode firstOffer = hotelNode.path("offers").path(0);
+                BigDecimal price = BigDecimal.ZERO;
+                String currency = "TRY";
+                String board = "Unknown";
+                boolean available = false;
+
+                if (!firstOffer.isMissingNode()) {
+                    price = new BigDecimal(firstOffer.path("price").path("amount").asText("0"));
+                    currency = firstOffer.path("price").path("currency").asText("TRY");
+                    board = firstOffer.path("rooms").path(0).path("boardName").asText("Unknown");
+                    available = firstOffer.path("isAvailable").asBoolean(true);
+                }
+
+                // Absolute image URL; TourVisio omits it for many hotels → null (frontend placeholder).
+                JsonNode thumbNode = hotelNode.path("thumbnailFull");
+                String image = thumbNode.isTextual() && !thumbNode.asText().isBlank() ? thumbNode.asText() : null;
+
+                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image));
+            }
+        }
+        return products;
     }
 }

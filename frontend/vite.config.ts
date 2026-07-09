@@ -15,5 +15,9 @@ export default defineConfig({
   },
   test: {
     environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    // Animasyonlu bileşenler jsdom render'ını yavaşlatıyor; paralel yük
+    // altında 5s varsayılanı yalancı timeout üretiyordu.
+    testTimeout: 10000,
   },
 })
