@@ -29,6 +29,14 @@ spring:
     model:
       chat: openai
       embedding: none
+      # The OpenAI starter would otherwise also auto-configure audio/image/moderation models, whose
+      # bean creation REQUIRES a non-empty api-key — without these "none" selections every context
+      # (tests, local boot without GEMINI_API_KEY) fails on openAiAudioSpeechModel instantiation.
+      audio:
+        speech: none
+        transcription: none
+      image: none
+      moderation: none
     openai:
       api-key: ${GEMINI_API_KEY:}
       # Gemini's OpenAI-compatible base already ends in /v1beta/openai, so completions-path is just
