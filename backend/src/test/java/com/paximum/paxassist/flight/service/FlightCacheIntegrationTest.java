@@ -73,6 +73,28 @@ class FlightCacheIntegrationTest {
         TourVisioPriceSearchResponse mockResponse = new TourVisioPriceSearchResponse(header, body);
 
         when(tourVisioFlightClient.priceSearch(any())).thenReturn(mockResponse);
+
+        // Mock autocomplete responses
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.City istCity = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.City("IST", "Istanbul");
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Item istItem = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Item(1, istCity, null);
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Body istBody = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Body(java.util.List.of(istItem));
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse istResponse = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse(header, istBody);
+
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.City aytCity = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.City("AYT", "Antalya");
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Item aytItem = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Item(1, aytCity, null);
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Body aytBody = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse.Body(java.util.List.of(aytItem));
+        com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse aytResponse = 
+                new com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAutocompleteResponse(header, aytBody);
+
+        when(tourVisioFlightClient.departureAutocomplete(any())).thenReturn(istResponse);
+        when(tourVisioFlightClient.arrivalAutocomplete(any())).thenReturn(aytResponse);
     }
 
     @Test
