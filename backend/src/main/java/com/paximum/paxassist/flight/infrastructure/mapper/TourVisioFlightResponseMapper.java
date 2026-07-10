@@ -19,6 +19,7 @@ import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioBaggageInfo;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightItem;
+import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightPoint;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightResult;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioOffer;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSearchResponse;
@@ -79,15 +80,23 @@ public class TourVisioFlightResponseMapper {
                 .flightNumber(FlightNumberParser.parse(item.flightNo()).number())
                 .origin(item.departure().airport().id())
                 .destination(item.arrival().airport().id())
+                .originCity(cityNameOf(item.departure()))
+                .destinationCity(cityNameOf(item.arrival()))
                 .departTime(toInstant(item.departure().date()))
                 .arriveTime(toInstant(item.arrival().date()))
                 .returnDepartTime(null)
                 .returnArriveTime(null)
                 .stops(item.stopCount())
+                .durationMinutes(item.duration())
                 .baggage(summarizeBaggage(item.baggageInformations()))
                 .price(offer.price() != null ? offer.price().amount() : null)
                 .currency(offer.price() != null ? offer.price().currency() : null)
                 .build());
+    }
+
+    /** City name the flight point sits in (e.g. airport SAW → "Istanbul"), null when absent. */
+    private String cityNameOf(TourVisioFlightPoint point) {
+        return point != null && point.city() != null ? point.city().name() : null;
     }
 
     private String summarizeBaggage(List<TourVisioBaggageInfo> baggageInformations) {

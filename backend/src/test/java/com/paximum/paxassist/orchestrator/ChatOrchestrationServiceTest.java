@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -45,8 +46,11 @@ class ChatOrchestrationServiceTest {
         return new ChatOrchestrationService(guard, guardAuditLogger, intentExtraction, sessionStore, intentRouter);
     }
 
+    /**
+     * Trello Kartı 1: Guard reddettiğinde IntentionLLM'e gidilmemeli
+     */
     @Test
-    void guardBlock_auditsAndReturnsSafeMessage_withoutCallingAiOrRouter() {
+    void shouldBlockRequestWhenGuardFails() {
         when(sessionStore.getOrCreate(any(), any())).thenReturn(new ChatSession("s1"));
         when(guard.processInput("zararlı"))
                 .thenThrow(new GuardBlockedException("Güvenlik politikaları gereği reddedildi.", "Prompt Injection"));
@@ -60,22 +64,157 @@ class ChatOrchestrationServiceTest {
         verify(intentRouter, never()).route(any());
     }
 
+    /**
+     * Trello Kartı 2: Kullanıcı ilk bağlandığında Session oluşturma (sessionId null geldiğinde)
+     */
     @Test
-    void happyPath_extractsRoutesPersistsAndStampsSessionId() {
-        ChatSession session = new ChatSession("s1");
-        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+    void shouldCreateNewSessionWhenSessionIdIsNull() {
+        ChatSession newSession = new ChatSession("new-session-456");
+        when(sessionStore.getOrCreate(null, 7L)).thenReturn(newSession);
         when(intentExtraction.extract(eq("merhaba"), anyList()))
                 .thenReturn(new IntentExtractionResult(IntentType.OTHER, null));
         when(intentRouter.route(IntentType.OTHER)).thenReturn(handler);
-        when(handler.handle(any())).thenReturn(OrchestrationResult.message("Size nasıl yardımcı olabilirim?"));
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message("Merhaba! Size otel veya uçuş konularında nasıl yardımcı olabilirim?"));
 
-        OrchestrationOutcome outcome = service().handle("s1", "merhaba", 7L);
+        OrchestrationOutcome outcome = service().handle(null, "merhaba", 7L);
 
-        assertThat(outcome.result().reply()).isEqualTo("Size nasıl yardımcı olabilirim?");
-        assertThat(outcome.result().sessionId()).isEqualTo("s1");
-        assertThat(outcome.session()).isSameAs(session);
+        assertThat(outcome.result().reply()).isEqualTo("Merhaba! Size otel veya uçuş konularında nasıl yardımcı olabilirim?");
+        assertThat(outcome.result().sessionId()).isEqualTo("new-session-456");
+        assertThat(outcome.session()).isSameAs(newSession);
+        verify(sessionStore).save(newSession);
+    }
+
+    /**
+     * Trello Kartı 1: Modüller arası trafik yönlendirmesi
+     * Trello Kartı 2: Oturum ve Konuşma geçmişinin okunması/yazılması
+     * Trello Kartı 4: Sonuçların UI formatına (Chat Bubble) çevrilmesi
+     * Trello Kartı 5: Loglama (Orchestrator loglaması GuardAuditLogger veya benzeriyle yapılıyor)
+     */
+    @Test
+    void shouldProcessValidMessageAndReturnHotelResults() {
+        ChatSession session = new ChatSession("session-123");
+        // Test 1: Geçmiş mesajların doğru çevrildiğini test etmek için önceden mesaj ekliyoruz
+        session.addMessage("user", "eski mesaj");
+        session.addMessage("assistant", "eski cevap");
+        
+        when(sessionStore.getOrCreate("session-123", 7L)).thenReturn(session);
+        
+        org.mockito.ArgumentCaptor<java.util.List<com.paximum.paxassist.ai.ChatHistoryEntry>> historyCaptor = 
+                org.mockito.ArgumentCaptor.forClass(java.util.List.class);
+        
+        when(intentExtraction.extract(eq("Antalya'da 5 yıldızlı otel arıyorum"), historyCaptor.capture()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null)); // Criteria normally here
+        
+        when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
+        
+        org.mockito.ArgumentCaptor<OrchestrationContext> contextCaptor = 
+                org.mockito.ArgumentCaptor.forClass(OrchestrationContext.class);
+                
+        // Handler represents the HotelModule processing and ResponseFormatter
+        when(handler.handle(contextCaptor.capture())).thenReturn(OrchestrationResult.cards("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.", java.util.List.of(new Object(), new Object())));
+
+        OrchestrationOutcome outcome = service().handle("session-123", "Antalya'da 5 yıldızlı otel arıyorum", 7L);
+
+        // Test 1 Doğrulama: Geçmiş mesajlar LLM'e (intentExtraction) doğru aktarıldı mı?
+        java.util.List<com.paximum.paxassist.ai.ChatHistoryEntry> passedHistory = historyCaptor.getValue();
+        assertThat(passedHistory).hasSize(2);
+        assertThat(passedHistory.get(0).role()).isEqualTo("user");
+        assertThat(passedHistory.get(0).content()).isEqualTo("eski mesaj");
+        assertThat(passedHistory.get(1).role()).isEqualTo("assistant");
+        assertThat(passedHistory.get(1).content()).isEqualTo("eski cevap");
+
+        // Test 2 Doğrulama: OrchestrationContext doğru inşa edildi mi?
+        OrchestrationContext passedContext = contextCaptor.getValue();
+        assertThat(passedContext.session()).isSameAs(session);
+        assertThat(passedContext.userMessage()).isEqualTo("Antalya'da 5 yıldızlı otel arıyorum");
+        assertThat(passedContext.intent()).isEqualTo(IntentType.HOTEL);
+        assertThat(passedContext.criteria()).isNull();
+
+        assertThat(outcome.result().reply()).isEqualTo("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.");
+        assertThat(outcome.result().cards()).hasSize(2);
+        
+        // user + assistant turns are appended to the session transcript (2 eski + 2 yeni = 4 mesaj)
+        assertThat(session.getMessages()).hasSize(4);
+        assertThat(session.getMessages().get(2).role()).isEqualTo("user");
+        assertThat(session.getMessages().get(3).role()).isEqualTo("assistant");
+        
+        verify(sessionStore).save(session);
+    }
+
+    /**
+     * Trello Kartı 3: Eksik Bilgi Tamamlama (İnteraktif Soru-Cevap) Algoritması
+     */
+    @Test
+    void shouldAskQuestionWhenParametersAreMissing() {
+        ChatSession session = new ChatSession("session-123");
+        when(sessionStore.getOrCreate("session-123", 7L)).thenReturn(session);
+        
+        when(intentExtraction.extract(eq("Uçak bileti almak istiyorum"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.FLIGHT, null)); // Missing criteria
+        
+        when(intentRouter.route(IntentType.FLIGHT)).thenReturn(handler);
+        
+        // In the real architecture, the FlightSearchHandler detects missing parameters and returns a question
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message("Nereye uçmak istersiniz ve hangi tarihte?"));
+
+        OrchestrationOutcome outcome = service().handle("session-123", "Uçak bileti almak istiyorum", 7L);
+
+        assertThat(outcome.result().reply()).isEqualTo("Nereye uçmak istersiniz ve hangi tarihte?");
+        
         // user + assistant turns are appended to the session transcript
         assertThat(session.getMessages()).hasSize(2);
+        verify(sessionStore).save(session);
+        // OTHER turn is registered for out-of-scope tracking
+        verify(guard).registerOutOfScope(7L, true);
+    }
+
+    @Test
+    void blockedUser_shortCircuitsBeforeExtraction() {
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(new ChatSession("s1"));
+        doThrow(new GuardBlockedException("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.",
+                "Out-of-scope abuse: user temporarily blocked"))
+                .when(guard).assertNotBlocked(7L);
+
+        OrchestrationResult result = service().handle("s1", "merhaba", 7L).result();
+
+        assertThat(result.reply())
+                .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
+        verify(guardAuditLogger).logBlockedRequestAsync("merhaba", "Out-of-scope abuse: user temporarily blocked");
+        verifyNoInteractions(intentExtraction);
+        verify(intentRouter, never()).route(any());
+        verify(sessionStore, never()).save(any());
+    }
+
+    @Test
+    void outOfScopeThresholdReached_blocksThisTurn_withoutRoutingOrPersisting() {
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(new ChatSession("s1"));
+        when(intentExtraction.extract(eq("nasılsın"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.OTHER, null));
+        doThrow(new GuardBlockedException("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.",
+                "Out-of-scope abuse: user temporarily blocked"))
+                .when(guard).registerOutOfScope(7L, true);
+
+        OrchestrationResult result = service().handle("s1", "nasılsın", 7L).result();
+
+        assertThat(result.reply())
+                .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
+        verify(guardAuditLogger).logBlockedRequestAsync("nasılsın", "Out-of-scope abuse: user temporarily blocked");
+        verify(intentRouter, never()).route(any());
+        verify(sessionStore, never()).save(any());
+    }
+
+    @Test
+    void inScopeTurn_registersAsNonOutOfScope_resettingStreak() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("Antalya'da otel"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null));
+        when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message("8 otel buldum"));
+
+        service().handle("s1", "Antalya'da otel", 7L);
+
+        verify(guard).registerOutOfScope(7L, false);
         verify(sessionStore).save(session);
     }
 }

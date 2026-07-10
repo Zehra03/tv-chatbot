@@ -13,11 +13,13 @@ import type { FlightProduct } from '@/types'
  * çizgisi, hover'da teal kenar + 3B eğim (TiltedCard). Fiyat backend'den
  * geldiği gibi gösterilir (AnimatedPrice sr-only ikizinde formatPrice). Seç,
  * ürünü taslağa yazıp kontrollü rezervasyon formuna yönlendirir.
+ *
+ * `tilt` — chat thread'inde eğim istemiyoruz (arama sonrası kartlar); orada
+ * `tilt={false}` geçilir, sonuç sayfalarında varsayılan (eğimli) kalır.
  */
-export function FlightCard({ product }: { product: FlightProduct }) {
+export function FlightCard({ product, tilt = true }: { product: FlightProduct; tilt?: boolean }) {
   const select = useSelectProduct()
-  return (
-    <TiltedCard>
+  const content = (
       <div className="glass-card p-5 transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]">
         <div className="flex items-center justify-between gap-3">
           <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-white/70">
@@ -35,6 +37,9 @@ export function FlightCard({ product }: { product: FlightProduct }) {
         <div className="mt-4 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="truncate text-2xl font-bold text-white">{product.origin}</p>
+            {product.originCity && (
+              <p className="truncate text-xs font-medium text-white/80">{product.originCity}</p>
+            )}
             <p className="mt-0.5 text-xs text-white/70">{formatDateTime(product.departTime)}</p>
           </div>
           <div className="flex min-w-16 flex-1 flex-col items-center px-2">
@@ -51,6 +56,9 @@ export function FlightCard({ product }: { product: FlightProduct }) {
           </div>
           <div className="min-w-0 text-right">
             <p className="truncate text-2xl font-bold text-white">{product.destination}</p>
+            {product.destinationCity && (
+              <p className="truncate text-xs font-medium text-white/80">{product.destinationCity}</p>
+            )}
             {product.tripType === 'round_trip' && product.returnDepartTime && (
               <p className="mt-0.5 text-xs text-white/70">
                 Dönüş: {formatDateTime(product.returnDepartTime)}
@@ -84,6 +92,6 @@ export function FlightCard({ product }: { product: FlightProduct }) {
           </Button>
         </div>
       </div>
-    </TiltedCard>
   )
+  return tilt ? <TiltedCard>{content}</TiltedCard> : content
 }

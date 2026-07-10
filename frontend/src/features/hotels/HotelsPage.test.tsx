@@ -86,6 +86,18 @@ describe('HotelsPage (MSW ile)', () => {
     expect(screen.getByText('5 sonuç')).toBeTruthy()
   })
 
+  it('destination otomatik tamamlamadan öneri seçince alanı doldurur', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Nereye'), 'Anta')
+    const option = await screen.findByRole('option', { name: /Antalya/ }, { timeout: 3000 })
+    await user.click(option)
+
+    expect((screen.getByLabelText('Nereye') as HTMLInputElement).value).toBe('Antalya')
+    expect(screen.queryByRole('option', { name: /Antalya/ })).toBeNull()
+  })
+
   it('Seç, taslağı yazıp rezervasyon formuna yönlendirir', async () => {
     const user = userEvent.setup()
     const { store } = renderPage()

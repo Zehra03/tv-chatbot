@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.paximum.paxassist.auth.dto.AuthResponseDto;
 import com.paximum.paxassist.auth.dto.AuthUserDto;
 import com.paximum.paxassist.auth.dto.LoginRequestDto;
+import com.paximum.paxassist.auth.dto.RefreshRequestDto;
 import com.paximum.paxassist.auth.dto.RegisterRequestDto;
 import com.paximum.paxassist.auth.security.UserPrincipal;
 import com.paximum.paxassist.auth.service.AuthService;
@@ -38,10 +39,21 @@ public class AuthController {
         return authService.login(request);
     }
 
-    // Stateless JWT: nothing to invalidate server-side, the frontend just discards the token.
-    // Endpoint exists so the frontend's fixed auth contract (authApi.ts) has a real target.
+    // Rotates the presented refresh token for a new access + refresh token pair. Public (like
+    // login) because the access token may already be expired when this is called; the refresh
+    // token itself is the credential.
+    @PostMapping("/refresh")
+    public AuthResponseDto refresh(@Valid @RequestBody RefreshRequestDto request) {
+        return authService.refresh(request);
+    }
+
+    // Revokes the caller's refresh tokens server-side, then the frontend discards its access token.
+    // principal is null only in standalone/unauthenticated setups; a real request always carries it.
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
+    public ResponseEntity<Void> logout(@AuthenticationPrincipal UserPrincipal principal) {
+        if (principal != null) {
+            authService.logout(principal.getId());
+        }
         return ResponseEntity.noContent().build();
     }
 

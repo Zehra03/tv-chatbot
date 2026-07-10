@@ -11,10 +11,12 @@ import com.paximum.paxassist.auth.domain.User;
 import com.paximum.paxassist.auth.dto.AuthResponseDto;
 import com.paximum.paxassist.auth.dto.AuthUserDto;
 import com.paximum.paxassist.auth.dto.LoginRequestDto;
+import com.paximum.paxassist.auth.dto.RefreshRequestDto;
 import com.paximum.paxassist.auth.dto.RegisterRequestDto;
 import com.paximum.paxassist.auth.exception.EmailAlreadyExistsException;
 import com.paximum.paxassist.auth.repository.UserRepository;
 import com.paximum.paxassist.auth.security.JwtService;
+import com.paximum.paxassist.auth.service.RefreshTokenService.RotatedTokens;
 
 @Service
 public class AuthService {
@@ -23,16 +25,19 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
 
     public AuthService(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
             AuthenticationManager authenticationManager,
-            JwtService jwtService) {
+            JwtService jwtService,
+            RefreshTokenService refreshTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @Transactional
@@ -49,9 +54,10 @@ public class AuthService {
                 .build();
         userRepository.save(user);
 
-        return issueToken(user);
+        return issueTokens(user);
     }
 
+    @Transactional
     public AuthResponseDto login(LoginRequestDto request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password()));
@@ -60,12 +66,32 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalStateException(
                         "Authenticated user not found: " + request.email()));
 
-        return issueToken(user);
+        return issueTokens(user);
     }
 
-    private AuthResponseDto issueToken(User user) {
-        String token = jwtService.generateToken(user.getEmail(), user.getRole().name());
-        return new AuthResponseDto(toUserDto(user), token);
+    /**
+     * Exchanges a valid refresh token for a fresh access token, rotating the refresh token in the
+     * process. Throws {@link com.paximum.paxassist.auth.exception.InvalidRefreshTokenException} if
+     * the presented token is unknown, revoked, or expired.
+     */
+    @Transactional
+    public AuthResponseDto refresh(RefreshRequestDto request) {
+        RotatedTokens rotated = refreshTokenService.rotate(request.refreshToken());
+        User user = rotated.user();
+        String accessToken = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        return new AuthResponseDto(toUserDto(user), accessToken, rotated.refreshToken());
+    }
+
+    /** Revokes every refresh token for the user so logout takes effect server-side. */
+    @Transactional
+    public void logout(Long userId) {
+        refreshTokenService.revokeAllForUser(userId);
+    }
+
+    private AuthResponseDto issueTokens(User user) {
+        String accessToken = jwtService.generateToken(user.getEmail(), user.getRole().name());
+        String refreshToken = refreshTokenService.issue(user);
+        return new AuthResponseDto(toUserDto(user), accessToken, refreshToken);
     }
 
     private static AuthUserDto toUserDto(User user) {

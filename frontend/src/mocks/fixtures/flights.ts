@@ -1,4 +1,4 @@
-import type { FlightProduct } from '@/types'
+import type { FlightLocation, FlightProduct } from '@/types'
 
 /**
  * ⚠️ MOCK VERİ — TAMAMEN UYDURMA. Gerçek uçuş/fiyat/uygunluk değildir.
@@ -66,4 +66,22 @@ export const flightFixtures: FlightProduct[] = [
     price: 100,
     currency: 'EUR',
   },
+]
+
+/**
+ * ⚠️ MOCK konum önerileri — kalkış/varış otomatik tamamlama için. Gerçek IATA
+ * kodları taşır ama liste dev-mock'tur (backend `MockFlightLocationService` ile
+ * paralel). GET /api/v1/flights/locations handler'ı bunları isim/id ile filtreler.
+ */
+export const flightLocationFixtures: FlightLocation[] = [
+  { id: 'IST', code: 'IST', name: 'İstanbul Havalimanı (IST)', type: 'airport' },
+  { id: 'SAW', code: 'SAW', name: 'İstanbul Sabiha Gökçen (SAW)', type: 'airport' },
+  { id: 'AYT', code: 'AYT', name: 'Antalya Havalimanı (AYT)', type: 'airport' },
+  { id: 'ESB', code: 'ESB', name: 'Ankara Esenboğa (ESB)', type: 'airport' },
+  { id: 'ADB', code: 'ADB', name: 'İzmir Adnan Menderes (ADB)', type: 'airport' },
+  { id: 'DLM', code: 'DLM', name: 'Dalaman (DLM)', type: 'airport' },
+  { id: 'BJV', code: 'BJV', name: 'Bodrum Milas (BJV)', type: 'airport' },
+  { id: 'LHR', code: 'LHR', name: 'London Heathrow (LHR)', type: 'airport' },
+  { id: 'CDG', code: 'CDG', name: 'Paris Charles de Gaulle (CDG)', type: 'airport' },
+  { id: 'FRA', code: 'FRA', name: 'Frankfurt (FRA)', type: 'airport' },
 ]

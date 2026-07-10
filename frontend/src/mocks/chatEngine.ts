@@ -217,11 +217,17 @@ export function processMessage(
 
   if (!s.intent) s.intent = detectIntent(message)
 
-  // 1) Intent belirsiz → önce onu sor.
+  // 1) Intent belirsiz → seçenekli kart ile netleştir ("hangisini demek istediniz?").
+  //    Seçenek değeri orijinal mesajı taşır → tıklanınca şehir vb. bir sonraki tura aktarılır.
+  //    (Gerçek backend'de bu, AMBIGUOUS intent + OrchestrationResult.choices ile üretilir.)
   if (!s.intent) {
     const q = 'Otel araması mı yoksa uçuş araması mı yapmak istersiniz?'
     s.pendingQuestion = q
     const reply = makeMessage('assistant', q)
+    reply.options = [
+      { label: 'Otel ara', value: `${message} için otel arıyorum` },
+      { label: 'Uçuş ara', value: `${message} için uçuş arıyorum` },
+    ]
     s.messages.push(reply)
     return { sessionId: s.id, reply, pendingQuestion: q }
   }

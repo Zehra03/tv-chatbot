@@ -1,12 +1,20 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
-import { authApi, reservationApi, setAuthToken, UNAUTHORIZED_EVENT } from '@/api'
+import {
+  authApi,
+  reservationApi,
+  setAuthToken,
+  setRefreshToken,
+  TOKENS_REFRESHED_EVENT,
+  UNAUTHORIZED_EVENT,
+} from '@/api'
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
 afterEach(() => {
   server.resetHandlers()
   setAuthToken(null)
+  setRefreshToken(null)
 })
 afterAll(() => server.close())
 
@@ -84,7 +92,7 @@ describe('apiClient interceptor (MSW ile)', () => {
     expect(seenHeader).toBeNull()
   })
 
-  it('jetonlu istek 401 dönünce UNAUTHORIZED_EVENT yayınlar', async () => {
+  it('refresh jetonu yokken 401 doğrudan UNAUTHORIZED_EVENT yayınlar', async () => {
     server.use(
       http.get('/api/v1/auth/me', () =>
         HttpResponse.json({ message: 'Jeton süresi doldu.' }, { status: 401 }),
@@ -98,6 +106,63 @@ describe('apiClient interceptor (MSW ile)', () => {
     window.removeEventListener(UNAUTHORIZED_EVENT, listener)
 
     expect(listener).toHaveBeenCalledTimes(1)
+  })
+
+  it('jetonlu istek 401 dönünce refresh jetonuyla sessizce yeniler ve isteği tekrarlar', async () => {
+    let meCalls = 0
+    server.use(
+      http.get('/api/v1/auth/me', ({ request }) => {
+        meCalls += 1
+        // İlk çağrı eski jetonla → 401; refresh sonrası retry yeni jetonla → 200.
+        if (request.headers.get('Authorization') === 'Bearer jwt-yeni') {
+          return HttpResponse.json({ id: '1', email: 'a@b.c' })
+        }
+        return HttpResponse.json({ message: 'Jeton süresi doldu.' }, { status: 401 })
+      }),
+      http.post('/api/v1/auth/refresh', () =>
+        HttpResponse.json({
+          user: { id: '1', email: 'a@b.c' },
+          token: 'jwt-yeni',
+          refreshToken: 'refresh-yeni',
+        }),
+      ),
+    )
+    const unauthorized = vi.fn()
+    const refreshed = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, unauthorized)
+    window.addEventListener(TOKENS_REFRESHED_EVENT, refreshed)
+
+    setAuthToken('jwt-eski')
+    setRefreshToken('refresh-eski')
+    const me = await authApi.me()
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, unauthorized)
+    window.removeEventListener(TOKENS_REFRESHED_EVENT, refreshed)
+
+    expect(me).toMatchObject({ id: '1' })
+    expect(meCalls).toBe(2) // 401, ardından retry 200
+    expect(refreshed).toHaveBeenCalledTimes(1)
+    expect(unauthorized).not.toHaveBeenCalled()
+  })
+
+  it('refresh de 401 dönerse oturumu düşürür (UNAUTHORIZED_EVENT)', async () => {
+    server.use(
+      http.get('/api/v1/auth/me', () =>
+        HttpResponse.json({ message: 'Jeton süresi doldu.' }, { status: 401 }),
+      ),
+      http.post('/api/v1/auth/refresh', () =>
+        HttpResponse.json({ message: 'Refresh geçersiz.' }, { status: 401 }),
+      ),
+    )
+    const unauthorized = vi.fn()
+    window.addEventListener(UNAUTHORIZED_EVENT, unauthorized)
+
+    setAuthToken('jwt-eski')
+    setRefreshToken('refresh-eski')
+    await expect(authApi.me()).rejects.toMatchObject({ status: 401 })
+
+    window.removeEventListener(UNAUTHORIZED_EVENT, unauthorized)
+    expect(unauthorized).toHaveBeenCalledTimes(1)
   })
 
   it('login’in kendi 401’i (hatalı şifre) oturum-düşmesi olayı YAYINLAMAZ', async () => {

@@ -8,7 +8,13 @@ import type {
   ReservationPreview,
   SendMessageRequest,
 } from '@/api'
-import { flightFixtures, hotelFixtures, reservationFixtures } from './fixtures'
+import {
+  flightFixtures,
+  flightLocationFixtures,
+  hotelFixtures,
+  hotelLocationFixtures,
+  reservationFixtures,
+} from './fixtures'
 import {
   deleteSessionState,
   getSessionState,
@@ -40,6 +46,7 @@ let nextReservationId = 2000
 interface MockAuthSession {
   user: AuthUser
   token: string
+  refreshToken: string
 }
 const MOCK_AUTH_KEY = 'pax-msw-auth'
 let mockAuthMemory: MockAuthSession | null = null
@@ -62,6 +69,15 @@ function writeAuthSession(session: MockAuthSession | null) {
     else localStorage.removeItem(MOCK_AUTH_KEY)
   } catch {
     /* bellek kopyası yeter */
+  }
+}
+
+/** Backend'in çift-jeton yanıtı gibi yeni bir mock oturum (access + refresh) üretir. */
+function issueSession(user: AuthUser): MockAuthSession {
+  return {
+    user,
+    token: `mock-token-${crypto.randomUUID()}`,
+    refreshToken: `mock-refresh-${crypto.randomUUID()}`,
   }
 }
 
@@ -118,6 +134,16 @@ export const handlers: RequestHandler[] = [
   }),
 
   // ── Hotel ───────────────────────────────────────────────────────────────
+  // Destination otomatik tamamlama: q'yu şehir adıyla eşleştirir (backend
+  // HotelSearchService.suggestLocations paritesi). 2 karakterden kısa sorgu boş döner.
+  http.get('/api/v1/hotels/locations', ({ request }) => {
+    const q = new URL(request.url).searchParams.get('q') ?? ''
+    const needle = norm(q)
+    if (needle.length < 2) return HttpResponse.json([])
+    const matches = hotelLocationFixtures.filter((l) => norm(l.name).includes(needle))
+    return HttpResponse.json(matches.slice(0, 8))
+  }),
+
   http.post('/api/v1/hotels/search', async ({ request }) => {
     const criteria = (await request.json()) as HotelSearchCriteria
     const nd = criteria?.destination ? norm(criteria.destination) : ''
@@ -132,6 +158,18 @@ export const handlers: RequestHandler[] = [
   }),
 
   // ── Flight ──────────────────────────────────────────────────────────────
+  // Kalkış/varış otomatik tamamlama: q'yu isim/id ile eşleştirir (backend
+  // FlightLocationService paritesi). 2 karakterden kısa sorgu boş döner.
+  http.get('/api/v1/flights/locations', ({ request }) => {
+    const q = new URL(request.url).searchParams.get('q') ?? ''
+    const needle = norm(q)
+    if (needle.length < 2) return HttpResponse.json([])
+    const matches = flightLocationFixtures.filter(
+      (l) => norm(l.name).includes(needle) || norm(l.id).includes(needle),
+    )
+    return HttpResponse.json(matches.slice(0, 8))
+  }),
+
   http.post('/api/v1/flights/search', async ({ request }) => {
     const criteria = (await request.json()) as FlightSearchCriteria
     const nd = criteria?.destination ? norm(criteria.destination) : ''
@@ -224,9 +262,12 @@ export const handlers: RequestHandler[] = [
     }
     registeredEmails.add(body.email.toLowerCase())
     const user: AuthUser = { id: crypto.randomUUID(), email: body.email, name: body.name }
-    const session: MockAuthSession = { user, token: `mock-token-${crypto.randomUUID()}` }
+    const session = issueSession(user)
     writeAuthSession(session)
-    return HttpResponse.json({ user: session.user, token: session.token }, { status: 201 })
+    return HttpResponse.json(
+      { user: session.user, token: session.token, refreshToken: session.refreshToken },
+      { status: 201 },
+    )
   }),
 
   http.post('/api/v1/auth/login', async ({ request }) => {
@@ -242,9 +283,33 @@ export const handlers: RequestHandler[] = [
       email: body.email,
       name: body.email.split('@')[0],
     }
-    const session: MockAuthSession = { user, token: `mock-token-${crypto.randomUUID()}` }
+    const session = issueSession(user)
     writeAuthSession(session)
-    return HttpResponse.json({ user: session.user, token: session.token })
+    return HttpResponse.json({
+      user: session.user,
+      token: session.token,
+      refreshToken: session.refreshToken,
+    })
+  }),
+
+  // Refresh jetonunu doğrulayıp yeni bir çift üretir (rotation — eski refresh jetonu
+  // artık geçersiz). Backend paritesi: geçersiz/eşleşmeyen jeton 401 INVALID_REFRESH_TOKEN.
+  http.post('/api/v1/auth/refresh', async ({ request }) => {
+    const body = (await request.json().catch(() => null)) as { refreshToken?: string } | null
+    const session = readAuthSession()
+    if (!session || !body?.refreshToken || body.refreshToken !== session.refreshToken) {
+      return HttpResponse.json(
+        errorBody('INVALID_REFRESH_TOKEN', 'Refresh jetonu geçersiz ya da süresi dolmuş.'),
+        { status: 401 },
+      )
+    }
+    const rotated = issueSession(session.user)
+    writeAuthSession(rotated)
+    return HttpResponse.json({
+      user: rotated.user,
+      token: rotated.token,
+      refreshToken: rotated.refreshToken,
+    })
   }),
 
   http.post('/api/v1/auth/logout', () => {

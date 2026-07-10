@@ -6,9 +6,11 @@ import { apiClient } from './client'
  * frontend içeriğini yorumlamaz, hiçbir sır burada tutulmaz.
  *   POST /api/v1/auth/register
  *   POST /api/v1/auth/login
+ *   POST /api/v1/auth/refresh   (kısa ömürlü access jetonunu refresh ile yeniler)
  *   POST /api/v1/auth/logout
  *   GET  /api/v1/auth/me   (Authorization: Bearer <token> — interceptor ekler)
- * LoginPage bu API'ye bağlıdır; jeton authSlice → setAuthToken ile taşınır.
+ * LoginPage bu API'ye bağlıdır; jetonlar authSlice → setAuthToken/setRefreshToken
+ * ile taşınır. refresh çağrısı normalde client.ts interceptor'ında otomatik yapılır.
  */
 
 export interface AuthUser {
@@ -30,8 +32,10 @@ export interface RegisterRequest {
 
 export interface AuthResponse {
   user: AuthUser
-  /** Opak oturum jetonu (mock'ta sahte dize). */
+  /** Opak, kısa ömürlü access jetonu (mock'ta sahte dize). */
   token: string
+  /** Opak, uzun ömürlü refresh jetonu — /auth/refresh ile yeni access jetonu alır. */
+  refreshToken: string
 }
 
 export const authApi = {
@@ -42,6 +46,11 @@ export const authApi = {
 
   async register(body: RegisterRequest): Promise<AuthResponse> {
     const res = await apiClient.post<AuthResponse>('/api/v1/auth/register', body)
+    return res.data
+  },
+
+  async refresh(refreshToken: string): Promise<AuthResponse> {
+    const res = await apiClient.post<AuthResponse>('/api/v1/auth/refresh', { refreshToken })
     return res.data
   },
 

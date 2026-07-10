@@ -19,7 +19,9 @@ public class SlotMerger {
 
     public SlotCriteria merge(SlotCriteria base, SlotCriteria update) {
         if (update == null) {
-            return base;
+            // Never return null: a turn may carry an intent with no slots (e.g. "otel arıyorum"),
+            // and the mappers dereference the result — so coalesce both-null to an empty criteria.
+            return base != null ? base : SlotCriteria.empty();
         }
         if (base == null) {
             return update;
@@ -28,9 +30,11 @@ public class SlotMerger {
                 pick(update.location(), base.location()),
                 pick(update.checkIn(), base.checkIn()),
                 pick(update.checkOut(), base.checkOut()),
+                pick(update.nights(), base.nights()),
                 pick(update.rooms(), base.rooms()),
                 pick(update.stars(), base.stars()),
                 pick(update.boardType(), base.boardType()),
+                pick(update.features(), base.features()),
                 pick(update.origin(), base.origin()),
                 pick(update.destination(), base.destination()),
                 pick(update.departureDate(), base.departureDate()),
@@ -41,6 +45,7 @@ public class SlotMerger {
                 pick(update.childAges(), base.childAges()),
                 pick(update.nationality(), base.nationality()),
                 pick(update.currency(), base.currency()),
+                pick(update.maxPrice(), base.maxPrice()),
                 pick(update.sortBy(), base.sortBy()),
                 pick(update.selectionReference(), base.selectionReference())
         );
@@ -50,7 +55,8 @@ public class SlotMerger {
         return update != null ? update : base;
     }
 
-    private static List<Integer> pick(List<Integer> update, List<Integer> base) {
+    // Lists (childAges, features): a non-empty update wins; empty/null keeps the accumulated value.
+    private static <E> List<E> pick(List<E> update, List<E> base) {
         return (update != null && !update.isEmpty()) ? update : base;
     }
 }

@@ -49,6 +49,14 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-ollama</artifactId>
         </dependency>
+        <!-- OpenAI-compatible client used to talk to Google Gemini's OpenAI endpoint
+        (https://generativelanguage.googleapis.com/v1beta/openai). Main chat + intent extraction
+        run on Gemini; the Validator keeps its own Ollama client. Provider is selected via
+        spring.ai.model.chat=openai so the two chat starters don't both create a ChatModel bean. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
         <!-- MCP server (WebMVC/SSE transport): exposes the hotel/flight SEARCH use-cases as
         Model Context Protocol tools so external MCP clients can call them. Search-only surface —
         no reservation/booking tool is ever registered. Version managed by the spring-ai-bom. -->

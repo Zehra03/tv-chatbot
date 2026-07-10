@@ -21,6 +21,11 @@ export interface HotelProduct {
   /** DB: board_type varchar(50) — serbest metin (ör. "BB", "AI"). */
   boardType: string
   availability: boolean
+  /**
+   * Otel görseli — TourVisio pricesearch `thumbnailFull` (mutlak URL). Sağlayıcıda
+   * görsel yoksa null/undefined gelir; kart placeholder gösterir. Asla uydurulmaz.
+   */
+  image?: string | null
 }
 
 export interface FlightProduct {
@@ -28,6 +33,9 @@ export interface FlightProduct {
   airline: string
   origin: string
   destination: string
+  /** origin/destination havalimanı kodunun ait olduğu şehir (ör. SAW → "Istanbul"), TourVisio'dan. */
+  originCity?: string | null
+  destinationCity?: string | null
   departTime: IsoDateTime
   arriveTime: IsoDateTime | null
   tripType: TripType

@@ -146,9 +146,9 @@ class ChatControllerTest {
 
     @Test
     void getSession_returnsFullTranscript() throws Exception {
-        ChatMessageDto user = new ChatMessageDto("10", "user", "Antalya otel", "2026-07-07T10:00:00Z", null);
+        ChatMessageDto user = new ChatMessageDto("10", "user", "Antalya otel", "2026-07-07T10:00:00Z", null, null);
         ChatMessageDto assistant = new ChatMessageDto("11", "assistant", "1 otel buldum:", "2026-07-07T10:00:01Z",
-                List.of(new ResultCardDto("hotel", Map.of("hotelName", "Rixos"))));
+                List.of(new ResultCardDto("hotel", Map.of("hotelName", "Rixos"))), null);
         ChatSessionDto dto = new ChatSessionDto("42", "Antalya otel", List.of(user, assistant),
                 new PartialCriteriaDto("hotel", Map.of("destination", "Antalya")), null);
         when(sessionQueryService.getSession("42", USER_ID)).thenReturn(Optional.of(dto));

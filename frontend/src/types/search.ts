@@ -22,6 +22,29 @@ export interface TimeRange {
   to?: string
 }
 
+/**
+ * Uçuş kalkış/varış otomatik tamamlama önerisi (backend `FlightLocationDto`).
+ * Serbest metin ("Ant") → gerçek TourVisio konumu. `id` arama origin/destination
+ * olarak geri gönderilir; `name` dropdown'da gösterilir; `code` (IATA) yalnız havalimanında.
+ */
+export interface FlightLocation {
+  id: string
+  code?: string | null
+  name: string
+  type: 'city' | 'airport'
+}
+
+/**
+ * Otel destination otomatik tamamlama önerisi (backend `HotelLocationDto`). Uçuştan
+ * farkı: `code` yok ve seçilince aramaya `name` gider (otel araması ismi tekrar
+ * TourVisio konum id'sine çözer), `id` değil.
+ */
+export interface HotelLocation {
+  id: string
+  name: string
+  type: 'city'
+}
+
 /** Otel arama kriteri. `destination` = backend HotelSearchCriteria record'undaki alan. */
 export interface HotelSearchCriteria {
   destination: string
