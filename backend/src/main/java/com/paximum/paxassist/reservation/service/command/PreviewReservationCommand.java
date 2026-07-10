@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.paximum.paxassist.reservation.domain.PassengerType;
 import com.paximum.paxassist.reservation.domain.TripType;
 
@@ -47,9 +48,44 @@ public record PreviewReservationCommand(
         @Valid Flight flight) {
 
     /** Cross-field rule: a reservation must include at least a hotel or a flight (product type is derived, never trusted). */
+    @JsonIgnore
     @AssertTrue(message = "A reservation must include at least a hotel or a flight")
     public boolean isAtLeastOneProductPresent() {
         return hotel != null || flight != null;
+    }
+
+    /**
+     * Cross-field rule: {@code totalAmount} must equal the sum of the present product-price snapshots
+     * (hotel + flight). The price itself is still trusted from input (not recomputed against TourVisio),
+     * but this boundary check rejects an inconsistent/tampered total early (400) instead of letting it
+     * flow into the booking. It is skipped when the expected total cannot be computed here:
+     * <ul>
+     *   <li>{@code additionalOffers} carry extra cost with no price in this DTO, so the sum would be partial;</li>
+     *   <li>a null {@code totalAmount} or a null product price is left to {@code @NotNull} to report;</li>
+     *   <li>no product present is left to {@link #isAtLeastOneProductPresent()} to report.</li>
+     * </ul>
+     * Assumes each product price is that product's full price in {@code currency} (matching currencies).
+     */
+    @JsonIgnore
+    @AssertTrue(message = "totalAmount must equal the sum of the hotel and flight prices")
+    public boolean isTotalAmountConsistentWithProductPrices() {
+        if (totalAmount == null || (hotel == null && flight == null)) {
+            return true; // handled by @NotNull / isAtLeastOneProductPresent
+        }
+        if (additionalOffers != null && !additionalOffers.isEmpty()) {
+            return true; // extras have unknown price here — can't validate the total
+        }
+        if ((hotel != null && hotel.price() == null) || (flight != null && flight.price() == null)) {
+            return true; // let @NotNull on the product price report it
+        }
+        BigDecimal expected = BigDecimal.ZERO;
+        if (hotel != null) {
+            expected = expected.add(hotel.price());
+        }
+        if (flight != null) {
+            expected = expected.add(flight.price());
+        }
+        return totalAmount.compareTo(expected) == 0;
     }
 
     /** Returns a copy with the given owner id (the controller injects the authenticated user id here). */

@@ -75,10 +75,12 @@ injection — no login logic re-implemented. Credentials/base URL come from the 
 ## Confirmed (resolved 2026-07-07)
 
 1. **Endpoint path casing — CONFIRMED lowercase** `/api/bookingservice/<operation>` (not PascalCase).
-   Because the configured base URL (`tourvisio.url`) already ends in `/v2/api`, the code appends
-   `/bookingservice/<op>` so the resolved URL is `https://…/v2/api/bookingservice/<op>` — matching the
-   confirmed `/api/bookingservice/<op>` pattern. (Do NOT append `/api/bookingservice/…` or the `/api`
-   would be duplicated.) Applies to both booking and cancellation endpoints.
+   NOTE (corrected 2026-07-10): `tourvisio.url` is the host+version base only (`.../v2`) and does NOT
+   include `/api` — the Flight/Auth Feign clients append their own `path="/api"`. `TourVisioBookingClientConfig`
+   now appends `/api` to the base URL (idempotently), and the per-op paths stay `/bookingservice/<op>`, so the
+   resolved URL is `https://…/v2/api/bookingservice/<op>`. (An earlier version wrongly assumed the base already
+   ended in `/v2/api`, so the `/api` was dropped and TourVisio returned "route not found".) Applies to both
+   booking and cancellation endpoints.
 2. **`message.id` / `message.messageType` — CONFIRMED integers** (e.g. id `10000000`, messageType `2`/`4`).
    Modelled as nullable `Integer`.
 3. **`CancellationReason.id` — CONFIRMED string** (e.g. `"2"`, `"6"`), echoed back verbatim as the

@@ -53,9 +53,9 @@ tourvisio:
   # without extra env; override per-deployment via TOURVISIO_CULTURE / TOURVISIO_TIMEZONE.
   culture: ${TOURVISIO_CULTURE:en-US}
   timezone: ${TOURVISIO_TIMEZONE:Europe/Istanbul}
-  agency: ${TOURVISIO_AGENCY:}
-  user: ${TOURVISIO_USER:}
-  password: ${TOURVISIO_PASSWORD:}
+  agency: ${TOURVISIO_AGENCY:TOURVISIO_AGENCY}
+  user: ${TOURVISIO_USER:TOURVISIO_USER}
+  password: ${TOURVISIO_PASSWORD:TOURVISIO_PASSWORD}
 
 server:
   port: ${SERVER_PORT:${BACKEND_PORT:8081}}

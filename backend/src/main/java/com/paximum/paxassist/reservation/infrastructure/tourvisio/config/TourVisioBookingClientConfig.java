@@ -55,13 +55,20 @@ public class TourVisioBookingClientConfig {
     }
 
     /**
-     * Trims a trailing slash so leading-slash endpoint paths concatenate predictably
-     * (the env value may end with {@code /v2/api/} or {@code /v2/api}).
+     * Normalizes {@code tourvisio.url} into the booking base URL.
+     *
+     * <p>{@code tourvisio.url} is the host+version base only (e.g. {@code .../v2}); the
+     * {@code /api} segment is NOT part of it — the Flight/Auth Feign clients append their own
+     * {@code path = "/api"} (see {@code TourVisioFlightClient}). This client resolves per-op paths
+     * as {@code /bookingservice/<op>} against the base, so the base MUST include {@code /api} or
+     * TourVisio rejects the call with "route not found". We therefore append {@code /api} here
+     * (idempotently), yielding e.g. {@code .../v2/api/bookingservice/begintransaction}.
      */
     private static String normalizeBaseUrl(String baseUrl) {
-        if (baseUrl != null && baseUrl.endsWith("/")) {
-            return baseUrl.substring(0, baseUrl.length() - 1);
+        if (baseUrl == null) {
+            return null;
         }
-        return baseUrl;
+        String trimmed = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        return trimmed.endsWith("/api") ? trimmed : trimmed + "/api";
     }
 }

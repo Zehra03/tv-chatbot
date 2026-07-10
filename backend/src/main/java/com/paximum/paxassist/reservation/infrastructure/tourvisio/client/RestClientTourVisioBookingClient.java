@@ -14,6 +14,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
 
+import com.paximum.paxassist.flight.infrastructure.client.TourVisioSearchException;
 import com.paximum.paxassist.flight.infrastructure.client.TourVisioTokenProvider;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.config.TourVisioBookingClientConfig;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.AddServicesRequest;
@@ -57,9 +58,9 @@ public class RestClientTourVisioBookingClient implements TourVisioBookingClient 
     private static final Logger log = LoggerFactory.getLogger(RestClientTourVisioBookingClient.class);
 
     // Endpoint paths. CONFIRMED convention: lowercase /api/bookingservice/<operation> (not PascalCase).
-    // The configured base URL (tourvisio.url) already ends in /v2/api, and RestClient resolves
-    // base + path, so we append "/bookingservice/<op>" (NOT "/api/bookingservice/<op>", which would
-    // double the /api). Resolved e.g.: https://.../v2/api/bookingservice/begintransaction.
+    // The /api segment is supplied by the base URL: TourVisioBookingClientConfig appends "/api" to
+    // tourvisio.url (which is only the host+version base, e.g. .../v2). RestClient resolves base + path,
+    // so we append "/bookingservice/<op>" here. Resolved e.g.: https://.../v2/api/bookingservice/begintransaction.
     private static final String BEGIN_TRANSACTION = "/bookingservice/begintransaction";
     private static final String ADD_SERVICES = "/bookingservice/addservices";
     private static final String REMOVE_SERVICES = "/bookingservice/removeservices";
@@ -221,10 +222,19 @@ public class RestClientTourVisioBookingClient implements TourVisioBookingClient 
     }
 
     private <T> T authorizedPost(String path, Object body, Class<T> type) {
+        String token;
+        try {
+            token = tokenProvider.getToken();
+        } catch (TourVisioSearchException e) {
+            // Token acquisition failed (e.g. TourVisio login rejected our credentials). Convert the
+            // flight-module exception into a definite technical failure so execute() surfaces a clean
+            // TOURVISIO_UNAVAILABLE (502) instead of letting it escape as an unmapped 500.
+            throw new TourVisioTechnicalException("TourVisio authorization failed: " + e.getMessage(), e);
+        }
         try {
             return restClient.post()
                     .uri(path)
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenProvider.getToken())
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(body)
                     .retrieve()
