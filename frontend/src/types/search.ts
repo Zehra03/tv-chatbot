@@ -7,6 +7,14 @@ import type { IsoDate, CurrencyCode, CountryCode } from './common'
  * Chat slot-filling'de `Partial<...>` kullanılır (bkz. chat.ts `PartialCriteria`).
  */
 
+/**
+ * Tek aramada izin verilen azami misafir/yolcu sayısı (otelde yetişkin, uçuşta yolcu).
+ * Backend bir üst sınır dayatmaz (adults yalnız >=1); bu sırf bir UI/UX limitidir:
+ * seyahat motorları grup boyutunu tek aramada ~9 ile sınırlar, ötesi TourVisio
+ * aramasını anlamsızlaştırır ve büyük gruplar tipik olarak ayrı bir akışa yönlendirilir.
+ */
+export const MAX_PARTY_SIZE = 9
+
 /** Uçuş yön tipi. DB: flight_reservation_details.trip_type CHECK ('one_way','round_trip'). */
 export type TripType = 'one_way' | 'round_trip'
 
