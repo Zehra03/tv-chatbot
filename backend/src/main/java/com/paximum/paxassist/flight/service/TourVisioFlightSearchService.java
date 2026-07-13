@@ -99,7 +99,8 @@ public class TourVisioFlightSearchService implements FlightSearchService {
                             .formatted(criteria.getOrigin(), criteria.getDestination()));
         }
 
-        List<FlightProduct> products = responseMapper.toFlightProducts(response, criteria.getTripType());
+        List<FlightProduct> products = FlightResultFilter.apply(
+                criteria, responseMapper.toFlightProducts(response, criteria.getTripType()));
         eventPublisher.publishEvent(FlightSearchEvent.success(criteria, products.size()));
 
         log.info("Flight search completed: origin={}, destination={}, resultCount={}",
