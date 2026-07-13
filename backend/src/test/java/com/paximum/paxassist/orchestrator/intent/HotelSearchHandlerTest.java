@@ -106,7 +106,7 @@ class HotelSearchHandlerTest {
     void maxPriceFiltersOutTooExpensiveCards() {
         SlotCriteria merged = slots(Map.of(
                 "location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05",
-                "adults", 2, "maxPrice", 1800));
+                "adults", 2, "hotelMaxPrice", 1800));
         OrchestrationContext context = contextWith(merged);
         HotelProduct cheap = new HotelProduct("H1", "Blue", "Antalya", 4, new BigDecimal("1500"), "TRY", "HB", true);
         HotelProduct pricey = new HotelProduct("H2", "Rixos", "Antalya", 5, new BigDecimal("2000"), "TRY", "AI", true);
@@ -122,7 +122,7 @@ class HotelSearchHandlerTest {
     void maxPriceRemovingAllCardsGivesHonestBudgetMessage() {
         SlotCriteria merged = slots(Map.of(
                 "location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05",
-                "adults", 2, "maxPrice", 10, "currency", "TRY"));
+                "adults", 2, "hotelMaxPrice", 10, "currency", "TRY"));
         OrchestrationContext context = contextWith(merged);
         HotelProduct pricey = new HotelProduct("H2", "Rixos", "Antalya", 5, new BigDecimal("2000"), "TRY", "AI", true);
         when(hotelSearchService.searchHotels(any()))

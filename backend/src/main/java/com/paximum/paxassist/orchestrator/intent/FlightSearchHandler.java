@@ -67,7 +67,7 @@ public class FlightSearchHandler implements IntentHandler {
 
         // Post-search budget filter over REAL results (board type does not apply to flights).
         List<Object> rawCards = new ArrayList<>(outcome.results());
-        List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.maxPrice());
+        List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.flightMaxPrice());
 
         context.session().setActiveDomain("FLIGHT");
         context.session().setLastResultCards(cards);
@@ -79,9 +79,9 @@ public class FlightSearchHandler implements IntentHandler {
         if (!cards.isEmpty()) {
             return "Aramanıza uygun " + cards.size() + " uçuş buldum:";
         }
-        if (!rawCards.isEmpty() && merged.maxPrice() != null) {
+        if (!rawCards.isEmpty() && merged.flightMaxPrice() != null) {
             String currency = merged.currency() != null ? merged.currency() : "TL";
-            return merged.maxPrice() + " " + currency
+            return merged.flightMaxPrice() + " " + currency
                     + " altında uygun uçuş bulamadım. Bütçeyi biraz artırmayı deneyebilir misiniz?";
         }
         return "Aradığınız kriterlere uygun uçuş bulamadım. Farklı bir tarih veya güzergah deneyebilir misiniz?";
