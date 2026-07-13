@@ -78,7 +78,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         // 2. Fetch destination/location autocomplete
         String locationId = null;
         try {
-            locationId = firstCityId(tourVisioHotelApiClient.getArrivalAutocomplete(request.destination()));
+            locationId = firstCityId(tourVisioHotelApiClient.getArrivalAutocomplete(request.destination()), request.destination());
         } catch (Exception e) {
             log.error("Failed to autocomplete destination: {}", e.getMessage());
             logModuleClient.logActivity(
@@ -142,7 +142,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         // autocomplete round-trip per probe. A failure here just means "no suggestions" (never a 500).
         String locationId;
         try {
-            locationId = firstCityId(tourVisioHotelApiClient.getArrivalAutocomplete(base.destination()));
+            locationId = firstCityId(tourVisioHotelApiClient.getArrivalAutocomplete(base.destination()), base.destination());
         } catch (Exception e) {
             log.warn("Date suggestion autocomplete failed for {}: {}", base.destination(), e.getMessage());
             return List.of();
@@ -228,12 +228,16 @@ public class HotelSearchServiceImpl implements HotelSearchService {
                 .replace("&gt;", ">");
     }
 
-    /** First city id from a TourVisio autocomplete response, or null when none is present. */
-    private static String firstCityId(AutocompleteResponse response) {
-        if (response != null && response.body() != null && response.body().items() != null) {
+    /** First city id from a TourVisio autocomplete response that matches the query, or null when none is present. */
+    private static String firstCityId(AutocompleteResponse response, String query) {
+        if (response != null && response.body() != null && response.body().items() != null && query != null && !query.isBlank()) {
+            String needle = fold(query.trim());
             for (AutocompleteResponse.Item item : response.body().items()) {
-                if (item.city() != null && item.city().id() != null) {
-                    return item.city().id();
+                if (item.city() != null && item.city().id() != null && item.city().name() != null) {
+                    String cityName = fold(item.city().name());
+                    if (cityName.contains(needle) || needle.contains(cityName)) {
+                        return item.city().id();
+                    }
                 }
             }
         }
