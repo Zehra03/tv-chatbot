@@ -23,9 +23,10 @@ class SlotNormalizerTest {
         String checkIn = LocalDate.now().plusDays(2).toString();
         String checkOut = LocalDate.now().plusDays(5).toString();
         SlotCriteria criteria = new SlotCriteria(
-                null, checkIn, checkOut, null, null, null, null, null, null,
+                null, checkIn, checkOut, null, null, null, null, null, null, null,
                 null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                null, null, null, null, null,
+                null, null, null
         );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
@@ -39,9 +40,10 @@ class SlotNormalizerTest {
         String checkIn = LocalDate.now().plusDays(5).toString();
         String checkOut = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
-                null, checkIn, checkOut, null, null, null, null, null, null,
+                null, checkIn, checkOut, null, null, null, null, null, null, null,
                 null, null, null, null, null, null,
-                null, null, null, null, null, null, null
+                null, null, null, null, null,
+                null, null, null
         );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
@@ -55,9 +57,9 @@ class SlotNormalizerTest {
         String depart = LocalDate.now().plusDays(5).toString();
         String returnDate = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
-                null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null,
                 null, null, depart, returnDate, null, null,
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
@@ -73,9 +75,9 @@ class SlotNormalizerTest {
         String pastReturn = LocalDate.now().minusDays(1).toString();
 
         SlotCriteria criteria = new SlotCriteria(
-                null, pastCheckIn, pastCheckOut, null, null, null, null, null, null,
+                null, pastCheckIn, pastCheckOut, null, null, null, null, null, null, null,
                 null, null, pastDepart, pastReturn, null, null,
-                null, null, null, null, null, null, null
+                null, null, null, null, null, null, null, null
         );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
@@ -89,9 +91,10 @@ class SlotNormalizerTest {
     @Test
     void shouldClearInvalidNumericValues() {
         SlotCriteria criteria = new SlotCriteria(
-                null, null, null, null, 0, null, null, null, -100,
+                null, null, null, null, 0, null, null, null, null, -100,
                 null, null, null, null, null, -50,
-                0, -1, java.util.List.of(5, -2, 8), null, null, null, null
+                0, -1, java.util.List.of(5, -2, 8), null, null,
+                null, null, null
         );
 
         SlotCriteria normalized = normalizer.normalize(criteria);

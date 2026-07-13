@@ -103,6 +103,7 @@ public class SlotNormalizer {
                 nights,
                 rooms,
                 criteria.stars(),
+                criteria.maxStars(),
                 criteria.boardType(),
                 criteria.features(),
                 hotelMaxPrice,
@@ -118,6 +119,7 @@ public class SlotNormalizer {
                 criteria.nationality(),
                 criteria.currency(),
                 criteria.sortBy(),
+                criteria.limit(),
                 criteria.selectionReference()
         );
     }

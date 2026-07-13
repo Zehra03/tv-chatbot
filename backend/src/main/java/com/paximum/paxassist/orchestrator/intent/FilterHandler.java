@@ -21,28 +21,61 @@ public class FilterHandler implements IntentHandler {
 
     @Override
     public boolean supports(IntentType intent) {
-        return intent == IntentType.FILTER;
+        return intent == IntentType.FILTER || intent == IntentType.CLEAR_FILTER;
     }
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
-        List<Object> current = context.session().getLastResultCards();
+        List<Object> current = context.session().getLastApiResultCards();
         if (current == null || current.isEmpty()) {
             return OrchestrationResult.message(
                     "Önce bir otel veya uçuş araması yapmalıyız. Ne aramak istersiniz?");
         }
 
-        String sortBy = context.criteria() != null ? context.criteria().sortBy() : null;
-        Comparator<Object> comparator = comparatorFor(sortBy);
-        if (comparator == null) {
-            return OrchestrationResult.message(
-                    "Sonuçları nasıl sıralamamı istersiniz? Örneğin \"en ucuzdan\" veya \"en yüksek yıldızlı\".");
+        if (context.intent() == IntentType.CLEAR_FILTER) {
+            context.session().getAccumulatedCriteria().remove("limit");
+            context.session().getAccumulatedCriteria().remove("stars");
+            context.session().getAccumulatedCriteria().remove("maxStars");
+            context.session().getAccumulatedCriteria().remove("boardType");
+            context.session().getAccumulatedCriteria().remove("features");
+            context.session().getAccumulatedCriteria().remove("sortBy");
+            context.session().getAccumulatedCriteria().remove("hotelMaxPrice");
+            context.session().getAccumulatedCriteria().remove("flightMaxPrice");
+            
+            context.session().setLastResultCards(new ArrayList<>(current));
+            return OrchestrationResult.cards("Filtreler temizlendi. Tüm sonuçlar listeleniyor:", current);
         }
 
-        List<Object> sorted = new ArrayList<>(current);
-        sorted.sort(comparator);
-        context.session().setLastResultCards(sorted);
-        return OrchestrationResult.cards("İşte güncellenmiş sıralama:", sorted);
+        if (context.criteria() == null) {
+            return OrchestrationResult.message("Filtreleme kriteri anlaşılamadı.");
+        }
+
+        List<Object> filtered = new ArrayList<>(current);
+
+        // Apply filters in sequence
+        Integer hotelPrice = context.criteria().hotelMaxPrice();
+        Integer flightPrice = context.criteria().flightMaxPrice();
+        Integer maxPrice = hotelPrice != null ? hotelPrice : flightPrice;
+        filtered = ResultFilters.applyMaxPrice(filtered, maxPrice);
+
+        filtered = ResultFilters.applyBoardType(filtered, context.criteria().boardType());
+        filtered = ResultFilters.applyFeatures(filtered, context.criteria().features());
+        filtered = ResultFilters.applyStars(filtered, context.criteria().stars(), context.criteria().maxStars());
+
+        if (filtered.isEmpty()) {
+            return OrchestrationResult.message("Mevcut sonuçlar arasında bu kriterlere uygun sonuç bulamadım.");
+        }
+
+        String sortBy = context.criteria().sortBy();
+        Comparator<Object> comparator = comparatorFor(sortBy);
+        if (comparator != null) {
+            filtered.sort(comparator);
+        }
+
+        filtered = ResultFilters.applyLimit(filtered, context.criteria().limit());
+
+        context.session().setLastResultCards(filtered);
+        return OrchestrationResult.cards("İşte filtrelenmiş sonuçlar:", filtered);
     }
 
     private Comparator<Object> comparatorFor(String sortBy) {

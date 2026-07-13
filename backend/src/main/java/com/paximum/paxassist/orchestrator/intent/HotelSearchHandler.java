@@ -81,10 +81,13 @@ public class HotelSearchHandler implements IntentHandler {
         List<Object> rawCards = toCards(response.results());
         List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.hotelMaxPrice());
         cards = ResultFilters.applyBoardType(cards, merged.boardType());
+        cards = ResultFilters.applyStars(cards, merged.stars(), merged.maxStars());
         List<Object> beforeFeatureFilter = cards;
         cards = ResultFilters.applyFeatures(cards, merged.features());
+        cards = ResultFilters.applyLimit(cards, merged.limit());
 
         context.session().setActiveDomain("HOTEL");
+        context.session().setLastApiResultCards(rawCards);
         context.session().setLastResultCards(cards);
 
         return OrchestrationResult.cards(hotelReply(cards, rawCards, beforeFeatureFilter, merged), cards);

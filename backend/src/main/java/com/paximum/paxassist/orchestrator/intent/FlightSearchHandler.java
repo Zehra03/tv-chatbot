@@ -71,6 +71,7 @@ public class FlightSearchHandler implements IntentHandler {
         List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.flightMaxPrice());
 
         context.session().setActiveDomain("FLIGHT");
+        context.session().setLastApiResultCards(rawCards);
         context.session().setLastResultCards(cards);
 
         return OrchestrationResult.cards(flightReply(cards, rawCards, merged), cards);
