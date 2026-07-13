@@ -108,7 +108,7 @@ class FlightSearchHandlerTest {
     void maxPriceFiltersOutTooExpensiveFlights() {
         SlotCriteria merged = slots(Map.of(
                 "origin", "İstanbul", "destination", "Antalya", "departureDate", "2026-08-01",
-                "adults", 1, "currency", "TRY", "maxPrice", 1500));
+                "adults", 1, "currency", "TRY", "flightMaxPrice", 1500));
         OrchestrationContext context = contextWith(merged);
         FlightProduct cheap = flight("F1", "1450");
         FlightProduct pricey = flight("F2", "2500");
