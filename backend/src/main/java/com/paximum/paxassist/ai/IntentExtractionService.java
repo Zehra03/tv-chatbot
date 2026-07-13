@@ -110,19 +110,11 @@ public class IntentExtractionService {
         - Fill only fields explicitly present in the message; all others null.
         - Dates are always YYYY-MM-DD, resolved using TODAY/WEEKDAY from <context>.
         - If the user gives only a month or season without a specific day ("Eylülde",
-          "yaz aylarında"), leave the date field NULL — do not guess a day. The assistant will
-          ask for an exact date.
-        - NUMERIC DATE FORMATS: the user may give dates as D/M/YYYY, D-M-YYYY, D.M.YYYY, or with a
-          2-digit year (D.M.YY). Resolve as follows:
-            - If exactly one of the two non-year numbers is > 12, that number is unambiguously the
-              DAY (the other is the MONTH), regardless of position — e.g. "15/5/2026" and "5/15/2026"
-              both resolve to 2026-05-15, since 15 cannot be a month.
-            - If BOTH numbers are ≤ 12 (e.g. "5/6/2026"), the format is genuinely ambiguous
-              (day-first vs month-first). Do NOT guess — leave the date field NULL, exactly like the
-              ambiguous-count rule below. The assistant will ask the user to clarify or restate the
-              date (e.g. "8 Haziran" or "2026-06-05").
-            - A 2-digit year (e.g. "26") always resolves to 20XX for this product (future travel
-              dates only) — "5.15.26" → 2026-05-15.
+          "yaz aylarında"), leave the date field out of the criteria object entirely (do not fabricate a day).
+        - NUMERIC DATE FORMATS: The user may give dates as D/M/YYYY, D-M-YYYY, D.M.YYYY, or with a 2-digit year (D.M.YY). Resolve using this smart priority logic:
+            - DEFAULT TO DAY-FIRST (Turkish Format): By default, always treat the first number as the DAY and the second number as the MONTH (e.g., "5/6/2026" → June 5th → 2026-06-05).
+            - AUTOMATIC AMERICAN FALLBACK: If the second number (which is the month position in Turkish format) is GREATER THAN 12 (e.g., "5/15/2026" or "07/13/2026"), automatically switch to Month-First format, meaning the first number is the MONTH and the second is the DAY (e.g., "5/15/2026" → May 15th → 2026-05-15).
+            - A 2-digit year (e.g. "26") always resolves to 20XX for this product — "5.6.26" → 2026-06-05.
             - An already-ISO date (YYYY-MM-DD) is used as-is.
         - intent is always set. If criteria is entirely empty, return null for criteria.
         - EXTRACT RAW VALUES, NEVER CORRECT OR CLAMP THEM. If the user states a negative or
@@ -218,9 +210,11 @@ public class IntentExtractionService {
         Mesaj: "5.15.26 tarihinde otele giriş"
         Çıktı: {"intent":"HOTEL","criteria":{"checkIn":"2026-05-15"}}
 
-        # ── Ambiguous numeric date (both day and month ≤ 12): drop the date, never guess ──
-        Mesaj: "Bodrum'da 5.6.26 tarihinde otel"
-        Çıktı: {"intent":"HOTEL","criteria":{"location":"Bodrum"}}
+        Mesaj: "5.6.26 tarihinde otel"
+        Çıktı: {"intent":"HOTEL","criteria":{"checkIn":"2026-06-05"}}
+
+        Mesaj: "07/13/2026 tarihinde uçuş"
+        Çıktı: {"intent":"FLIGHT","criteria":{"departureDate":"2026-07-13"}}
 
         Mesaj: "Eylülde Antalya'da denize sıfır bir otel, 2 yetişkin"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":2,"features":["SEAFRONT"]}}
@@ -250,7 +244,7 @@ public class IntentExtractionService {
         Mesaj: "İstanbul'dan İzmir'e 3000 tl altında uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","flightMaxPrice":3000}}
 
-        Mesaj: "Antalya'da -2 yetişkin ve -1 çocuklu otel"
+        Mesaj: "Antalya'da -2 yetişkin ve -1 childlu otel"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":-2,"children":-1}}
 
         Mesaj: "0 yetişkin 2 çocuk için oda arıyorum"
