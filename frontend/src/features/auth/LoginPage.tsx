@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff, MapPin, Plane, Star, Wifi } from 'lucide-react'
 import heroImage from '@/assets/travel-hero.png'
 import hotelImage from '@/assets/hotel-room.png'
@@ -444,14 +445,27 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
 export default function LoginPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const location = useLocation()
   const user = useAppSelector((s) => s.auth.user)
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
 
-  // Oturum açıkken /login'e gelinirse uygulamaya geri dön.
-  if (user) return <Navigate to="/chat" replace />
+  // RequireAccount bir misafiri buraya yönlendirdiyse nedenini + geldiği sayfayı taşır.
+  const redirectState = location.state as { reason?: string; from?: string } | null
+  const accountRequired = redirectState?.reason === 'account-required'
 
-  const goToApp = () => navigate('/chat', { replace: true })
+  useEffect(() => {
+    if (accountRequired) {
+      toast.info('Rezervasyon için giriş yapın veya ücretsiz bir hesap oluşturun.')
+    }
+  }, [accountRequired])
+
+  // Yalnızca GERÇEK (misafir olmayan) oturum açıkken uygulamaya geri dön. Misafir /login'de
+  // kalabilir ki giriş/kayıt ile hesaba yükselsin (bounce edilirse formu hiç göremezdi).
+  if (user && !user.guest) return <Navigate to="/chat" replace />
+
+  // Giriş/kayıt başarısında misafirin gelmek istediği korumalı sayfaya (varsa) dön; yoksa /chat.
+  const goToApp = () => navigate(redirectState?.from ?? '/chat', { replace: true })
 
   const runAuth = async (call: () => Promise<AuthResponse>) => {
     if (submitting) return
@@ -481,7 +495,8 @@ export default function LoginPage() {
       }}
       onGuestContinue={() => {
         dispatch(guestSessionStarted())
-        goToApp()
+        // Misafir korumalı sayfaya giremez; her zaman sohbete gönder ('from'u kullanma).
+        navigate('/chat', { replace: true })
       }}
     />
   )

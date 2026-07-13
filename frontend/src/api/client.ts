@@ -44,6 +44,7 @@ interface RetriableRequestConfig extends InternalAxiosRequestConfig {
 
 let authToken: string | null = null
 let refreshTokenValue: string | null = null
+let guestIdValue: string | null = null
 
 /**
  * Access jetonunu istemciye tanıtır (null = oturum kapalı). authSlice çağırır;
@@ -58,13 +59,28 @@ export function setRefreshToken(token: string | null) {
   refreshTokenValue = token
 }
 
+/**
+ * Misafir kimliğini (opak X-Guest-Id) istemciye tanıtır (null = misafir değil).
+ * authSlice çağırır. Jetonsuz misafir isteklerinde bu başlık gider; backend bununla
+ * misafir oturumlarını sahiplendirir (JWT DEĞİL, düşük-değerli taşıyıcı anahtar).
+ */
+export function setGuestId(guestId: string | null) {
+  guestIdValue = guestId
+}
+
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
   headers: { 'Content-Type': 'application/json' },
 })
 
 apiClient.interceptors.request.use((config) => {
-  if (authToken) config.headers.Authorization = `Bearer ${authToken}`
+  // Yetkili kullanıcı → Bearer jeton. Jetonsuz misafir → X-Guest-Id. İkisi bir arada
+  // gönderilmez: giriş yapınca authSlice guestId'yi temizler.
+  if (authToken) {
+    config.headers.Authorization = `Bearer ${authToken}`
+  } else if (guestIdValue) {
+    config.headers['X-Guest-Id'] = guestIdValue
+  }
   return config
 })
 

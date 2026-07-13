@@ -29,6 +29,7 @@ describe('authSlice', () => {
       user,
       token: 'jwt-1',
       refreshToken: 'refresh-1',
+      guestId: null,
     })
   })
 
@@ -52,16 +53,40 @@ describe('authSlice', () => {
     const loggedIn = reducer(undefined, sessionStarted({ user, token: 'jwt-1', refreshToken: 'refresh-1' }))
     const state = reducer(loggedIn, logout())
 
-    expect(state).toEqual({ user: null, token: null, refreshToken: null })
+    expect(state).toEqual({ user: null, token: null, refreshToken: null, guestId: null })
     expect(localStorage.getItem('pax-auth')).toBeNull()
   })
 
-  it('guestSessionStarted jetonsuz misafir oturumu açar', () => {
+  it('guestSessionStarted jetonsuz misafir oturumu açar ve kalıcı bir guestId üretir', () => {
     const state = reducer(undefined, guestSessionStarted())
 
     expect(state.user).toMatchObject({ guest: true, name: 'Misafir' })
     expect(state.token).toBeNull()
     expect(state.refreshToken).toBeNull()
+    // Opak, boş olmayan bir misafir kimliği üretilir ve localStorage'a yazılır (yenilemede kalır).
+    expect(state.guestId).toEqual(expect.any(String))
+    expect(state.guestId!.length).toBeGreaterThan(0)
+    expect(JSON.parse(localStorage.getItem('pax-auth')!).guestId).toBe(state.guestId)
+  })
+
+  it('guestSessionStarted her çağrıda benzersiz bir guestId üretir', () => {
+    const a = reducer(undefined, guestSessionStarted())
+    const b = reducer(undefined, guestSessionStarted())
+    expect(a.guestId).not.toBe(b.guestId)
+  })
+
+  it('giriş yapınca (sessionStarted) misafir guestId temizlenir', () => {
+    const guest = reducer(undefined, guestSessionStarted())
+    expect(guest.guestId).toEqual(expect.any(String))
+    const loggedIn = reducer(guest, sessionStarted({ user, token: 'jwt-1', refreshToken: 'refresh-1' }))
+    expect(loggedIn.guestId).toBeNull()
+  })
+
+  it('logout misafir guestId’sini de temizler', () => {
+    const guest = reducer(undefined, guestSessionStarted())
+    const state = reducer(guest, logout())
+    expect(state.guestId).toBeNull()
+    expect(localStorage.getItem('pax-auth')).toBeNull()
   })
 
   it('userRefreshed açık oturumun kullanıcısını tazeler, kapalı oturuma dokunmaz', () => {
@@ -84,7 +109,21 @@ describe('authSlice', () => {
     const { default: freshReducer } = await import('./authSlice')
     const state = freshReducer(undefined, { type: '@@INIT' })
 
-    expect(state).toEqual({ user, token: 'jwt-stored', refreshToken: 'refresh-stored' })
+    expect(state).toEqual({ user, token: 'jwt-stored', refreshToken: 'refresh-stored', guestId: null })
+  })
+
+  it('modül yüklenirken saklı misafir oturumunu (guestId) geri yükler', async () => {
+    const guestUser = { id: 'guest', email: '', name: 'Misafir', guest: true }
+    localStorage.setItem(
+      'pax-auth',
+      JSON.stringify({ user: guestUser, token: null, refreshToken: null, guestId: 'guest-xyz' }),
+    )
+    vi.resetModules()
+
+    const { default: freshReducer } = await import('./authSlice')
+    const state = freshReducer(undefined, { type: '@@INIT' })
+
+    expect(state).toEqual({ user: guestUser, token: null, refreshToken: null, guestId: 'guest-xyz' })
   })
 
   it('bozuk localStorage kaydında boş oturumla başlar', async () => {
@@ -94,6 +133,6 @@ describe('authSlice', () => {
     const { default: freshReducer } = await import('./authSlice')
     const state = freshReducer(undefined, { type: '@@INIT' })
 
-    expect(state).toEqual({ user: null, token: null, refreshToken: null })
+    expect(state).toEqual({ user: null, token: null, refreshToken: null, guestId: null })
   })
 })

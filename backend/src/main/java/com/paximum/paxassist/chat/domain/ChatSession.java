@@ -15,8 +15,11 @@ public class ChatSession {
 
     private final String id;
     // Owner (users.id). Sessions are scoped to the authenticated user so listing/loading/deleting
-    // never crosses users. Null only for legacy/in-memory sessions with no principal.
+    // never crosses users. Null for guest-owned (see guestToken) or legacy/in-memory sessions.
     private Long userId;
+    // Opaque per-visitor key for guest-owned sessions (X-Guest-Id). Mutually exclusive with userId:
+    // set only when the owner is an anonymous guest. Null for user-owned/legacy sessions.
+    private String guestToken;
     private Map<String, Object> accumulatedCriteria;
     private List<Object> lastResultCards;
     private final List<ChatMessage> messages = new ArrayList<>();
@@ -35,6 +38,9 @@ public class ChatSession {
 
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
+
+    public String getGuestToken() { return guestToken; }
+    public void setGuestToken(String guestToken) { this.guestToken = guestToken; }
 
     public Map<String, Object> getAccumulatedCriteria() { return accumulatedCriteria; }
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
