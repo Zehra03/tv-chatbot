@@ -21,17 +21,17 @@ public class MockTourVisioHotelApiClient implements TourVisioHotelApiClient {
 
     private static final List<HotelProduct> HOTELS = List.of(
             new HotelProduct("H1", "Rixos Premium", "Antalya", 5, new BigDecimal("1500.00"), "EUR", "All Inclusive", true,
-                    null, List.of("Beach Hotel", "Private Beach", "Outdoor Pool", "Spa Center")),
+                    null, List.of("Beach Hotel", "Private Beach", "Outdoor Pool", "Spa Center"), "mock-offer-h1"),
             new HotelProduct("H2", "Titanic Mardan Palace", "Antalya", 5, new BigDecimal("2000.00"), "EUR", "All Inclusive", true,
-                    null, List.of("Outdoor Pool", "Water Slides", "Kids Club")),
+                    null, List.of("Outdoor Pool", "Water Slides", "Kids Club"), "mock-offer-h2"),
             new HotelProduct("H3", "Kaya Palazzo", "Belek", 5, new BigDecimal("1800.00"), "EUR", "All Inclusive", true,
-                    null, List.of("Sand Beach", "Kids Club", "Outdoor Pool")),
+                    null, List.of("Sand Beach", "Kids Club", "Outdoor Pool"), "mock-offer-h3"),
             new HotelProduct("H4", "Maxx Royal", "Kemer", 5, new BigDecimal("3000.00"), "EUR", "All Inclusive", true,
-                    null, List.of("Beach Hotel", "Spa", "Sauna")),
+                    null, List.of("Beach Hotel", "Spa", "Sauna"), "mock-offer-h4"),
             new HotelProduct("H5", "Hilton Bosphorus", "Istanbul", 5, new BigDecimal("350.00"), "EUR", "Bed & Breakfast", true,
-                    null, List.of("City Hotel", "Indoor Pool", "Fitness Center")),
+                    null, List.of("City Hotel", "Indoor Pool", "Fitness Center"), "mock-offer-h5"),
             new HotelProduct("H6", "Swissotel The Bosphorus", "Istanbul", 5, new BigDecimal("400.00"), "EUR", "Bed & Breakfast", true,
-                    null, List.of("City Hotel", "Spa", "Fitness Center"))
+                    null, List.of("City Hotel", "Spa", "Fitness Center"), "mock-offer-h6")
     );
 
     @Override
