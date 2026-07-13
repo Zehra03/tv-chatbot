@@ -70,6 +70,10 @@ public class HotelSearchHandler implements IntentHandler {
         if ("INCOMPLETE".equals(response.status())) {
             return OrchestrationResult.clarify(clarifications.questionForHotel(response.missingParameters()), "hotel");
         }
+        
+        if ("INVALID_LOCATION".equals(response.status())) {
+            return OrchestrationResult.clarify("Girdiğiniz şehir/bölge (" + response.results() + ") sistemimizde bulunamadı. Lütfen geçerli bir lokasyon giriniz.", "hotel");
+        }
 
         // Post-search, in-memory filters over REAL results (no fabrication): budget, board type,
         // then requested hotel features (denize sıfır / havuz / spa …) confirmed by provider data.

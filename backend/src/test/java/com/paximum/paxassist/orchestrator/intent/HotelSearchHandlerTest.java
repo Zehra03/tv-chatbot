@@ -74,6 +74,19 @@ class HotelSearchHandlerTest {
     }
 
     @Test
+    void invalidLocationReturnsFriendlyClarify() {
+        OrchestrationContext context = contextWith(slots(Map.of("location", "lulubumbu")));
+        when(hotelSearchService.searchHotels(any()))
+                .thenReturn(HotelSearchResponse.invalidLocation("lulubumbu"));
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        assertThat(result.redirectToReservation()).isFalse();
+        assertThat(result.reply()).contains("lulubumbu").contains("bulunamadı");
+    }
+
+    @Test
     void successReturnsCardsAndUpdatesSession() {
         SlotCriteria merged = slots(
                 Map.of("location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05", "adults", 2));

@@ -100,7 +100,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
                 "SUCCESS",
                 "No location ID found for destination " + request.destination()
             );
-            return HotelSearchResponse.success(null);
+            return HotelSearchResponse.invalidLocation(request.destination());
         }
 
         // 3. Perform the actual Price Search
