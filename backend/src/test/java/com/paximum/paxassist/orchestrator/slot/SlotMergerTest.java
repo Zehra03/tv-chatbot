@@ -55,14 +55,17 @@ class SlotMergerTest {
     }
 
     @Test
-    void maxPriceFromUpdateIsMergedAndBaseKept() {
-        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2));
-        SlotCriteria update = slots(Map.of("maxPrice", 1800));
+    void perDomainBudgetsMergeIndependently() {
+        // Hotel budget set first, then a separate flight budget on a later turn: the two per-domain
+        // budgets coexist and neither overwrites the other (nor bleeds into the other search).
+        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2, "hotelMaxPrice", 18000));
+        SlotCriteria update = slots(Map.of("flightMaxPrice", 3000));
 
         SlotCriteria merged = merger.merge(base, update);
 
-        assertThat(merged.location()).isEqualTo("Antalya"); // kept from base
-        assertThat(merged.maxPrice()).isEqualTo(1800);       // added by update
+        assertThat(merged.location()).isEqualTo("Antalya");    // kept from base
+        assertThat(merged.hotelMaxPrice()).isEqualTo(18000);   // kept from base
+        assertThat(merged.flightMaxPrice()).isEqualTo(3000);   // added by update
     }
 
     @Test
