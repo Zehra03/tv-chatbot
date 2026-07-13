@@ -85,4 +85,22 @@ class SlotNormalizerTest {
         assertThat(normalized.departureDate()).isNull();
         assertThat(normalized.returnDate()).isNull();
     }
+
+    @Test
+    void shouldClearInvalidNumericValues() {
+        SlotCriteria criteria = new SlotCriteria(
+                null, null, null, null, 0, null, null, null, -100,
+                null, null, null, null, null, -50,
+                0, -1, java.util.List.of(5, -2, 8), null, null, null, null
+        );
+
+        SlotCriteria normalized = normalizer.normalize(criteria);
+
+        assertThat(normalized.rooms()).isNull();
+        assertThat(normalized.hotelMaxPrice()).isNull();
+        assertThat(normalized.flightMaxPrice()).isNull();
+        assertThat(normalized.adults()).isNull();
+        assertThat(normalized.children()).isNull();
+        assertThat(normalized.childAges()).containsExactly(5, 8);
+    }
 }

@@ -80,25 +80,41 @@ public class SlotNormalizer {
             returnDateStr = returnDate.toString();
         }
 
+        // 3. Numeric Limits
+        Integer adults = criteria.adults() != null && criteria.adults() > 0 ? criteria.adults() : null;
+        Integer children = criteria.children() != null && criteria.children() >= 0 ? criteria.children() : null;
+        
+        java.util.List<Integer> childAges = criteria.childAges();
+        if (childAges != null) {
+            childAges = childAges.stream().filter(age -> age >= 0).toList();
+            if (childAges.isEmpty()) {
+                childAges = null;
+            }
+        }
+
+        Integer rooms = criteria.rooms() != null && criteria.rooms() > 0 ? criteria.rooms() : null;
+        Integer hotelMaxPrice = criteria.hotelMaxPrice() != null && criteria.hotelMaxPrice() > 0 ? criteria.hotelMaxPrice() : null;
+        Integer flightMaxPrice = criteria.flightMaxPrice() != null && criteria.flightMaxPrice() > 0 ? criteria.flightMaxPrice() : null;
+
         return new SlotCriteria(
                 criteria.location(),
                 checkInStr,
                 checkOutStr,
                 nights,
-                criteria.rooms(),
+                rooms,
                 criteria.stars(),
                 criteria.boardType(),
                 criteria.features(),
-                criteria.hotelMaxPrice(),
+                hotelMaxPrice,
                 criteria.origin(),
                 criteria.destination(),
                 departureDateStr,
                 returnDateStr,
                 criteria.cabinClass(),
-                criteria.flightMaxPrice(),
-                criteria.adults(),
-                criteria.children(),
-                criteria.childAges(),
+                flightMaxPrice,
+                adults,
+                children,
+                childAges,
                 criteria.nationality(),
                 criteria.currency(),
                 criteria.sortBy(),
