@@ -210,8 +210,11 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
                 String currency = "TRY";
                 String board = "Unknown";
                 boolean available = false;
+                String offerId = null;
 
                 if (!firstOffer.isMissingNode()) {
+                    JsonNode offerIdNode = firstOffer.path("offerId");
+                    offerId = offerIdNode.isTextual() ? offerIdNode.asText() : null;
                     price = new BigDecimal(firstOffer.path("price").path("amount").asText("0"));
                     currency = firstOffer.path("price").path("currency").asText("TRY");
                     board = firstOffer.path("rooms").path(0).path("boardName").asText("Unknown");
@@ -227,7 +230,7 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
                 // themes ("Deniz Kenarında", "BEACH") are sparse but add signal. Never fabricated.
                 List<String> features = collectNames(hotelNode.path("facilities"), hotelNode.path("themes"));
 
-                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image, features));
+                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image, features, offerId));
             }
         }
         return products;

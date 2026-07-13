@@ -20,7 +20,10 @@ public record HotelProduct(
     // "Deniz Kenarında", "Outdoor Pool". Drives the chat feature filter (denize sıfır / havuz / spa …)
     // via orchestrator.intent.HotelFeature. Empty when the provider returned no facility/theme data
     // for the hotel — never guessed.
-    List<String> features
+    List<String> features,
+    // The explicit offer token required by the reservation (BeginTransaction) API.
+    // Omitted in old constructors and mocks.
+    String offerId
 ) {
     /** Null-safe features so filters can iterate without guarding (missing provider data → empty). */
     public HotelProduct {
@@ -30,12 +33,21 @@ public record HotelProduct(
     }
 
     /**
+     * Backwards-compatible constructor for call sites that carry features but no offerId.
+     */
+    public HotelProduct(String id, String hotelName, String region, int stars,
+                        BigDecimal price, String currency, String boardType, boolean availability,
+                        String image, List<String> features) {
+        this(id, hotelName, region, stars, price, currency, boardType, availability, image, features, null);
+    }
+
+    /**
      * Backwards-compatible constructor for call sites that carry an image but no features.
      */
     public HotelProduct(String id, String hotelName, String region, int stars,
                         BigDecimal price, String currency, String boardType, boolean availability,
                         String image) {
-        this(id, hotelName, region, stars, price, currency, boardType, availability, image, List.of());
+        this(id, hotelName, region, stars, price, currency, boardType, availability, image, List.of(), null);
     }
 
     /**
@@ -44,6 +56,6 @@ public record HotelProduct(
      */
     public HotelProduct(String id, String hotelName, String region, int stars,
                         BigDecimal price, String currency, String boardType, boolean availability) {
-        this(id, hotelName, region, stars, price, currency, boardType, availability, null, List.of());
+        this(id, hotelName, region, stars, price, currency, boardType, availability, null, List.of(), null);
     }
 }
