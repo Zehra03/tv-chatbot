@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,13 +24,13 @@ import com.paximum.paxassist.flight.service.FlightSearchService;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
-import com.paximum.paxassist.orchestrator.date.TravelDateGuard;
+import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,14 +41,15 @@ class FlightSearchHandlerTest {
     @Mock
     private FlightSearchService flightSearchService;
 
+    private SlotGuard slotGuard;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private final TravelDateGuard dateGuard =
-            new TravelDateGuard(Clock.fixed(Instant.parse("2026-07-08T00:00:00Z"), ZoneOffset.UTC));
-
     private FlightSearchHandler handler() {
+        slotGuard = mock(SlotGuard.class);
+        when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
         return new FlightSearchHandler(
-                slotFilling, new FlightCriteriaMapper(), flightSearchService, new ClarificationCatalog(), dateGuard);
+                slotFilling, new FlightCriteriaMapper(), flightSearchService, new ClarificationCatalog(), slotGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
@@ -93,15 +95,18 @@ class FlightSearchHandlerTest {
     }
 
     @Test
-    void pastDepartureBecomesFriendlyClarifyBeforeSearch() {
-        OrchestrationContext context = contextWith(slots(Map.of(
-                "origin", "İstanbul", "destination", "Antalya", "departureDate", "2026-06-25", "adults", 1)));
+    void pastDateGuard_shortCircuitsBeforeSearch() {
+        FlightSearchHandler handler = handler();
+        when(slotGuard.checkInvalidSlots(any()))
+                .thenReturn(Optional.of("Girdiğiniz tarih geçmişte kalıyor"));
 
-        OrchestrationResult result = handler().handle(context);
+        OrchestrationContext context = contextWith(slots(Map.of("departureDate", "2026-06-01")));
+
+        OrchestrationResult result = handler.handle(context);
 
         assertThat(result.cards()).isEmpty();
         assertThat(result.reply()).contains("geçmiş");
-        verifyNoInteractions(flightSearchService);
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
     }
 
     @Test

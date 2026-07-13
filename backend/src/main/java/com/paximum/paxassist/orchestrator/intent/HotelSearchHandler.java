@@ -14,7 +14,7 @@ import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
-import com.paximum.paxassist.orchestrator.date.TravelDateGuard;
+import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
@@ -34,18 +34,18 @@ public class HotelSearchHandler implements IntentHandler {
     private final HotelCriteriaMapper mapper;
     private final HotelSearchService hotelSearchService;
     private final ClarificationCatalog clarifications;
-    private final TravelDateGuard dateGuard;
+    private final SlotGuard slotGuard;
 
     public HotelSearchHandler(SlotFillingService slotFilling,
                               HotelCriteriaMapper mapper,
                               HotelSearchService hotelSearchService,
                               ClarificationCatalog clarifications,
-                              TravelDateGuard dateGuard) {
+                              SlotGuard slotGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.hotelSearchService = hotelSearchService;
         this.clarifications = clarifications;
-        this.dateGuard = dateGuard;
+        this.slotGuard = slotGuard;
     }
 
     @Override
@@ -57,11 +57,11 @@ public class HotelSearchHandler implements IntentHandler {
     public OrchestrationResult handle(OrchestrationContext context) {
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
-        // Deterministic past-date guard before any TourVisio call — the friendly "geçmiş tarih"
-        // script otherwise lives only in the Paxi prompt, which this search path bypasses.
-        Optional<String> pastDate = dateGuard.checkPastDate(merged);
-        if (pastDate.isPresent()) {
-            return OrchestrationResult.clarify(pastDate.get(), "hotel");
+        // Deterministic guard over the newly extracted criteria to catch past dates and invalid 
+        // numeric values before they are lost to normalizer logic.
+        Optional<String> invalidSlot = slotGuard.checkInvalidSlots(context.criteria());
+        if (invalidSlot.isPresent()) {
+            return OrchestrationResult.clarify(invalidSlot.get(), "hotel");
         }
 
         HotelSearchRequest request = mapper.toRequest(merged);
