@@ -33,6 +33,7 @@ class TourVisioHotelApiClientImplTest {
                         "city": { "name": "Antalya" },
                         "offers": [
                           {
+                            "offerId": "test-offer-123",
                             "isAvailable": true,
                             "price": { "amount": 42.00, "currency": "EUR" },
                             "rooms": [ { "boardName": "ALL INCLUSIVE" } ]
@@ -58,6 +59,7 @@ class TourVisioHotelApiClientImplTest {
         assertThat(p.boardType()).isEqualTo("ALL INCLUSIVE");
         assertThat(p.availability()).isTrue();
         assertThat(p.image()).isNull(); // no thumbnailFull in this fixture
+        assertThat(p.offerId()).isEqualTo("test-offer-123");
     }
 
     @Test
