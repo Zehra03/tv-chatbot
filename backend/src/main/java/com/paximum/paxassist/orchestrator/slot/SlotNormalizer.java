@@ -27,9 +27,18 @@ public class SlotNormalizer {
         // 1. Hotel Logic
         String checkInStr = criteria.checkIn();
         LocalDate checkIn = parseOrNull(checkInStr);
+        if (checkIn != null && checkIn.isBefore(today)) {
+            checkIn = null;
+            checkInStr = null;
+        }
 
         String checkOutStr = criteria.checkOut();
         LocalDate checkOut = parseOrNull(checkOutStr);
+        if (checkOut != null && checkOut.isBefore(today)) {
+            checkOut = null;
+            checkOutStr = null;
+        }
+
         Integer nights = criteria.nights();
 
         if (checkIn != null) {
@@ -48,17 +57,23 @@ public class SlotNormalizer {
                     nights = (int) ChronoUnit.DAYS.between(checkIn, checkOut);
                 }
             }
-        } else if (checkOut != null && checkOut.isBefore(today)) {
-            // No checkIn, but checkOut is in the past
-            checkOutStr = null;
         }
 
         // 2. Flight Logic
         String departureDateStr = criteria.departureDate();
         LocalDate departureDate = parseOrNull(departureDateStr);
+        if (departureDate != null && departureDate.isBefore(today)) {
+            departureDate = null;
+            departureDateStr = null;
+        }
 
         String returnDateStr = criteria.returnDate();
         LocalDate returnDate = parseOrNull(returnDateStr);
+        if (returnDate != null && returnDate.isBefore(today)) {
+            returnDate = null;
+            returnDateStr = null;
+        }
+
         if (returnDate != null && departureDate != null && returnDate.isBefore(departureDate)) {
             // Return date cannot be before departure date
             returnDate = departureDate.plusDays(1);

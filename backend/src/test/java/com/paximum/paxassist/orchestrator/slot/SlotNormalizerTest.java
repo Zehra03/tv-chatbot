@@ -64,4 +64,25 @@ class SlotNormalizerTest {
 
         assertThat(normalized.returnDate()).isEqualTo(LocalDate.now().plusDays(6).toString());
     }
+
+    @Test
+    void shouldClearPastDates() {
+        String pastCheckIn = LocalDate.now().minusDays(5).toString();
+        String pastCheckOut = LocalDate.now().minusDays(2).toString();
+        String pastDepart = LocalDate.now().minusDays(10).toString();
+        String pastReturn = LocalDate.now().minusDays(1).toString();
+
+        SlotCriteria criteria = new SlotCriteria(
+                null, pastCheckIn, pastCheckOut, null, null, null, null, null, null,
+                null, null, pastDepart, pastReturn, null, null,
+                null, null, null, null, null, null, null
+        );
+
+        SlotCriteria normalized = normalizer.normalize(criteria);
+
+        assertThat(normalized.checkIn()).isNull();
+        assertThat(normalized.checkOut()).isNull();
+        assertThat(normalized.departureDate()).isNull();
+        assertThat(normalized.returnDate()).isNull();
+    }
 }
