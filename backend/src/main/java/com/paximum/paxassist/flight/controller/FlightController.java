@@ -17,6 +17,8 @@ import com.paximum.paxassist.flight.service.FlightLocationService;
 import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 import com.paximum.paxassist.flight.service.FlightSearchService;
 
+import jakarta.validation.Valid;
+
 /**
  * Frontend-facing flight search. Accepts the frontend's {@code FlightSearchCriteria} and returns a
  * bare {@code FlightProduct[]} (frontend contract, {@code frontend/src/api/flightApi.ts}). The
@@ -41,7 +43,7 @@ public class FlightController {
     }
 
     @PostMapping("/search")
-    public List<FlightProductApiDto> search(@RequestBody FlightSearchApiRequest request) {
+    public List<FlightProductApiDto> search(@Valid @RequestBody FlightSearchApiRequest request) {
         FlightSearchCriteria criteria = request.toCriteria();
         FlightSearchOutcome outcome = flightSearchService.search(criteria);
         return outcome.results().stream()
