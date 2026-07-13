@@ -9,7 +9,6 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { TiltedCard } from '@/components/TiltedCard'
 import { SplitText } from '@/components/SplitText'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { logout } from '@/features/auth/authSlice'
@@ -79,7 +78,6 @@ export function ProfilePage() {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <TiltedCard rotateAmplitude={5} scaleOnHover={1.01}>
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardHeader className="flex-row items-center gap-4 space-y-0">
             <div
@@ -127,11 +125,9 @@ export function ProfilePage() {
             </dl>
           </CardContent>
         </Card>
-        </TiltedCard>
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2">
-        <TiltedCard>
         <Card className="glass-card h-full border-white/15 bg-white/10 text-white transition-all hover:border-brand-teal/40 hover:bg-white/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
@@ -163,9 +159,7 @@ export function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
-        </TiltedCard>
 
-        <TiltedCard>
         <Card className="glass-card h-full border-white/15 bg-white/10 text-white transition-all hover:border-brand-teal/40 hover:bg-white/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
@@ -191,7 +185,6 @@ export function ProfilePage() {
             </Button>
           </CardContent>
         </Card>
-        </TiltedCard>
       </motion.div>
 
       <motion.div variants={itemVariants}>
