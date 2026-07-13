@@ -24,9 +24,8 @@ class DateNormalizerTest {
     void shouldComputeNightsFromCheckOut() {
         String checkIn = LocalDate.now().plusDays(2).toString();
         String checkOut = LocalDate.now().plusDays(5).toString();
-        SlotCriteria criteria = new SlotCriteria(null, checkIn, checkOut, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
-        SlotCriteria normalized = normalizer.normalize(criteria);
+        SlotCriteria normalized = normalizer.normalize(withStay(checkIn, checkOut));
 
         assertThat(normalized.checkOut()).isEqualTo(checkOut);
         assertThat(normalized.nights()).isEqualTo(3);
@@ -36,9 +35,8 @@ class DateNormalizerTest {
     void shouldFixReverseCheckOut() {
         String checkIn = LocalDate.now().plusDays(5).toString();
         String checkOut = LocalDate.now().plusDays(2).toString();
-        SlotCriteria criteria = new SlotCriteria(null, checkIn, checkOut, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
-        SlotCriteria normalized = normalizer.normalize(criteria);
+        SlotCriteria normalized = normalizer.normalize(withStay(checkIn, checkOut));
 
         assertThat(normalized.checkOut()).isEqualTo(LocalDate.now().plusDays(6).toString());
         assertThat(normalized.nights()).isEqualTo(1);
@@ -48,10 +46,23 @@ class DateNormalizerTest {
     void shouldFixReverseReturnDate() {
         String depart = LocalDate.now().plusDays(5).toString();
         String returnDate = LocalDate.now().plusDays(2).toString();
-        SlotCriteria criteria = new SlotCriteria(null, null, null, null, null, null, null, null, null, null, depart, returnDate, null, null, null, null, null, null, null, null, null);
 
-        SlotCriteria normalized = normalizer.normalize(criteria);
+        SlotCriteria normalized = normalizer.normalize(withTrip(depart, returnDate));
 
         assertThat(normalized.returnDate()).isEqualTo(LocalDate.now().plusDays(6).toString());
+    }
+
+    /** Hotel criteria carrying only the stay dates — the sole slots these tests exercise. */
+    private static SlotCriteria withStay(String checkIn, String checkOut) {
+        return new SlotCriteria(
+                null, checkIn, checkOut, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null);
+    }
+
+    /** Flight criteria carrying only the departure/return dates. */
+    private static SlotCriteria withTrip(String departureDate, String returnDate) {
+        return new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null, null,
+                departureDate, returnDate, null, null, null, null, null, null, null, null, null);
     }
 }
