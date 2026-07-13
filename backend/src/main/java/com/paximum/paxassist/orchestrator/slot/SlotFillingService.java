@@ -27,10 +27,12 @@ public class SlotFillingService {
 
     private final ObjectMapper objectMapper;
     private final SlotMerger slotMerger;
+    private final DateNormalizer dateNormalizer;
 
-    public SlotFillingService(ObjectMapper objectMapper, SlotMerger slotMerger) {
+    public SlotFillingService(ObjectMapper objectMapper, SlotMerger slotMerger, DateNormalizer dateNormalizer) {
         this.objectMapper = objectMapper;
         this.slotMerger = slotMerger;
+        this.dateNormalizer = dateNormalizer;
     }
 
     /**
@@ -40,6 +42,7 @@ public class SlotFillingService {
     public SlotCriteria accumulate(ChatSession session, SlotCriteria incoming) {
         SlotCriteria previous = fromMap(session.getAccumulatedCriteria());
         SlotCriteria merged = slotMerger.merge(previous, incoming);
+        merged = dateNormalizer.normalize(merged);
         session.setAccumulatedCriteria(toMap(merged));
         return merged;
     }
