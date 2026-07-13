@@ -55,6 +55,7 @@ public class IntentExtractionService {
                             FITNESS      → fitness, spor salonu, gym
                             PETS_ALLOWED → evcil hayvan kabul, köpeğimle/kedimle kalabileceğim
                           Listede karşılığı olmayan özel bir istek varsa onu features'a EKLEME (uydurma).
+            hotelMaxPrice : Otel araması için üst fiyat sınırı (integer), örn. "otelde 18000 tl max" → 18000
 
             ── FLIGHT KRİTERLERİ ────────────────────────────────────────────────
             origin        : Kalkış şehri veya havalimanı (string)
@@ -62,6 +63,7 @@ public class IntentExtractionService {
             departureDate : Kalkış tarihi YYYY-MM-DD (string)
             returnDate    : Dönüş tarihi YYYY-MM-DD — tek yön ise null (string)
             cabinClass    : ECONOMY | BUSINESS | FIRST (string)
+            flightMaxPrice : Uçuş araması için üst fiyat sınırı (integer), örn. "uçuşa 3000 tl max" → 3000
 
             ── ORTAK KRİTERLER (hotel + flight) ─────────────────────────────────
             adults      : Yetişkin sayısı (integer)
@@ -69,7 +71,6 @@ public class IntentExtractionService {
             childAges   : Çocuk yaşları listesi (integer[])
             nationality : Misafir milliyeti ISO-3166 alpha-2, örn. "TR" (string)
             currency    : Para birimi ISO-4217, örn. "TRY" (string)
-            maxPrice    : Kullanıcının belirttiği üst fiyat sınırı (integer), örn. "1800 tl max" → 1800
 
             ── FILTER KRİTERLERİ ────────────────────────────────────────────────
             sortBy      : price_asc | price_desc | stars_desc (string)
@@ -98,6 +99,10 @@ public class IntentExtractionService {
             - Etiketsiz ve belirsiz birden çok sayı ("2 2") varsa adults ve children'ı NULL bırak
               (asistan tek soruyla netleştirecek). Uydurma sayı atama.
             - "çocuksuz" / "çocuk yok" → children:0.
+            - Bütçe/üst fiyat sınırını ("N tl max", "N tl altında", "bütçem N") mevcut aramanın
+              türüne göre yaz: OTEL aramasında hotelMaxPrice, UÇUŞ aramasında flightMaxPrice.
+              İkisini birden doldurma; hangi arama sürüyorsa yalnızca ona yaz. Kullanıcı otel için
+              bir bütçe, uçuş için AYRI bir bütçe verebilir — biri diğerinin yerine geçmez.
             - Otel özelliği (denize sıfır, havuzlu, spa'lı vb.) HOTEL intent'inin parçasıdır: devam
               eden bir otel aramasında kullanıcı yalnızca özellik eklerse intent HOTEL kalır ve
               istenen anahtar(lar) features dizisine yazılır. Olumsuz ifadede ("havuz olmasın")
@@ -166,7 +171,14 @@ public class IntentExtractionService {
             Çıktı: {"intent":"HOTEL","criteria":{"adults":3,"children":17}}
 
             Mesaj: "2 kişi 1 çocuk 1800 tl max otel"
-            Çıktı: {"intent":"HOTEL","criteria":{"adults":2,"children":1,"maxPrice":1800}}
+            Çıktı: {"intent":"HOTEL","criteria":{"adults":2,"children":1,"hotelMaxPrice":1800}}
+
+            Mesaj: "İstanbul'dan İzmir'e 3000 tl altında uçuş"
+            Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","flightMaxPrice":3000}}
+
+            Sohbet Geçmişi: assistant: Aramanıza uygun 5 otel buldum:
+            Mesaj: "şimdi de İstanbul'a uçuş bak, uçuşa 3000 tl max"
+            Çıktı: {"intent":"FLIGHT","criteria":{"destination":"İstanbul","flightMaxPrice":3000}}
 
             Mesaj: "Antalya'da otel ama Manavgat olmasın"
             Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya"}}
