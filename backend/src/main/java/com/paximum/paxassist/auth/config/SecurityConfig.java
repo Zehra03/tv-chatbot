@@ -79,14 +79,21 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/info")
                         .permitAll()
-                        // Business module endpoints: any authenticated user (USER or ADMIN).
-                        // Path-based so Flight/Hotel/Reservation/Chat controllers don't need
-                        // their own security annotations - RBAC lives centrally in Auth.
+                        // Guest-reachable surface: chatting and browsing search results need no
+                        // account. A logged-in user still arrives here with a populated principal
+                        // (the JWT filter runs on every request); a guest arrives anonymously and is
+                        // identified downstream by an opaque X-Guest-Id, never a Spring principal.
+                        // Booking stays gated below so only registered users can create/retrieve a
+                        // reservation ("controlled booking" invariant).
                         .requestMatchers(
                                 "/api/v1/chat/**",
                                 "/api/v1/hotels/**",
-                                "/api/v1/flights/**",
-                                "/api/v1/reservations/**")
+                                "/api/v1/flights/**")
+                        .permitAll()
+                        // Business module endpoints requiring an account: any authenticated user
+                        // (USER or ADMIN). Path-based so the Reservation controller needs no
+                        // security annotations - RBAC lives centrally in Auth.
+                        .requestMatchers("/api/v1/reservations/**")
                         .hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

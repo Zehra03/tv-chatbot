@@ -55,14 +55,17 @@ class SlotMergerTest {
     }
 
     @Test
-    void maxPriceFromUpdateIsMergedAndBaseKept() {
-        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2));
-        SlotCriteria update = slots(Map.of("maxPrice", 1800));
+    void perDomainBudgetsMergeIndependently() {
+        // Hotel budget set first, then a separate flight budget on a later turn: the two per-domain
+        // budgets coexist and neither overwrites the other (nor bleeds into the other search).
+        SlotCriteria base = slots(Map.of("location", "Antalya", "adults", 2, "hotelMaxPrice", 18000));
+        SlotCriteria update = slots(Map.of("flightMaxPrice", 3000));
 
         SlotCriteria merged = merger.merge(base, update);
 
-        assertThat(merged.location()).isEqualTo("Antalya"); // kept from base
-        assertThat(merged.maxPrice()).isEqualTo(1800);       // added by update
+        assertThat(merged.location()).isEqualTo("Antalya");    // kept from base
+        assertThat(merged.hotelMaxPrice()).isEqualTo(18000);   // kept from base
+        assertThat(merged.flightMaxPrice()).isEqualTo(3000);   // added by update
     }
 
     @Test
@@ -95,5 +98,49 @@ class SlotMergerTest {
         SlotCriteria merged = merger.merge(base, update);
 
         assertThat(merged.features()).containsExactly("SEAFRONT");
+    }
+
+    @Test
+    void emptyStringDoesNotOverwriteExistingValue() {
+        SlotCriteria base = slots(Map.of("location", "Antalya"));
+        SlotCriteria update = slots(Map.of("location", "")); // LLM halüsinasyonu
+        
+        SlotCriteria merged = merger.merge(base, update);
+        
+        assertThat(merged.location()).isEqualTo("Antalya");
+    }
+    @Test
+    void explicitCheckOutUpdateDiscardsOldNights() {
+        SlotCriteria base = slots(Map.of("checkIn", "2026-07-15", "checkOut", "2026-07-20", "nights", 5));
+        SlotCriteria update = slots(Map.of("checkOut", "2026-07-30"));
+        
+        SlotCriteria merged = merger.merge(base, update);
+        
+        assertThat(merged.checkIn()).isEqualTo("2026-07-15");
+        assertThat(merged.checkOut()).isEqualTo("2026-07-30");
+        assertThat(merged.nights()).isNull();
+    }
+
+    @Test
+    void explicitNightsUpdateDiscardsOldCheckOut() {
+        SlotCriteria base = slots(Map.of("checkIn", "2026-07-15", "checkOut", "2026-07-20", "nights", 5));
+        SlotCriteria update = slots(Map.of("nights", 10));
+        
+        SlotCriteria merged = merger.merge(base, update);
+        
+        assertThat(merged.checkIn()).isEqualTo("2026-07-15");
+        assertThat(merged.checkOut()).isNull();
+        assertThat(merged.nights()).isEqualTo(10);
+    }
+    @Test
+    void explicitCheckInUpdateDiscardsOldNights() {
+        SlotCriteria base = slots(Map.of("checkIn", "2026-07-15", "checkOut", "2026-07-20", "nights", 5));
+        SlotCriteria update = slots(Map.of("checkIn", "2026-07-12"));
+        
+        SlotCriteria merged = merger.merge(base, update);
+        
+        assertThat(merged.checkIn()).isEqualTo("2026-07-12");
+        assertThat(merged.checkOut()).isEqualTo("2026-07-20");
+        assertThat(merged.nights()).isNull();
     }
 }

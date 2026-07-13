@@ -63,7 +63,7 @@ export function MessageList({ pending, error, onRetry, onSelectOption }: Message
     bottomRef.current?.scrollIntoView?.({ behavior: 'smooth' })
   }, [messages.length, pending])
 
-  // overflow-x-hidden: TiltedCard hover büyümesi yatay scrollbar titretmesin.
+  // overflow-x-hidden: kart hover animasyonları yatay scrollbar titretmesin.
   // relative ŞART: mesaj balonlarındaki sr-only etiketleri position:absolute'tur;
   // kap konumlandırılmazsa bunların kapsayan bloğu <main> olur (en yakın
   // konumlandırılmış ata), böylece bu kabın overflow kırpmasından KAÇARLAR ve

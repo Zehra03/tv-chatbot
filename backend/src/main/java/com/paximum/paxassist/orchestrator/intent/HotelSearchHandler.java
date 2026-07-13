@@ -74,7 +74,7 @@ public class HotelSearchHandler implements IntentHandler {
         // Post-search, in-memory filters over REAL results (no fabrication): budget, board type,
         // then requested hotel features (denize sıfır / havuz / spa …) confirmed by provider data.
         List<Object> rawCards = toCards(response.results());
-        List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.maxPrice());
+        List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.hotelMaxPrice());
         cards = ResultFilters.applyBoardType(cards, merged.boardType());
         List<Object> beforeFeatureFilter = cards;
         cards = ResultFilters.applyFeatures(cards, merged.features());
@@ -100,9 +100,9 @@ public class HotelSearchHandler implements IntentHandler {
                     + "çıkmadı; kriteri kaldırmayı ya da farklı bir bölge/tarih denemeyi ister misiniz?";
         }
         // Everything was filtered out by budget while the search itself had results → say so honestly.
-        if (!rawCards.isEmpty() && merged.maxPrice() != null) {
+        if (!rawCards.isEmpty() && merged.hotelMaxPrice() != null) {
             String currency = merged.currency() != null ? merged.currency() : "TL";
-            return merged.maxPrice() + " " + currency
+            return merged.hotelMaxPrice() + " " + currency
                     + " altında uygun otel bulamadım. Bütçeyi biraz artırmayı deneyebilir misiniz?";
         }
         return "Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?";

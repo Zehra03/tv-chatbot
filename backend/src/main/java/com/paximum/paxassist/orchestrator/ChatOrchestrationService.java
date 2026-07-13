@@ -8,6 +8,7 @@ import com.paximum.paxassist.ai.ChatHistoryEntry;
 import com.paximum.paxassist.ai.IntentExtractionResult;
 import com.paximum.paxassist.ai.IntentExtractionService;
 import com.paximum.paxassist.ai.IntentType;
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
 import com.paximum.paxassist.guard.GuardBlockedException;
@@ -44,8 +45,13 @@ public class ChatOrchestrationService {
         this.intentRouter = intentRouter;
     }
 
-    public OrchestrationOutcome handle(String sessionId, String userMessage, Long userId) {
-        ChatSession session = sessionStore.getOrCreate(sessionId, userId);
+    public OrchestrationOutcome handle(String sessionId, String userMessage, ChatCaller caller) {
+        ChatSession session = sessionStore.getOrCreate(sessionId, caller);
+
+        // Stateful abuse tracking is keyed by user id. Guests (userId null) are covered by the
+        // stateless content guard below + IP rate limiting, but not the consecutive-out-of-scope
+        // block (the guard no-ops on a null key) — an accepted limitation for anonymous callers.
+        Long userId = caller.userId();
 
         // 1. Guard — fail fast before any LLM call. A blocked request is audited and answered
         //    with the safe standard message; the detailed reason is never leaked to the client.

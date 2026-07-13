@@ -5,6 +5,7 @@ import {
   authApi,
   reservationApi,
   setAuthToken,
+  setGuestId,
   setRefreshToken,
   TOKENS_REFRESHED_EVENT,
   UNAUTHORIZED_EVENT,
@@ -15,6 +16,7 @@ afterEach(() => {
   server.resetHandlers()
   setAuthToken(null)
   setRefreshToken(null)
+  setGuestId(null)
 })
 afterAll(() => server.close())
 
@@ -90,6 +92,43 @@ describe('apiClient interceptor (MSW ile)', () => {
     await authApi.me()
 
     expect(seenHeader).toBeNull()
+  })
+
+  it('misafirde (jeton yok, guestId var) X-Guest-Id başlığı gönderir, Authorization göndermez', async () => {
+    let seenGuest: string | null = null
+    let seenAuth: string | null = 'sentinel'
+    server.use(
+      http.get('/api/v1/auth/me', ({ request }) => {
+        seenGuest = request.headers.get('X-Guest-Id')
+        seenAuth = request.headers.get('Authorization')
+        return HttpResponse.json({ id: '1', email: 'a@b.c' })
+      }),
+    )
+
+    setGuestId('guest-abc')
+    await authApi.me()
+
+    expect(seenGuest).toBe('guest-abc')
+    expect(seenAuth).toBeNull()
+  })
+
+  it('jeton varken Authorization öncelikli olur, X-Guest-Id gönderilmez', async () => {
+    let seenGuest: string | null = 'sentinel'
+    let seenAuth: string | null = null
+    server.use(
+      http.get('/api/v1/auth/me', ({ request }) => {
+        seenGuest = request.headers.get('X-Guest-Id')
+        seenAuth = request.headers.get('Authorization')
+        return HttpResponse.json({ id: '1', email: 'a@b.c' })
+      }),
+    )
+
+    setAuthToken('jwt-123')
+    setGuestId('guest-abc')
+    await authApi.me()
+
+    expect(seenAuth).toBe('Bearer jwt-123')
+    expect(seenGuest).toBeNull()
   })
 
   it('refresh jetonu yokken 401 doğrudan UNAUTHORIZED_EVENT yayınlar', async () => {

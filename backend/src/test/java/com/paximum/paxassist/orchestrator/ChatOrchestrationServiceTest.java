@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.paximum.paxassist.ai.IntentExtractionResult;
 import com.paximum.paxassist.ai.IntentExtractionService;
 import com.paximum.paxassist.ai.IntentType;
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
 import com.paximum.paxassist.guard.GuardBlockedException;
@@ -42,6 +43,9 @@ class ChatOrchestrationServiceTest {
     @Mock
     private IntentHandler handler;
 
+    // The turn's caller. Session ownership scopes by this; the guard still keys by its raw userId (7L).
+    private static final ChatCaller CALLER = ChatCaller.authenticated(7L);
+
     private ChatOrchestrationService service() {
         return new ChatOrchestrationService(guard, guardAuditLogger, intentExtraction, sessionStore, intentRouter);
     }
@@ -55,7 +59,7 @@ class ChatOrchestrationServiceTest {
         when(guard.processInput("zararlı"))
                 .thenThrow(new GuardBlockedException("Güvenlik politikaları gereği reddedildi.", "Prompt Injection"));
 
-        OrchestrationResult result = service().handle(null, "zararlı", 7L).result();
+        OrchestrationResult result = service().handle(null, "zararlı", CALLER).result();
 
         assertThat(result.reply()).isEqualTo("Güvenlik politikaları gereği reddedildi.");
         assertThat(result.sessionId()).isEqualTo("s1");
@@ -70,13 +74,13 @@ class ChatOrchestrationServiceTest {
     @Test
     void shouldCreateNewSessionWhenSessionIdIsNull() {
         ChatSession newSession = new ChatSession("new-session-456");
-        when(sessionStore.getOrCreate(null, 7L)).thenReturn(newSession);
+        when(sessionStore.getOrCreate(null, CALLER)).thenReturn(newSession);
         when(intentExtraction.extract(eq("merhaba"), anyList()))
                 .thenReturn(new IntentExtractionResult(IntentType.OTHER, null));
         when(intentRouter.route(IntentType.OTHER)).thenReturn(handler);
         when(handler.handle(any())).thenReturn(OrchestrationResult.message("Merhaba! Size otel veya uçuş konularında nasıl yardımcı olabilirim?"));
 
-        OrchestrationOutcome outcome = service().handle(null, "merhaba", 7L);
+        OrchestrationOutcome outcome = service().handle(null, "merhaba", CALLER);
 
         assertThat(outcome.result().reply()).isEqualTo("Merhaba! Size otel veya uçuş konularında nasıl yardımcı olabilirim?");
         assertThat(outcome.result().sessionId()).isEqualTo("new-session-456");
@@ -97,7 +101,7 @@ class ChatOrchestrationServiceTest {
         session.addMessage("user", "eski mesaj");
         session.addMessage("assistant", "eski cevap");
         
-        when(sessionStore.getOrCreate("session-123", 7L)).thenReturn(session);
+        when(sessionStore.getOrCreate("session-123", CALLER)).thenReturn(session);
         
         org.mockito.ArgumentCaptor<java.util.List<com.paximum.paxassist.ai.ChatHistoryEntry>> historyCaptor = 
                 org.mockito.ArgumentCaptor.forClass(java.util.List.class);
@@ -113,7 +117,7 @@ class ChatOrchestrationServiceTest {
         // Handler represents the HotelModule processing and ResponseFormatter
         when(handler.handle(contextCaptor.capture())).thenReturn(OrchestrationResult.cards("Size uygun 2 otel buldum, aşağıdan inceleyebilirsiniz.", java.util.List.of(new Object(), new Object())));
 
-        OrchestrationOutcome outcome = service().handle("session-123", "Antalya'da 5 yıldızlı otel arıyorum", 7L);
+        OrchestrationOutcome outcome = service().handle("session-123", "Antalya'da 5 yıldızlı otel arıyorum", CALLER);
 
         // Test 1 Doğrulama: Geçmiş mesajlar LLM'e (intentExtraction) doğru aktarıldı mı?
         java.util.List<com.paximum.paxassist.ai.ChatHistoryEntry> passedHistory = historyCaptor.getValue();
@@ -147,7 +151,7 @@ class ChatOrchestrationServiceTest {
     @Test
     void shouldAskQuestionWhenParametersAreMissing() {
         ChatSession session = new ChatSession("session-123");
-        when(sessionStore.getOrCreate("session-123", 7L)).thenReturn(session);
+        when(sessionStore.getOrCreate("session-123", CALLER)).thenReturn(session);
         
         when(intentExtraction.extract(eq("Uçak bileti almak istiyorum"), anyList()))
                 .thenReturn(new IntentExtractionResult(IntentType.FLIGHT, null)); // Missing criteria
@@ -157,15 +161,15 @@ class ChatOrchestrationServiceTest {
         // In the real architecture, the FlightSearchHandler detects missing parameters and returns a question
         when(handler.handle(any())).thenReturn(OrchestrationResult.message("Nereye uçmak istersiniz ve hangi tarihte?"));
 
-        OrchestrationOutcome outcome = service().handle("session-123", "Uçak bileti almak istiyorum", 7L);
+        OrchestrationOutcome outcome = service().handle("session-123", "Uçak bileti almak istiyorum", CALLER);
 
         assertThat(outcome.result().reply()).isEqualTo("Nereye uçmak istersiniz ve hangi tarihte?");
         
         // user + assistant turns are appended to the session transcript
         assertThat(session.getMessages()).hasSize(2);
         verify(sessionStore).save(session);
-        // OTHER turn is registered for out-of-scope tracking
-        verify(guard).registerOutOfScope(7L, true);
+        // A FLIGHT turn is in-scope, so it is registered as NOT out-of-scope (resets the streak).
+        verify(guard).registerOutOfScope(7L, false);
     }
 
     @Test
@@ -175,7 +179,7 @@ class ChatOrchestrationServiceTest {
                 "Out-of-scope abuse: user temporarily blocked"))
                 .when(guard).assertNotBlocked(7L);
 
-        OrchestrationResult result = service().handle("s1", "merhaba", 7L).result();
+        OrchestrationResult result = service().handle("s1", "merhaba", CALLER).result();
 
         assertThat(result.reply())
                 .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
@@ -194,7 +198,7 @@ class ChatOrchestrationServiceTest {
                 "Out-of-scope abuse: user temporarily blocked"))
                 .when(guard).registerOutOfScope(7L, true);
 
-        OrchestrationResult result = service().handle("s1", "nasılsın", 7L).result();
+        OrchestrationResult result = service().handle("s1", "nasılsın", CALLER).result();
 
         assertThat(result.reply())
                 .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
@@ -212,7 +216,7 @@ class ChatOrchestrationServiceTest {
         when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
         when(handler.handle(any())).thenReturn(OrchestrationResult.message("8 otel buldum"));
 
-        service().handle("s1", "Antalya'da otel", 7L);
+        service().handle("s1", "Antalya'da otel", CALLER);
 
         verify(guard).registerOutOfScope(7L, false);
         verify(sessionStore).save(session);

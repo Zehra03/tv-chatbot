@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.dto.ChatSessionDto;
 import com.paximum.paxassist.chat.dto.ChatSessionSummaryDto;
@@ -42,7 +43,7 @@ class ChatSessionQueryServiceTest {
 
     @Test
     void listsSummariesAndLoadsTranscriptForOwner() {
-        ChatSession session = store.getOrCreate(null, OWNER);
+        ChatSession session = store.getOrCreate(null, ChatCaller.authenticated(OWNER));
         session.getAccumulatedCriteria().put("location", "Antalya");
         session.addMessage("user", "Antalya otel bul");
         session.setLastResultCards(List.of(
@@ -50,13 +51,13 @@ class ChatSessionQueryServiceTest {
         session.addMessage("assistant", "1 otel buldum:");
         store.save(session);
 
-        List<ChatSessionSummaryDto> summaries = queryService.listSummaries(OWNER);
+        List<ChatSessionSummaryDto> summaries = queryService.listSummaries(ChatCaller.authenticated(OWNER));
         assertThat(summaries).hasSize(1);
         assertThat(summaries.get(0).id()).isEqualTo(session.getId());
         assertThat(summaries.get(0).title()).isEqualTo("Antalya otel bul"); // derived from first user message
         assertThat(summaries.get(0).messageCount()).isEqualTo(2);
 
-        ChatSessionDto dto = queryService.getSession(session.getId(), OWNER).orElseThrow();
+        ChatSessionDto dto = queryService.getSession(session.getId(), ChatCaller.authenticated(OWNER)).orElseThrow();
         assertThat(dto.messages()).hasSize(2);
         assertThat(dto.messages().get(0).role()).isEqualTo("user");
         assertThat(dto.messages().get(1).cards()).hasSize(1);
@@ -67,12 +68,12 @@ class ChatSessionQueryServiceTest {
 
     @Test
     void doesNotLeakSessionsAcrossUsers() {
-        ChatSession session = store.getOrCreate(null, OWNER);
+        ChatSession session = store.getOrCreate(null, ChatCaller.authenticated(OWNER));
         session.addMessage("user", "gizli");
         session.addMessage("assistant", "tamam");
         store.save(session);
 
-        assertThat(queryService.listSummaries(OTHER)).isEmpty();
-        assertThat(queryService.getSession(session.getId(), OTHER)).isEmpty();
+        assertThat(queryService.listSummaries(ChatCaller.authenticated(OTHER))).isEmpty();
+        assertThat(queryService.getSession(session.getId(), ChatCaller.authenticated(OTHER))).isEmpty();
     }
 }

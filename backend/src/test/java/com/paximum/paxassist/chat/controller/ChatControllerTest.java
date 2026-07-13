@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.support.WebDataBinderFactory;
@@ -20,6 +21,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 import com.paximum.paxassist.auth.security.UserPrincipal;
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.dto.ChatMessageDto;
 import com.paximum.paxassist.chat.dto.ChatSessionDto;
@@ -56,6 +58,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ChatControllerTest {
 
     private static final long USER_ID = 7L;
+    // A logged-in principal resolves to this caller; session ops are stubbed/verified against it.
+    private static final ChatCaller CALLER = ChatCaller.authenticated(USER_ID);
 
     @Mock
     private ChatOrchestrationService orchestrationService;
@@ -92,7 +96,7 @@ class ChatControllerTest {
         OrchestrationResult result = OrchestrationResult
                 .cards("Aramanıza uygun 1 otel buldum:", List.of(hotel))
                 .withSessionId("42");
-        when(orchestrationService.handle("42", "Antalya otel", USER_ID))
+        when(orchestrationService.handle("42", "Antalya otel", CALLER))
                 .thenReturn(new OrchestrationOutcome(result, session));
 
         mockMvc.perform(post("/api/v1/chat")
@@ -118,7 +122,7 @@ class ChatControllerTest {
         OrchestrationResult result = OrchestrationResult
                 .clarify("Otele giriş tarihiniz nedir? (örn. 2026-08-01)", "hotel")
                 .withSessionId("42");
-        when(orchestrationService.handle(eq("42"), eq("Antalya"), eq(USER_ID)))
+        when(orchestrationService.handle(eq("42"), eq("Antalya"), eq(CALLER)))
                 .thenReturn(new OrchestrationOutcome(result, session));
 
         mockMvc.perform(post("/api/v1/chat")
@@ -133,7 +137,7 @@ class ChatControllerTest {
 
     @Test
     void listSessions_returnsSummaryRowsForTheUser() throws Exception {
-        when(sessionQueryService.listSummaries(USER_ID)).thenReturn(List.of(
+        when(sessionQueryService.listSummaries(CALLER)).thenReturn(List.of(
                 new ChatSessionSummaryDto("42", "Antalya otel", "2026-07-07T10:00:00Z", 4)));
 
         mockMvc.perform(get("/api/v1/chat/sessions"))
@@ -151,7 +155,7 @@ class ChatControllerTest {
                 List.of(new ResultCardDto("hotel", Map.of("hotelName", "Rixos"))), null);
         ChatSessionDto dto = new ChatSessionDto("42", "Antalya otel", List.of(user, assistant),
                 new PartialCriteriaDto("hotel", Map.of("destination", "Antalya")), null);
-        when(sessionQueryService.getSession("42", USER_ID)).thenReturn(Optional.of(dto));
+        when(sessionQueryService.getSession("42", CALLER)).thenReturn(Optional.of(dto));
 
         mockMvc.perform(get("/api/v1/chat/42"))
                 .andExpect(status().isOk())
@@ -164,7 +168,7 @@ class ChatControllerTest {
 
     @Test
     void getSession_missingOrForeign_returns404() throws Exception {
-        when(sessionQueryService.getSession("99", USER_ID)).thenReturn(Optional.empty());
+        when(sessionQueryService.getSession("99", CALLER)).thenReturn(Optional.empty());
 
         mockMvc.perform(get("/api/v1/chat/99"))
                 .andExpect(status().isNotFound());
@@ -172,11 +176,60 @@ class ChatControllerTest {
 
     @Test
     void deleteSession_ownedReturns204_otherwise404() throws Exception {
-        when(sessionStore.delete("42", USER_ID)).thenReturn(true);
-        when(sessionStore.delete("99", USER_ID)).thenReturn(false);
+        when(sessionStore.delete("42", CALLER)).thenReturn(true);
+        when(sessionStore.delete("99", CALLER)).thenReturn(false);
 
         mockMvc.perform(delete("/api/v1/chat/42")).andExpect(status().isNoContent());
         mockMvc.perform(delete("/api/v1/chat/99")).andExpect(status().isNotFound());
+    }
+
+    // --- Guest path: no principal, identity carried by the X-Guest-Id header ---
+
+    @Test
+    void guest_post_resolvesGuestCallerFromHeader() throws Exception {
+        ChatSession session = new ChatSession("42");
+        OrchestrationResult result = OrchestrationResult.message("Merhaba! Nasıl yardımcı olabilirim?")
+                .withSessionId("42");
+        when(orchestrationService.handle("42", "merhaba", ChatCaller.guest("guest-xyz")))
+                .thenReturn(new OrchestrationOutcome(result, session));
+
+        guestMockMvc().perform(post("/api/v1/chat")
+                        .header("X-Guest-Id", "guest-xyz")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"sessionId\":\"42\",\"message\":\"merhaba\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sessionId").value("42"))
+                .andExpect(jsonPath("$.reply.content").value("Merhaba! Nasıl yardımcı olabilirim?"));
+    }
+
+    @Test
+    void noPrincipalAndNoGuestId_isUnauthorized() throws Exception {
+        guestMockMvc().perform(post("/api/v1/chat")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"merhaba\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void overlongGuestId_isBadRequest() throws Exception {
+        String tooLong = "g".repeat(65); // guest_token column is varchar(64)
+        guestMockMvc().perform(post("/api/v1/chat")
+                        .header("X-Guest-Id", tooLong)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"merhaba\"}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    /** MockMvc whose {@code @AuthenticationPrincipal} resolves to null, so the guest header path runs. */
+    private MockMvc guestMockMvc() {
+        ChatController controller = new ChatController(
+                orchestrationService,
+                new ChatResponseAssembler(new ChatViewMapper()),
+                sessionQueryService,
+                sessionStore);
+        return MockMvcBuilders.standaloneSetup(controller)
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
+                .build();
     }
 
     /** Supplies the {@code @AuthenticationPrincipal} argument in standalone MockMvc (no security context). */

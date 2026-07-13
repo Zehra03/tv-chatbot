@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { motion, useReducedMotion } from 'framer-motion'
 import {
   ArrowRight,
@@ -12,10 +12,10 @@ import {
   Sparkles,
   Star,
 } from 'lucide-react'
-import DarkVeil from '@/components/DarkVeil'
 import { Logo } from '@/components/Logo'
 import { SplitText } from '@/components/SplitText'
 import { Button } from '@/components/ui/button'
+import { useAppSelector } from '@/app/hooks'
 
 /**
  * Herkese açık tanıtım sayfası (`/`) — "AI-Driven Dynamic Landing" düzeni:
@@ -107,19 +107,23 @@ function TypingDots() {
 
 export function LandingPage() {
   const navigate = useNavigate()
-  const reduced = useReducedMotion()
+  const user = useAppSelector((s) => s.auth.user)
+
+  // Oturum açıkken tanıtım sayfası atlanır; kullanıcı doğrudan uygulamaya
+  // (sohbete) düşer — LoginPage'deki aynı guard'la simetrik.
+  if (user) return <Navigate to="/chat" replace />
 
   return (
     <div className="dark min-h-[100dvh] bg-brand-navy font-sans text-white">
       {/* ——— Hero: prompt-input odaklı ——— */}
       <section className="relative flex min-h-[100dvh] flex-col overflow-hidden">
         <div className="absolute inset-0" aria-hidden="true">
-          {/* WebGL fon sürekli animasyon — reduced-motion'da statik gradyana düşer. */}
-          {reduced ? (
-            <div className="h-full w-full bg-gradient-to-b from-[#1a1040] via-brand-navy to-brand-navy" />
-          ) : (
-            <DarkVeil hueShift={25} />
-          )}
+          {/* Statik CSS gradyan fon — eski WebGL (ogl/DarkVeil) her karede
+             per-piksel shader çalıştırıp sürekli kasmaya yol açtığı için
+             kaldırıldı; bedava (CSS) katmanlarla aynı gece uçuşu hissi. */}
+          <div className="h-full w-full bg-gradient-to-b from-[#1a1040] via-brand-navy to-brand-navy" />
+          {/* Üstte hafif teal ışıma — hero'ya derinlik verir. */}
+          <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,theme(colors.brand.teal/12%),transparent_70%)]" />
           {/* Alt kenarı gövde yüzeyine eritir; metin kontrastını da güçlendirir. */}
           <div className="absolute inset-0 bg-gradient-to-b from-brand-navy/40 via-transparent to-brand-navy" />
         </div>

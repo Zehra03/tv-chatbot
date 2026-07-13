@@ -1,3 +1,5 @@
+
+
 package com.paximum.paxassist.ai;
 
 import java.util.List;
@@ -9,10 +11,13 @@ import java.util.List;
  * routing to hotel.HotelSearchCriteria or flight.FlightSearchCriteria.
  *
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
- *                nationality, currency, rooms, stars, boardType, features, sortBy
- * Flight fields: origin, destination, departureDate, returnDate, cabinClass
- * Shared        : adults, children, childAges, nationality, currency, maxPrice
+ *                nationality, currency, rooms, stars, boardType, features, hotelMaxPrice, sortBy
+ * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice
+ * Shared        : adults, children, childAges, nationality, currency
  * SELECT intent : selectionReference
+ *
+ * Budgets are per-domain (hotelMaxPrice vs flightMaxPrice), not shared: the same conversation
+ * can carry a hotel budget and a separate flight budget without one overriding the other.
  */
 
 public record SlotCriteria(
@@ -26,6 +31,7 @@ public record SlotCriteria(
         Integer stars,            // minimum star rating
         String boardType,         // AI | HB | BB | RO
         List<String> features,    // requested hotel features, e.g. ["SEAFRONT","POOL"] — see orchestrator.intent.HotelFeature
+        Integer hotelMaxPrice,    // upper price limit for a HOTEL search, e.g. "otelde 18000 tl max" → 18000
 
         // ── Flight ───────────────────────────────────────────────────────────
         String origin,            // departure city or airport
@@ -33,6 +39,7 @@ public record SlotCriteria(
         String departureDate,     // YYYY-MM-DD
         String returnDate,        // YYYY-MM-DD — null means one-way
         String cabinClass,        // ECONOMY | BUSINESS | FIRST
+        Integer flightMaxPrice,   // upper price limit for a FLIGHT search, e.g. "uçuşa 3000 tl max" → 3000
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -40,7 +47,6 @@ public record SlotCriteria(
         List<Integer> childAges,
         String nationality,       // ISO-3166 alpha-2
         String currency,          // ISO-4217
-        Integer maxPrice,         // user-stated upper price limit, e.g. "1800 tl max" → 1800
 
         // ── Filter / sort (FILTER intent) ────────────────────────────────────
         String sortBy,            // price_asc | price_desc | stars_desc
@@ -57,6 +63,6 @@ public record SlotCriteria(
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null);
+                null, null);
     }
 }

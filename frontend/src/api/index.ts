@@ -7,6 +7,7 @@ export {
   apiClient,
   setAuthToken,
   setRefreshToken,
+  setGuestId,
   UNAUTHORIZED_EVENT,
   TOKENS_REFRESHED_EVENT,
 } from './client'
