@@ -9,13 +9,13 @@ import org.junit.jupiter.api.Test;
 
 import com.paximum.paxassist.ai.SlotCriteria;
 
-class DateNormalizerTest {
+class SlotNormalizerTest {
 
-    private DateNormalizer normalizer;
+    private SlotNormalizer normalizer;
 
     @BeforeEach
     void setUp() {
-        normalizer = new DateNormalizer();
+        normalizer = new SlotNormalizer();
     }
 
     @Test

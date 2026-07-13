@@ -15,7 +15,7 @@ import com.paximum.paxassist.ai.SlotCriteria;
  * - Ensures returnDate is not before departureDate.
  */
 @Component
-public class DateNormalizer {
+public class SlotNormalizer {
 
     public SlotCriteria normalize(SlotCriteria criteria) {
         if (criteria == null) {
