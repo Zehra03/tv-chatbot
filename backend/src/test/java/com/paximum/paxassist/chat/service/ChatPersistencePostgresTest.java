@@ -12,6 +12,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatMessageEntity;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.domain.ChatSessionEntity;
@@ -54,7 +55,7 @@ class ChatPersistencePostgresTest {
     @Test
     void flywaySchemaValidatesAndSessionRoundTripsOnPostgres() {
         // Reaching this point means Flyway ran V1 and ddl-auto=validate passed against it.
-        ChatSession session = store.getOrCreate(null, null);
+        ChatSession session = store.getOrCreate(null, ChatCaller.ANONYMOUS);
         session.getAccumulatedCriteria().put("location", "Antalya");
         session.addMessage("user", "Antalya otel");
         session.addMessage("assistant", "Hangi tarihte?");

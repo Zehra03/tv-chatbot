@@ -38,6 +38,11 @@ public class ChatSessionEntity {
     @Column(name = "user_id")
     private Long userId;
 
+    // Opaque per-visitor key for guest-owned sessions (from the X-Guest-Id header); null for
+    // user-owned sessions. A session is owned by a user XOR a guest (DB CHECK constraint).
+    @Column(name = "guest_token", length = 64)
+    private String guestToken;
+
     @Column(length = 200)
     private String title;
 
@@ -79,6 +84,14 @@ public class ChatSessionEntity {
 
     public void setUserId(Long userId) {
         this.userId = userId;
+    }
+
+    public String getGuestToken() {
+        return guestToken;
+    }
+
+    public void setGuestToken(String guestToken) {
+        this.guestToken = guestToken;
     }
 
     public String getTitle() {
