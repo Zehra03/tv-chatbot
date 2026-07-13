@@ -72,6 +72,7 @@ public class HotelSearchHandler implements IntentHandler {
         }
         
         if ("INVALID_LOCATION".equals(response.status())) {
+            context.session().getAccumulatedCriteria().remove("location");
             return OrchestrationResult.clarify("Girdiğiniz şehir/bölge (" + response.results() + ") sistemimizde bulunamadı. Lütfen geçerli bir lokasyon giriniz.", "hotel");
         }
 

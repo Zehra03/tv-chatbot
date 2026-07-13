@@ -76,6 +76,7 @@ class HotelSearchHandlerTest {
     @Test
     void invalidLocationReturnsFriendlyClarify() {
         OrchestrationContext context = contextWith(slots(Map.of("location", "lulubumbu")));
+        context.session().getAccumulatedCriteria().put("location", "lulubumbu");
         when(hotelSearchService.searchHotels(any()))
                 .thenReturn(HotelSearchResponse.invalidLocation("lulubumbu"));
 
@@ -84,6 +85,7 @@ class HotelSearchHandlerTest {
         assertThat(result.cards()).isEmpty();
         assertThat(result.redirectToReservation()).isFalse();
         assertThat(result.reply()).contains("lulubumbu").contains("bulunamadı");
+        assertThat(context.session().getAccumulatedCriteria()).doesNotContainKey("location");
     }
 
     @Test
