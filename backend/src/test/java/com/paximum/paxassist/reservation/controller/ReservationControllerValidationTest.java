@@ -60,6 +60,39 @@ class ReservationControllerValidationTest {
     }
 
     @Test
+    void preview_hotelRoomsExceedAdults_isRejectedBeforeService() throws Exception {
+        // Otherwise-valid booking, but 4 rooms for 1 adult violates the cross-field rule
+        // (@AssertTrue isRoomsWithinAdults on the Hotel snapshot) — reject before the service.
+        String body = """
+                {
+                  "currency": "EUR",
+                  "totalAmount": 100,
+                  "leadGuestName": "Ada Lovelace",
+                  "travellers": [
+                    {"firstName": "Ada", "lastName": "Lovelace", "passengerType": "ADULT"}
+                  ],
+                  "hotel": {
+                    "hotelName": "Grand Antalya",
+                    "checkIn": "2026-08-01",
+                    "checkOut": "2026-08-05",
+                    "rooms": 4,
+                    "adults": 1,
+                    "children": 0,
+                    "price": 100,
+                    "currency": "EUR"
+                  }
+                }
+                """;
+        mockMvc.perform(post("/api/v1/reservations/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
+
+        verifyNoInteractions(reservationService);
+    }
+
+    @Test
     void confirm_neitherPreviewIdNorToken_isRejectedBeforeService() throws Exception {
         // @AssertTrue on ConfirmRequest requires exactly one reference; both blank -> reject.
         mockMvc.perform(post("/api/v1/reservations")
