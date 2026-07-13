@@ -1,4 +1,10 @@
-import { createBrowserRouter, Navigate, Outlet, type RouteObject } from 'react-router-dom'
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  useLocation,
+  type RouteObject,
+} from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
 import type { ZoneHandle } from '@/app/zones'
 import { Layout } from '@/components/Layout'
@@ -22,6 +28,25 @@ import { ProfilePage } from '@/features/profile/ProfilePage'
 function ProtectedRoute() {
   const user = useAppSelector((s) => s.auth.user)
   return user ? <Outlet /> : <Navigate to="/login" replace />
+}
+
+/**
+ * Gerçek hesap gerektiren rota sarmalı — sohbet/arama misafire açıktır ama rezervasyon
+ * ve profil hesap ister ("kontrollü rezervasyon" ilkesi; rezervasyonu sonradan yalnızca
+ * kayıtlı kullanıcı görüntüleyebilir). Misafiri /login'e yönlendirir ve giriş/kayıt sonrası
+ * geldiği sayfaya dönebilmesi için nereden geldiğini state'te taşır.
+ */
+function RequireAccount() {
+  const user = useAppSelector((s) => s.auth.user)
+  const location = useLocation()
+  if (user && !user.guest) return <Outlet />
+  return (
+    <Navigate
+      to="/login"
+      replace
+      state={{ reason: 'account-required', from: location.pathname }}
+    />
+  )
 }
 
 /** Rota ağacı ayrıca export edilir ki hata sınırı yerleşimi test edilebilsin. */
@@ -71,24 +96,30 @@ export const routes: RouteObject[] = [
                     handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
-                    path: '/reservation/new',
-                    element: <ReservationFormPage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
-                  },
-                  {
-                    path: '/reservations',
-                    element: <ReservationsPage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
-                  },
-                  {
-                    path: '/reservations/:id',
-                    element: <ReservationDetailPage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
-                  },
-                  {
-                    path: '/profile',
-                    element: <ProfilePage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
+                    // Hesap gerektiren sayfalar: misafir buraya giremez, /login'e düşer.
+                    element: <RequireAccount />,
+                    children: [
+                      {
+                        path: '/reservation/new',
+                        element: <ReservationFormPage />,
+                        handle: { zone: 'ai' } satisfies ZoneHandle,
+                      },
+                      {
+                        path: '/reservations',
+                        element: <ReservationsPage />,
+                        handle: { zone: 'ai' } satisfies ZoneHandle,
+                      },
+                      {
+                        path: '/reservations/:id',
+                        element: <ReservationDetailPage />,
+                        handle: { zone: 'ai' } satisfies ZoneHandle,
+                      },
+                      {
+                        path: '/profile',
+                        element: <ProfilePage />,
+                        handle: { zone: 'ai' } satisfies ZoneHandle,
+                      },
+                    ],
                   },
                 ],
               },

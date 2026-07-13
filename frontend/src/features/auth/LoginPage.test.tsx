@@ -30,8 +30,18 @@ afterEach(() => {
 })
 afterAll(() => server.close())
 
-function renderLogin() {
-  const store = configureStore({ reducer: { auth: authReducer } })
+type PreloadedAuth = {
+  user: { id: string; email: string; name?: string; guest?: boolean } | null
+  token: string | null
+  refreshToken: string | null
+  guestId: string | null
+}
+
+function renderLogin(preloadedAuth?: PreloadedAuth) {
+  const store = configureStore({
+    reducer: { auth: authReducer },
+    ...(preloadedAuth ? { preloadedState: { auth: preloadedAuth } } : {}),
+  })
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/login']}>
@@ -129,5 +139,29 @@ describe('LoginPage (authApi + MSW ile)', () => {
       expect(store.getState().auth.user).toMatchObject({ guest: true })
     })
     expect(store.getState().auth.token).toBeNull()
+    // Misafir kimliği üretildi (X-Guest-Id için) ve kalıcılaştı.
+    expect(store.getState().auth.guestId).toEqual(expect.any(String))
+  })
+
+  it('zaten misafir olan kullanıcı /login’de kalır (bounce edilmez), formu görür', () => {
+    renderLogin({
+      user: { id: 'guest', email: '', name: 'Misafir', guest: true },
+      token: null,
+      refreshToken: null,
+      guestId: 'guest-xyz',
+    })
+    // Bounce olsaydı CHAT STUB görünürdü; misafir hesaba yükselmek için formda kalmalı.
+    expect(screen.queryByRole('button', { name: 'Giriş Yap' })).not.toBeNull()
+    expect(screen.queryByText('CHAT STUB')).toBeNull()
+  })
+
+  it('gerçek (misafir olmayan) oturum açıkken /login’den /chat’e yönlendirir', async () => {
+    renderLogin({
+      user: { id: '1', email: 'a@b.c', name: 'A' },
+      token: 'jwt-1',
+      refreshToken: 'refresh-1',
+      guestId: null,
+    })
+    await screen.findByText('CHAT STUB')
   })
 })

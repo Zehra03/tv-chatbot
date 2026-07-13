@@ -41,3 +41,43 @@ describe('router hata sınırı yerleşimi', () => {
     expect(innerBoundary.children!.some((r) => r.path === '/chat')).toBe(true)
   })
 })
+
+/**
+ * Misafir erişim YERLEŞİMİ: sohbet/arama misafire açık (doğrudan çocuk), rezervasyon/profil
+ * ise ek bir pathless "hesap-guard" (RequireAccount) sarmalının altında. Bu ayrımı bozmak
+ * (ör. rezervasyonu doğrudan çocuk yapmak) misafire rezervasyon açardı — bu test onu yakalar.
+ */
+describe('misafir erişim yerleşimi', () => {
+  const root = routes[0]
+
+  function innerBoundary() {
+    const protectedWrapper = root.children!.find(
+      (r) => !r.path && !r.index && r.children,
+    ) as RouteObject
+    const layoutRoute = protectedWrapper.children!.find(
+      (r) => elementType(r.element) === Layout,
+    ) as RouteObject
+    return layoutRoute.children!.find((r) => r.errorElement) as RouteObject
+  }
+
+  it('sohbet/arama misafire açık: doğrudan çocuk rotalar', () => {
+    const directPaths = innerBoundary()
+      .children!.filter((r) => r.path)
+      .map((r) => r.path)
+    expect(directPaths).toEqual(expect.arrayContaining(['/chat', '/hotels', '/flights']))
+    // Rezervasyon/profil doğrudan DEĞİL (bir guard sarmalının altında).
+    expect(directPaths).not.toContain('/reservations')
+    expect(directPaths).not.toContain('/profile')
+  })
+
+  it('rezervasyon ve profil ayrı bir hesap-guard sarmalının altında', () => {
+    const accountGuard = innerBoundary().children!.find(
+      (r) => !r.path && !r.index && r.children,
+    ) as RouteObject
+    expect(accountGuard).toBeTruthy()
+    const guardedPaths = accountGuard.children!.map((r) => r.path)
+    expect(guardedPaths).toEqual(
+      expect.arrayContaining(['/reservation/new', '/reservations', '/reservations/:id', '/profile']),
+    )
+  })
+})
