@@ -29,11 +29,16 @@ public class SlotMerger {
         String mergedCheckOut = pick(update.checkOut(), base.checkOut());
         Integer mergedNights = pick(update.nights(), base.nights());
 
-        // Date dependency handling: if user explicitly updates one, the old value of the other is invalid.
-        if (update.checkOut() != null && !update.checkOut().isBlank() && update.nights() == null) {
+        boolean checkInUpdated = update.checkIn() != null && !update.checkIn().isBlank();
+        boolean checkOutUpdated = update.checkOut() != null && !update.checkOut().isBlank();
+        boolean nightsUpdated = update.nights() != null;
+
+        if (nightsUpdated) {
+            if (!checkOutUpdated) {
+                mergedCheckOut = null;
+            }
+        } else if (checkInUpdated || checkOutUpdated) {
             mergedNights = null;
-        } else if (update.nights() != null && (update.checkOut() == null || update.checkOut().isBlank())) {
-            mergedCheckOut = null;
         }
 
         return new SlotCriteria(

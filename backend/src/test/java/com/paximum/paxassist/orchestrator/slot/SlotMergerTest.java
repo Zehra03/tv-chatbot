@@ -129,4 +129,15 @@ class SlotMergerTest {
         assertThat(merged.checkOut()).isNull();
         assertThat(merged.nights()).isEqualTo(10);
     }
+    @Test
+    void explicitCheckInUpdateDiscardsOldNights() {
+        SlotCriteria base = slots(Map.of("checkIn", "2026-07-15", "checkOut", "2026-07-20", "nights", 5));
+        SlotCriteria update = slots(Map.of("checkIn", "2026-07-12"));
+        
+        SlotCriteria merged = merger.merge(base, update);
+        
+        assertThat(merged.checkIn()).isEqualTo("2026-07-12");
+        assertThat(merged.checkOut()).isEqualTo("2026-07-20");
+        assertThat(merged.nights()).isNull();
+    }
 }
