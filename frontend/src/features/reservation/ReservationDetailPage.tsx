@@ -3,7 +3,6 @@ import { ArrowLeft } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { TiltedCard } from '@/components/TiltedCard'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { useReservation } from '@/features/reservation/useReservation'
@@ -43,7 +42,6 @@ export function ReservationDetailPage() {
       )}
 
       {data && (
-        <TiltedCard rotateAmplitude={5} scaleOnHover={1.01}>
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardHeader className="flex-row items-center justify-between space-y-0 gap-3">
             <CardTitle className="min-w-0 break-all font-mono">{data.reservationNumber}</CardTitle>
@@ -108,7 +106,6 @@ export function ReservationDetailPage() {
             </div>
           </CardContent>
         </Card>
-        </TiltedCard>
       )}
     </div>
   )
