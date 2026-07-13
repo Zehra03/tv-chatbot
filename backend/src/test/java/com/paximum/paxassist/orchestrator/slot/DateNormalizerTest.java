@@ -18,13 +18,15 @@ class DateNormalizerTest {
         normalizer = new DateNormalizer();
     }
 
-
-
     @Test
     void shouldComputeNightsFromCheckOut() {
         String checkIn = LocalDate.now().plusDays(2).toString();
         String checkOut = LocalDate.now().plusDays(5).toString();
-        SlotCriteria criteria = new SlotCriteria(null, checkIn, checkOut, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        SlotCriteria criteria = new SlotCriteria(
+                null, checkIn, checkOut, null, null, null, null, null, null,
+                null, null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
 
@@ -36,7 +38,11 @@ class DateNormalizerTest {
     void shouldFixReverseCheckOut() {
         String checkIn = LocalDate.now().plusDays(5).toString();
         String checkOut = LocalDate.now().plusDays(2).toString();
-        SlotCriteria criteria = new SlotCriteria(null, checkIn, checkOut, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+        SlotCriteria criteria = new SlotCriteria(
+                null, checkIn, checkOut, null, null, null, null, null, null,
+                null, null, null, null, null, null,
+                null, null, null, null, null, null, null
+        );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
 
@@ -48,7 +54,11 @@ class DateNormalizerTest {
     void shouldFixReverseReturnDate() {
         String depart = LocalDate.now().plusDays(5).toString();
         String returnDate = LocalDate.now().plusDays(2).toString();
-        SlotCriteria criteria = new SlotCriteria(null, null, null, null, null, null, null, null, null, null, depart, returnDate, null, null, null, null, null, null, null, null, null);
+        SlotCriteria criteria = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null,
+                null, null, depart, returnDate, null, null,
+                null, null, null, null, null, null, null
+        );
 
         SlotCriteria normalized = normalizer.normalize(criteria);
 
