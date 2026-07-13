@@ -113,6 +113,26 @@ describe('HotelsPage (MSW ile)', () => {
     })
   })
 
+  it('oda sayısı yetişkin sayısını aşamaz (her odada en az bir yetişkin)', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    // Misafir & oda popover'ını aç (varsayılan 2 yetişkin, 1 oda).
+    await user.click(screen.getByLabelText('Misafir ve oda'))
+    expect(screen.getByText('2 yetişkin, 1 oda')).toBeTruthy()
+
+    // Oda 2'ye çıkınca yetişkine eşitlenir → "Oda artır" devre dışı (max = adults).
+    await user.click(screen.getByRole('button', { name: 'Oda sayısını artır' }))
+    expect(screen.getByText('2 yetişkin, 2 oda')).toBeTruthy()
+    expect((screen.getByRole('button', { name: 'Oda sayısını artır' }) as HTMLButtonElement).disabled).toBe(
+      true,
+    )
+
+    // Yetişkin 1'e inince oda da 1'e kısılır (geçersiz 1 yetişkin / 2 oda önlenir).
+    await user.click(screen.getByRole('button', { name: 'Yetişkin sayısını azalt' }))
+    expect(screen.getByText('1 yetişkin, 1 oda')).toBeTruthy()
+  })
+
   it('sunucu hatasında hata mesajı ve tekrar dene gösterir', async () => {
     server.use(
       http.post('/api/v1/hotels/search', () =>
