@@ -26,11 +26,21 @@ public class SlotMerger {
         if (base == null) {
             return update;
         }
+        String mergedCheckOut = pick(update.checkOut(), base.checkOut());
+        Integer mergedNights = pick(update.nights(), base.nights());
+
+        // Date dependency handling: if user explicitly updates one, the old value of the other is invalid.
+        if (update.checkOut() != null && !update.checkOut().isBlank() && update.nights() == null) {
+            mergedNights = null;
+        } else if (update.nights() != null && (update.checkOut() == null || update.checkOut().isBlank())) {
+            mergedCheckOut = null;
+        }
+
         return new SlotCriteria(
                 pick(update.location(), base.location()),
                 pick(update.checkIn(), base.checkIn()),
-                pick(update.checkOut(), base.checkOut()),
-                pick(update.nights(), base.nights()),
+                mergedCheckOut,
+                mergedNights,
                 pick(update.rooms(), base.rooms()),
                 pick(update.stars(), base.stars()),
                 pick(update.boardType(), base.boardType()),
@@ -52,7 +62,13 @@ public class SlotMerger {
     }
 
     private static <T> T pick(T update, T base) {
-        return update != null ? update : base;
+        if (update == null) {
+            return base;
+        }
+        if (update instanceof String s && s.isBlank()) {
+            return base;
+        }
+        return update;
     }
 
     // Lists (childAges, features): a non-empty update wins; empty/null keeps the accumulated value.
