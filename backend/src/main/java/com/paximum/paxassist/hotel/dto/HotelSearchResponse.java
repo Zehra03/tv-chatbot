@@ -14,4 +14,8 @@ public record HotelSearchResponse(
     public static HotelSearchResponse success(Object results) {
         return new HotelSearchResponse("SUCCESS", List.of(), results);
     }
+
+    public static HotelSearchResponse invalidLocation(String locationName) {
+        return new HotelSearchResponse("INVALID_LOCATION", List.of(), locationName);
+    }
 }

@@ -48,6 +48,7 @@ public class SlotMerger {
                 mergedNights,
                 pick(update.rooms(), base.rooms()),
                 pick(update.stars(), base.stars()),
+                pick(update.maxStars(), base.maxStars()),
                 pick(update.boardType(), base.boardType()),
                 pick(update.features(), base.features()),
                 pick(update.hotelMaxPrice(), base.hotelMaxPrice()),
@@ -63,6 +64,7 @@ public class SlotMerger {
                 pick(update.nationality(), base.nationality()),
                 pick(update.currency(), base.currency()),
                 pick(update.sortBy(), base.sortBy()),
+                pick(update.limit(), base.limit()),
                 pick(update.selectionReference(), base.selectionReference())
         );
     }

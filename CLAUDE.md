@@ -46,7 +46,7 @@ A single Spring Boot deployable, internally split into modules under `com.paximu
 Browser ─▶ ratelimiter ─▶ guard ─▶ orchestrator ─▶ ai (intention) ─▶ hotel | flight | reservation
 ```
 
-- **ratelimiter** — request throttling (config: `app.rate-limit`, 60 req / 60s).
+- **ratelimiter** — request throttling (config: `ratelimit`, 60 req / 60s).
 - **guard** — static regex / prompt-injection / profanity filter; rejects malicious input before it reaches the orchestrator.
 - **orchestrator** — owns chat flow and routing; persists every message + session state to the Chat/Session DB.
 - **ai** — intent extraction and **slot-filling** (asks follow-up questions for missing criteria) before a search runs.
