@@ -282,6 +282,21 @@ class ReservationControllerTest {
     }
 
     @Test
+    void confirm_priceMismatch_returns409WithBothAmounts() throws Exception {
+        // Nothing was purchased. The user must see what they agreed to and what it costs now.
+        confirmWithPreviewId(new ConfirmationResult.PriceMismatch(
+                new java.math.BigDecimal("1.00"), new java.math.BigDecimal("1500.00"), "EUR"));
+
+        postConfirm(PREVIEW_BODY)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.outcome").value("PRICE_MISMATCH"))
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.allOf(
+                        org.hamcrest.Matchers.containsString("1.00"),
+                        org.hamcrest.Matchers.containsString("1500.00"),
+                        org.hamcrest.Matchers.containsString("Rezervasyon yapılmadı"))));
+    }
+
+    @Test
     void confirm_blankPreviewIdAndToken_isRejectedBeforeTheService() throws Exception {
         postConfirm("""
                 {"previewId": "", "confirmationToken": ""}

@@ -127,6 +127,13 @@ public class ReservationController {
                     ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("COMMIT_OUTCOME_UNKNOWN", u.description()));
             case ConfirmationResult.OrphanedBooking o ->
                     ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new OutcomeResponse("ORPHANED_BOOKING", o.description()));
+            // 409: the offer's price is no longer the one the user agreed to. Nothing was purchased —
+            // both amounts go back so the UI can show old vs new and send the user to preview again.
+            case ConfirmationResult.PriceMismatch p ->
+                    ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("PRICE_MISMATCH",
+                            "Ürünün fiyatı değişti (onayladığınız: " + p.declaredAmount() + " " + p.currency()
+                                    + ", güncel: " + p.actualAmount() + " " + p.currency()
+                                    + "). Rezervasyon yapılmadı; lütfen yeniden önizleyin."));
         };
     }
 

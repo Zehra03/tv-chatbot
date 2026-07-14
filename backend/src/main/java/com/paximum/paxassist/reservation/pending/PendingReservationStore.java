@@ -1,6 +1,7 @@
 package com.paximum.paxassist.reservation.pending;
 
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -64,6 +65,26 @@ public class PendingReservationStore {
 
     public void savePreview(PendingReservation preview) {
         redis.opsForValue().set(PREVIEW_PREFIX + preview.previewId(), toJson(preview), previewTtl);
+    }
+
+    /**
+     * Puts a claimed snapshot back with only the time it had left, after a confirm attempt failed
+     * without buying anything. Restoring it under the original key lets the user retry the same
+     * {@code previewId}; without this, the atomic claim has already eaten the preview and the retry
+     * comes back as "already being confirmed".
+     *
+     * <p>The remaining TTL is deliberately not refreshed: a restored preview must not outlive the price
+     * it froze. A snapshot with nothing left simply is not written back.
+     *
+     * @return true if the snapshot is available again, false if it had already run out of time
+     */
+    public boolean restorePreview(PendingReservation preview) {
+        Duration remaining = previewTtl.minus(Duration.between(preview.createdAt(), Instant.now()));
+        if (remaining.isZero() || remaining.isNegative()) {
+            return false;
+        }
+        redis.opsForValue().set(PREVIEW_PREFIX + preview.previewId(), toJson(preview), remaining);
+        return true;
     }
 
     /** Non-destructive read (GET) — used to pre-check ownership without consuming the snapshot. */

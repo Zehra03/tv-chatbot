@@ -31,8 +31,10 @@ class PreviewReservationCommandTest {
 
     private static final String NO_ADULT = "Rezervasyonda en az bir yetişkin yolcu bulunmalıdır (yalnız çocuk seyahat edemez)";
     private static final String LEAD_NOT_ADULT = "Ana misafir (iletişim kurulacak yolcu) yetişkin olmalıdır";
-    private static final String AGE_TYPE_MISMATCH = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 12 ve üzeri, çocuk: 12 yaş altı)";
+    private static final String AGE_TYPE_MISMATCH = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 18+, çocuk: 3-17, bebek: 0-2)";
     private static final String COUNT_MISMATCH = "Yolcu sayısı seçilen ürünün kişi sayısıyla eşleşmiyor";
+    private static final String INFANT_NEEDS_FLIGHT = "Bebek (infant) yolcu yalnızca uçuş içeren rezervasyonlarda eklenebilir";
+    private static final String INFANT_NEEDS_ADULT = "Her bebek (infant) için bir yetişkin gerekir; bebek sayısı yetişkin sayısını aşamaz";
 
     private static ValidatorFactory factory;
     private static Validator validator;
@@ -104,10 +106,9 @@ class PreviewReservationCommandTest {
     }
 
     @Test
-    void aTwelveYearOldBookedAsAdult_mayTravelAlone() {
-        // Flight age policy: 12+ counts as an adult, so a lone 12-year-old must be booked as ADULT.
+    void anEighteenYearOldIsAnAdultAndMayTravelAlone() {
         assertThat(violations(command(
-                List.of(traveller("Efe", PassengerType.ADULT, 12, true)), null, flightFor(1))))
+                List.of(traveller("Efe", PassengerType.ADULT, 18, true)), null, flightFor(1))))
                 .isEmpty();
     }
 
@@ -158,12 +159,83 @@ class PreviewReservationCommandTest {
     }
 
     @Test
-    void elevenIsAChildAndTwelveIsAnAdult() {
+    void seventeenIsAChildAndEighteenIsAnAdult() {
         assertThat(violations(command(
-                List.of(adult("Ada"), traveller("Max", PassengerType.CHILD, 11, false)), hotelFor(1, 1), null)))
+                List.of(adult("Ada"), traveller("Max", PassengerType.CHILD, 17, false)), hotelFor(1, 1), null)))
                 .isEmpty();
         assertThat(violations(command(
-                List.of(adult("Ada"), traveller("Efe", PassengerType.CHILD, 12, false)), hotelFor(1, 1), null)))
+                List.of(adult("Ada"), traveller("Efe", PassengerType.CHILD, 18, false)), hotelFor(1, 1), null)))
+                .contains(AGE_TYPE_MISMATCH);
+    }
+
+    // ── Infant: a flight-only fare type (lap infant), never a hotel passenger type ───────────
+    //
+    // Booking.com models hotel children by exact age and prices them from age bands — there is no
+    // infant type on the hotel side (it is a cot/extra-bed policy). Infant is an airline concept: a
+    // lap infant carried on an adult's ticket, hence at most one per adult.
+
+    private PreviewReservationCommand.Traveller infant(String name, int age) {
+        return traveller(name, PassengerType.INFANT, age, false);
+    }
+
+    @Test
+    void infantOnAFlight_isAccepted() {
+        assertThat(violations(command(
+                List.of(adult("Ada"), infant("Bebek", 1)), null, flightFor(2))))
+                .isEmpty();
+    }
+
+    @Test
+    void infantOnAHotelOnlyBooking_isRejected() {
+        // An under-2 in a hotel booking is a CHILD priced from their age, not an infant fare.
+        assertThat(violations(command(
+                List.of(adult("Ada"), infant("Bebek", 1)), hotelFor(1, 1), null)))
+                .contains(INFANT_NEEDS_FLIGHT);
+    }
+
+    @Test
+    void infantOnACombinedBooking_isAcceptedBecauseAFlightIsPresent() {
+        assertThat(violations(command(
+                List.of(adult("Ada"), infant("Bebek", 1)), hotelFor(1, 1), flightFor(2))))
+                .isEmpty();
+    }
+
+    @Test
+    void moreInfantsThanAdults_isRejected() {
+        // One adult cannot carry two lap infants.
+        assertThat(violations(command(
+                List.of(adult("Ada"), infant("Bebek", 1), infant("İkiz", 1)), null, flightFor(3))))
+                .contains(INFANT_NEEDS_ADULT);
+    }
+
+    @Test
+    void oneInfantPerAdult_isAccepted() {
+        assertThat(violations(command(
+                List.of(adult("Ada"), adult("Efe"), infant("Bebek", 1), infant("İkiz", 0)), null, flightFor(4))))
+                .isEmpty();
+    }
+
+    @Test
+    void infantOnlyBooking_isRejectedForHavingNoAdult() {
+        assertThat(violations(command(List.of(infant("Bebek", 1)), null, flightFor(1))))
+                .contains(NO_ADULT);
+    }
+
+    @Test
+    void ageBandBoundaries_threeIsAChildAndTwoIsAnInfant() {
+        // Bands: infant 0-2, child 3-17. So 2 is still an infant and 3 is the first child age.
+        assertThat(violations(command(
+                List.of(adult("Ada"), infant("Bebek", 2)), null, flightFor(2))))
+                .isEmpty();
+        assertThat(violations(command(
+                List.of(adult("Ada"), traveller("Max", PassengerType.CHILD, 3, false)), null, flightFor(2))))
+                .isEmpty();
+        // A 2-year-old is not a child, and a 3-year-old is not an infant.
+        assertThat(violations(command(
+                List.of(adult("Ada"), traveller("Bebek", PassengerType.CHILD, 2, false)), null, flightFor(2))))
+                .contains(AGE_TYPE_MISMATCH);
+        assertThat(violations(command(
+                List.of(adult("Ada"), infant("Max", 3)), null, flightFor(2))))
                 .contains(AGE_TYPE_MISMATCH);
     }
 

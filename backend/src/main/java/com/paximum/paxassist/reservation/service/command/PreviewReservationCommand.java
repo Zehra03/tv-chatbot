@@ -49,16 +49,11 @@ public record PreviewReservationCommand(
         @Valid Hotel hotel,
         @Valid Flight flight) {
 
-    /**
-     * Age at which a traveller must be booked as {@link PassengerType#ADULT}. Mirrors the flight age
-     * policy: a 12+ passenger may travel unaccompanied, so 12+ IS an adult for booking purposes.
-     *
-     * <p>NOTE: the policy also names an "infant" band (0–1), but {@link PassengerType} and the
-     * {@code ck_passengers_type} DB constraint only know ADULT/CHILD — an infant cannot be represented
-     * without a new enum value, a Flyway migration and a frontend option. Until that decision is made,
-     * 0–11 is CHILD, and the rules below deliberately do not pretend an infant band exists.
-     */
-    private static final int ADULT_MIN_AGE = 12;
+    /** Age bands (product decision): infant 0–2, child 3–17, adult 18+. */
+    private static final int ADULT_MIN_AGE = 18;
+
+    /** Inclusive upper bound of the infant band — a lap infant is 0–2. */
+    private static final int INFANT_MAX_AGE = 2;
 
     /** Cross-field rule: a reservation must include at least a hotel or a flight (product type is derived, never trusted). */
     @AssertTrue(message = "A reservation must include at least a hotel or a flight")
@@ -103,21 +98,55 @@ public record PreviewReservationCommand(
     }
 
     /**
-     * Cross-field rule: a stated age must agree with the declared passenger type (ADULT ≥ 12,
-     * CHILD &lt; 12). Without it, {@code passengerType=CHILD, age=45} (child pricing for an adult) or
-     * {@code ADULT, age=3} passes every layer and reaches the DB and TourVisio.
+     * Cross-field rule: a stated age must agree with the declared passenger type — ADULT 18+,
+     * CHILD 3–17, INFANT 0–2. Without it, {@code passengerType=CHILD, age=45} (child pricing for an
+     * adult) or {@code ADULT, age=3} passes every layer and reaches the DB and TourVisio.
      * Age is optional; travellers without one are not checked here.
      */
-    @AssertTrue(message = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 12 ve üzeri, çocuk: 12 yaş altı)")
+    @AssertTrue(message = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 18+, çocuk: 3-17, bebek: 0-2)")
     public boolean isTravellerAgeConsistentWithType() {
         if (travellers == null) {
             return true;
         }
         return travellers.stream()
                 .filter(t -> t != null && t.age() != null && t.passengerType() != null)
-                .allMatch(t -> t.passengerType() == PassengerType.ADULT
-                        ? t.age() >= ADULT_MIN_AGE
-                        : t.age() < ADULT_MIN_AGE);
+                .allMatch(t -> switch (t.passengerType()) {
+                    case ADULT -> t.age() >= ADULT_MIN_AGE;
+                    case CHILD -> t.age() > INFANT_MAX_AGE && t.age() < ADULT_MIN_AGE;
+                    case INFANT -> t.age() <= INFANT_MAX_AGE;
+                });
+    }
+
+    /**
+     * Cross-field rule: an INFANT is an airline fare type (a lap infant on an adult's ticket), so a
+     * booking without a flight cannot carry one. Hotels have no infant type — they price children from
+     * their exact age — so an under-2 in a hotel-only booking is booked as a CHILD.
+     */
+    @AssertTrue(message = "Bebek (infant) yolcu yalnızca uçuş içeren rezervasyonlarda eklenebilir")
+    public boolean isInfantOnlyOnAFlightBooking() {
+        if (travellers == null || flight != null) {
+            return true;
+        }
+        return travellers.stream()
+                .noneMatch(t -> t != null && t.passengerType() == PassengerType.INFANT);
+    }
+
+    /**
+     * Cross-field rule: an infant travels on an adult's lap, so it cannot outnumber the adults — one
+     * adult cannot carry two lap infants. (The ≥1-adult rule above already covers the infant-only case.)
+     */
+    @AssertTrue(message = "Her bebek (infant) için bir yetişkin gerekir; bebek sayısı yetişkin sayısını aşamaz")
+    public boolean isEachInfantAccompaniedByAnAdult() {
+        if (travellers == null || travellers.isEmpty()) {
+            return true;
+        }
+        long infants = travellers.stream()
+                .filter(t -> t != null && t.passengerType() == PassengerType.INFANT)
+                .count();
+        long adults = travellers.stream()
+                .filter(t -> t != null && t.passengerType() == PassengerType.ADULT)
+                .count();
+        return infants <= adults;
     }
 
     /**

@@ -145,6 +145,179 @@ class ReservationServiceTest {
         verify(logModuleClient).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(), eq("SUCCESS"), anyString());
     }
 
+    // =============================================================================================
+    // Price verification (the declared amount is client input) and preview recovery.
+    // =============================================================================================
+
+    private PreviewReservationCommand bookingFor(BigDecimal declaredAmount) {
+        PreviewReservationCommand.Hotel hotel = new PreviewReservationCommand.Hotel(
+                "Hotel A", "Region", (short) 4, "BB",
+                java.time.LocalDate.now().plusDays(30), java.time.LocalDate.now().plusDays(32),
+                (short) 1, (short) 1, (short) 0, "TR", declaredAmount, "EUR");
+        PreviewReservationCommand.Traveller traveller = new PreviewReservationCommand.Traveller(
+                "1", "John", "Doe", com.paximum.paxassist.reservation.domain.PassengerType.ADULT,
+                30, "TR", "test@test.com", "555", true, 1, 1, java.time.LocalDate.of(1990, 1, 1),
+                "123", null, null, null);
+        return new PreviewReservationCommand(123L, "EUR", declaredAmount, "en-US", "John Doe",
+                null, null, List.of("OFFER-1"), List.of(), List.of(traveller), null, hotel, null);
+    }
+
+    /**
+     * A beginTransaction response carrying TourVisio's own pricing, in the confirmed shape: the
+     * passenger total under {@code reservationInfo.priceToPay}, with the agency net (10% lower)
+     * beside it — the value that must NOT be compared against the user's declared amount.
+     */
+    private TransactionResponse beginResponsePricedAt(String amount) {
+        com.fasterxml.jackson.databind.JsonNode reservationData = null;
+        if (amount != null) {
+            java.math.BigDecimal agencyNet = new java.math.BigDecimal(amount)
+                    .multiply(new java.math.BigDecimal("0.90"));
+            try {
+                reservationData = new com.fasterxml.jackson.databind.ObjectMapper().readTree("""
+                        {
+                          "reservationInfo": {
+                            "priceToPay": {"amount": %s, "currency": "EUR"},
+                            "totalPrice": {"amount": %s, "currency": "EUR"},
+                            "agencyPriceToPay": {"amount": %s, "currency": "EUR"}
+                          }
+                        }
+                        """.formatted(amount, amount, agencyNet));
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        }
+        return new TransactionResponse(
+                new TourVisioResponseHeader("req-1", true, List.of()),
+                new TransactionResponse.Body("txn-id", "2026-08-01T12:00:00Z", reservationData, 1, 1));
+    }
+
+    /** Claims a preview for user 123 and stubs beginTransaction to return the given response. */
+    private PendingReservation givenClaimedPreviewWithBegin(PreviewReservationCommand command,
+                                                            TourVisioCallResult<TransactionResponse> begin) {
+        PendingReservation pending = new PendingReservation("preview-123", 123L, Instant.now(), command);
+        when(pendingStore.peekPreview("preview-123")).thenReturn(Optional.of(pending));
+        when(pendingStore.claimPreview("preview-123")).thenReturn(Optional.of(pending));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any())).thenReturn(begin);
+        return pending;
+    }
+
+    @Test
+    void confirmReservation_declaredPriceBelowTheRealOne_abortsBeforeBuyingAnything() {
+        // The classic tampered request: a 1 EUR booking for a 1500 EUR offer. It must never be bought,
+        // and it must never be persisted at the fake amount.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1.00"));
+        givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+
+        assertThat(result).isInstanceOf(ConfirmationResult.PriceMismatch.class);
+        ConfirmationResult.PriceMismatch mismatch = (ConfirmationResult.PriceMismatch) result;
+        assertThat(mismatch.declaredAmount()).isEqualByComparingTo(new BigDecimal("1.00"));
+        assertThat(mismatch.actualAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+
+        // The point of aborting at beginTransaction: no purchase, no DB row.
+        verify(bookingClient, org.mockito.Mockito.never()).commitTransaction(any());
+        verifyNoInteractions(reservationRepository);
+        verify(logModuleClient).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(),
+                eq("FAILED"), anyString());
+    }
+
+    @Test
+    void confirmReservation_priceChangedSinceSearch_isTheSameAbort() {
+        // Indistinguishable from tampering at this point, and the answer is the same: buy nothing.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.Success<>(beginResponsePricedAt("1750.00")));
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+
+        assertThat(result).isInstanceOf(ConfirmationResult.PriceMismatch.class);
+        verify(bookingClient, org.mockito.Mockito.never()).commitTransaction(any());
+        // A stale price must NOT be handed back for a retry — the user has to preview the new one.
+        verify(pendingStore, org.mockito.Mockito.never()).restorePreview(any());
+    }
+
+    @Test
+    void confirmReservation_matchingPrice_proceedsToCommit() {
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+
+        when(requestMapper.toAddServicesRequest(command, "txn-id")).thenReturn(Optional.empty());
+        when(requestMapper.toSetReservationInfoRequest(command, "txn-id"))
+                .thenReturn(new SetReservationInfoRequest("txn-id", List.of(), null, null, null));
+        when(bookingClient.setReservationInfo(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(requestMapper.toCommitRequest(command, "txn-id"))
+                .thenReturn(new CommitTransactionRequest("txn-id", null));
+        when(bookingClient.commitTransaction(any())).thenReturn(new TourVisioCallResult.Success<>(
+                new CommitTransactionResponse(new TourVisioResponseHeader("req-1", true, List.of()),
+                        new CommitTransactionResponse.Body("TV-RES-1", "ENC-1", "txn-id"))));
+        Reservation reservation = new Reservation();
+        reservation.setId(99L);
+        when(entityMapper.toReservation(eq(command), anyString(), eq("TV-RES-1"))).thenReturn(reservation);
+        when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+
+        assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
+        verify(bookingClient).commitTransaction(any());
+    }
+
+    @Test
+    void confirmReservation_transientTourVisioFailure_handsThePreviewBackForARetry() {
+        // The atomic claim already consumed the preview. Without restoring it, the user's retry would
+        // hit the duplicate guard and be told a confirm is in progress — while nothing was confirmed.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        PendingReservation pending = givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.TechnicalFailure<TransactionResponse>("read timed out", null));
+        when(pendingStore.restorePreview(pending)).thenReturn(true);
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+
+        assertThat(result).isInstanceOf(ConfirmationResult.TourVisioUnavailable.class);
+        verify(pendingStore).restorePreview(pending);
+        verifyNoInteractions(reservationRepository);
+    }
+
+    @Test
+    void confirmReservation_transientFailureWithNoTtlLeft_says410NotAMisleading409() {
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        PendingReservation pending = givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.TechnicalFailure<TransactionResponse>("read timed out", null));
+        when(pendingStore.restorePreview(pending)).thenReturn(false);
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+
+        // "Your preview expired, start again" — not "already being confirmed".
+        assertThat(result).isInstanceOf(ConfirmationResult.PreviewExpired.class);
+    }
+
+    @Test
+    void confirmReservation_ambiguousCommit_doesNotHandThePreviewBack() {
+        // The purchase MAY exist. Restoring the preview would invite a second booking.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(requestMapper.toAddServicesRequest(command, "txn-id")).thenReturn(Optional.empty());
+        when(requestMapper.toSetReservationInfoRequest(command, "txn-id"))
+                .thenReturn(new SetReservationInfoRequest("txn-id", List.of(), null, null, null));
+        when(bookingClient.setReservationInfo(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(requestMapper.toCommitRequest(command, "txn-id"))
+                .thenReturn(new CommitTransactionRequest("txn-id", null));
+        when(bookingClient.commitTransaction(any()))
+                .thenReturn(new TourVisioCallResult.UnknownOutcome<CommitTransactionResponse>("TV-99", "timed out after commit", null));
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+
+        assertThat(result).isInstanceOf(ConfirmationResult.CommitOutcomeUnknown.class);
+        verify(pendingStore, org.mockito.Mockito.never()).restorePreview(any());
+    }
+
     @Test
     void confirmReservation_unownedPreview_failsImmediately() {
         // Given

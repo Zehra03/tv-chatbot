@@ -1,5 +1,6 @@
 package com.paximum.paxassist.reservation.service;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -13,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import com.paximum.paxassist.common.log.LogModuleClient;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
@@ -23,8 +26,10 @@ import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.C
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancelReservationResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancellationPenaltyResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CommitTransactionResponse;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TourVisioPrice;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TourVisioResponseHeader;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TransactionResponse;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.support.TourVisioPriceExtractor;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.result.TourVisioCallResult;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.result.TourVisioCallResult.BusinessFailure;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.result.TourVisioCallResult.Success;
@@ -142,10 +147,49 @@ public class ReservationService {
             return new ConfirmationResult.DuplicateInProgress();
         }
 
-        PreviewReservationCommand command = claimed.get().command();
-        ConfirmationResult result = runTransactionFlow(command, userId);
-        logConfirmOutcome(command, userId, result);
+        PendingReservation snapshot = claimed.get();
+        ConfirmationResult result = runTransactionFlow(snapshot.command(), userId);
+        // A failure that definitely bought nothing must not cost the user their preview: put the
+        // snapshot back so the same previewId can be retried (see restoreIfNothingWasPurchased).
+        result = restoreIfNothingWasPurchased(snapshot, result);
+        logConfirmOutcome(snapshot.command(), userId, result);
         return result;
+    }
+
+    /**
+     * The atomic claim (GETDEL) is what stops a double click from buying twice — but it consumes the
+     * preview even when the attempt then fails without buying anything. A user retrying a transient
+     * TourVisio outage would find their preview gone and be told "this reservation is already being
+     * confirmed" (409) while nothing at all had been confirmed.
+     *
+     * <p>So for the outcomes the flow itself documents as "no purchase happened", the snapshot goes
+     * back with its remaining TTL and the same {@code previewId} works again. If it has run out of time,
+     * the honest answer is {@code PreviewExpired} (410 → "start again"), never the misleading 409.
+     *
+     * <p>Deliberately NOT restored: {@link ConfirmationResult.CommitOutcomeUnknown} (the purchase may
+     * exist — a retry could book twice), {@link ConfirmationResult.OrphanedBooking} and
+     * {@link ConfirmationResult.Confirmed} (bought), {@link ConfirmationResult.NeedsUserConfirmation}
+     * (the flow moved on to an awaiting-commit token) and {@link ConfirmationResult.PriceMismatch}
+     * (the frozen price is stale by definition — the user must preview again).
+     */
+    private ConfirmationResult restoreIfNothingWasPurchased(PendingReservation snapshot, ConfirmationResult result) {
+        boolean nothingPurchased = result instanceof ConfirmationResult.TourVisioUnavailable
+                || result instanceof ConfirmationResult.TourVisioRejected;
+        if (!nothingPurchased) {
+            return result;
+        }
+        try {
+            if (pendingStore.restorePreview(snapshot)) {
+                log.info("Confirm failed without purchasing; preview {} restored for retry.", snapshot.previewId());
+                return result;
+            }
+            log.info("Confirm failed without purchasing, but preview {} had no TTL left.", snapshot.previewId());
+        } catch (RuntimeException e) {
+            // Redis is down: we cannot hand the preview back, so say so plainly rather than let the
+            // next attempt hit the duplicate guard and claim a confirm is in progress.
+            log.warn("Could not restore preview {} after a failed confirm: {}", snapshot.previewId(), e.getMessage());
+        }
+        return new ConfirmationResult.PreviewExpired();
     }
 
     /**
@@ -308,6 +352,13 @@ public class ReservationService {
             return new ConfirmationResult.TourVisioUnavailable("beginTransaction", "response carried no transactionId");
         }
 
+        // The declared price is client input. beginTransaction is the first point TourVisio prices the
+        // offer itself, and it is still BEFORE the purchase — so a mismatch aborts here, buying nothing.
+        Optional<ConfirmationResult> priceProblem = verifyPrice(command, begin);
+        if (priceProblem.isPresent()) {
+            return priceProblem.get();
+        }
+
         // add services (optional extras)
         Optional<AddServicesRequest> addRequest = requestMapper.toAddServicesRequest(command, transactionId);
         if (addRequest.isPresent()) {
@@ -335,6 +386,61 @@ public class ReservationService {
         }
 
         return commitAndPersist(command, transactionId, userId);
+    }
+
+    /**
+     * Compares the amount the client declared with the amount TourVisio priced the transaction at.
+     *
+     * <p>{@code totalAmount} arrives from the browser and is what gets written to the DB and shown in
+     * "Rezervasyonlarım", so on its own it is a client assertion: a tampered request could record a
+     * 1 TL booking. It can also simply be stale — the price may have moved between search and confirm.
+     * Both are caught here, before commit, so nothing is bought and nothing is persisted at a wrong price.
+     *
+     * <p>The amount comes from {@code reservationData.reservationInfo.priceToPay} — the passenger-facing
+     * total, not the agency net (see {@code TourVisioPriceExtractor}). {@code commitTransaction} itself
+     * returns identifiers only, so the transaction responses are the last place to see the provider's
+     * own price while the purchase can still be called off.
+     *
+     * <p><b>Fail-open, loudly.</b> {@code reservationData} is an untyped node, so an operation that omits
+     * the pricing block leaves nothing to compare. Blocking every booking on that would take the whole
+     * flow down; instead the booking proceeds and the un-verifiability is logged at WARN, so it shows up
+     * rather than quietly passing as "verified".
+     *
+     * @return the abort outcome when the prices disagree, empty when they match or cannot be compared
+     */
+    private Optional<ConfirmationResult> verifyPrice(PreviewReservationCommand command,
+                                                     TourVisioCallResult<TransactionResponse> begin) {
+        JsonNode reservationData = begin instanceof Success<TransactionResponse> success
+                && success.body() != null && success.body().body() != null
+                ? success.body().body().reservationData()
+                : null;
+
+        Optional<TourVisioPrice> actual = TourVisioPriceExtractor.extract(reservationData);
+        if (actual.isEmpty() || actual.get().amount() == null) {
+            log.warn("Price verification unavailable: beginTransaction carried no recognisable price. "
+                    + "Proceeding with the declared amount {} {}.", command.totalAmount(), command.currency());
+            return Optional.empty();
+        }
+
+        BigDecimal declared = command.totalAmount();
+        BigDecimal charged = actual.get().amount();
+        String chargedCurrency = actual.get().currency();
+        boolean amountMatches = declared != null && declared.compareTo(charged) == 0;
+        boolean currencyMatches = chargedCurrency == null || chargedCurrency.equalsIgnoreCase(command.currency());
+
+        if (amountMatches && currencyMatches) {
+            return Optional.empty();
+        }
+
+        // Not necessarily an attack — a genuine price change looks identical from here — but it is
+        // always a refusal to buy, and always worth a loud, durable trace. (The LogMod activity event
+        // is emitted once, by logConfirmOutcome, for this and every other terminal outcome.)
+        log.error("PRICE MISMATCH — declared {} {} but TourVisio priced the transaction at {} {}. "
+                        + "Aborting before commit; nothing purchased. userId={}",
+                declared, command.currency(), charged, chargedCurrency, command.userId());
+
+        return Optional.of(new ConfirmationResult.PriceMismatch(declared, charged,
+                chargedCurrency == null ? command.currency() : chargedCurrency));
     }
 
     private ConfirmationResult commitAndPersist(PreviewReservationCommand command, String transactionId, Long userId) {
