@@ -21,21 +21,6 @@ services:
       timeout: 5s
       retries: 5
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: paxassist-ollama
-    restart: unless-stopped
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama-data:/root/.ollama
-    # Image ships no curl/wget; `ollama list` returns 0 only when the local server answers.
-    healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
-      interval: 15s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
 
   backend:
     build:
@@ -60,11 +45,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      # Pipeline chat + intent extraction run on Gemini (spring.ai.model.chat=openai). The Validator
-      # defaults to DeepSeek's cloud API; Ollama is only used when VALIDATOR_PROVIDER=ollama, so
-      # don't gate backend startup on its health.
-      ollama:
-        condition: service_started
       redis:
         condition: service_healthy
     ports:
@@ -109,5 +89,4 @@ services:
 
 volumes:
   postgres-data:
-  ollama-data:
   redis-data:
