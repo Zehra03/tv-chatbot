@@ -19,6 +19,7 @@ import { FlightFilters } from '@/features/flights/FlightFilters'
 import { FlightList } from '@/features/flights/FlightList'
 import { LocationAutocomplete } from '@/features/flights/LocationAutocomplete'
 import { flightApi } from '@/api'
+import { MAX_PARTY_SIZE } from '@/types'
 import type { FlightLocation, FlightSearchCriteria, TripType } from '@/types'
 import flightHero from '@/assets/flight/philip-myrtorp-iiqpxCg2GD4-unsplash.jpg'
 
@@ -213,7 +214,7 @@ export function FlightsPage() {
               label="Yolcu"
               summary={`${passengers} yolcu`}
               rows={[
-                { key: 'passengers', label: 'Yolcu', value: passengers, min: 1, max: 9 },
+                { key: 'passengers', label: 'Yolcu', value: passengers, min: 1, max: MAX_PARTY_SIZE },
               ]}
               onRowChange={(_, v) => setPassengers(v)}
               fieldClassName={cn('w-32', heroFieldClass)}

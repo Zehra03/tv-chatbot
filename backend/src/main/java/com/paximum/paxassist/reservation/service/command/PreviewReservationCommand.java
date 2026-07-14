@@ -122,6 +122,16 @@ public record PreviewReservationCommand(
             String nationality,
             @NotNull @PositiveOrZero BigDecimal price,
             @NotBlank @Size(min = 3, max = 3) String currency) {
+
+        /**
+         * Cross-field rule: each room needs at least one adult, so rooms must not exceed adults
+         * (mirrors the frontend search-form guard). Null cases are left to {@code @NotNull} on the
+         * fields so this check does not raise a second, misleading violation.
+         */
+        @AssertTrue(message = "Rooms cannot exceed the number of adults (each room needs at least one adult)")
+        public boolean isRoomsWithinAdults() {
+            return rooms == null || adults == null || rooms <= adults;
+        }
     }
 
     /** Booked flight snapshot; mirrors {@code FlightReservationDetails}. */

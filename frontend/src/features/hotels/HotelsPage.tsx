@@ -16,6 +16,7 @@ import { HotelFilters } from '@/features/hotels/HotelFilters'
 import { HotelList } from '@/features/hotels/HotelList'
 import { LocationAutocomplete } from '@/features/flights/LocationAutocomplete'
 import { hotelApi } from '@/api'
+import { MAX_PARTY_SIZE } from '@/types'
 import type { HotelSearchCriteria } from '@/types'
 import hotelHero from '@/assets/hotel/valeriia-bugaiova-_pPHgeHz1uk-unsplash.jpg'
 
@@ -45,6 +46,15 @@ export function HotelsPage() {
     setChildAges((ages) =>
       next > ages.length ? [...ages, ...Array<number>(next - ages.length).fill(7)] : ages.slice(0, next),
     )
+  }
+
+  // Her oda en az bir yetişkin gerektirir → oda sayısı yetişkin sayısını aşamaz.
+  // Yetişkin azalınca oda sayısını da kısarak geçersiz kritere (ör. 1 yetişkin,
+  // 4 oda) girmeyi önleriz; oda sayacının üst sınırı doğrudan yetişkine bağlanır.
+  const maxRooms = adults
+  const changeAdults = (next: number) => {
+    setAdults(next)
+    setRooms((r) => Math.min(r, next))
   }
 
   const query = useHotelSearch(criteria)
@@ -77,7 +87,9 @@ export function HotelsPage() {
       adults,
       children: childCount,
       childAges,
-      rooms,
+      // Güvenlik ağı: sayaç zaten bağlı olsa da odayı yetişkinle sınırla,
+      // backend'e "oda > yetişkin" gibi geçersiz bir kriter gitmesin.
+      rooms: Math.min(rooms, adults),
       nationality: 'TR',
       currency: 'EUR',
     })
@@ -129,12 +141,12 @@ export function HotelsPage() {
             label="Misafir ve oda"
             summary={guestSummary}
             rows={[
-              { key: 'adults', label: 'Yetişkin', hint: '18 yaş ve üzeri', value: adults, min: 1, max: 9 },
+              { key: 'adults', label: 'Yetişkin', hint: '18 yaş ve üzeri', value: adults, min: 1, max: MAX_PARTY_SIZE },
               { key: 'children', label: 'Çocuk', hint: '0–17 yaş', value: childCount, min: 0, max: 6 },
-              { key: 'rooms', label: 'Oda', value: rooms, min: 1, max: 4 },
+              { key: 'rooms', label: 'Oda', hint: 'Her odada en az bir yetişkin', value: rooms, min: 1, max: maxRooms },
             ]}
             onRowChange={(key, value) => {
-              if (key === 'adults') setAdults(value)
+              if (key === 'adults') changeAdults(value)
               else if (key === 'children') changeChildCount(value)
               else setRooms(value)
             }}
