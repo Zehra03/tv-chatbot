@@ -16,6 +16,7 @@ import com.paximum.paxassist.auth.dto.LoginRequestDto;
 import com.paximum.paxassist.auth.dto.RefreshRequestDto;
 import com.paximum.paxassist.auth.dto.RegisterRequestDto;
 import com.paximum.paxassist.auth.exception.EmailAlreadyExistsException;
+import com.paximum.paxassist.auth.exception.EmailNotFoundException;
 import com.paximum.paxassist.auth.exception.InvalidRefreshTokenException;
 import com.paximum.paxassist.auth.repository.UserRepository;
 import com.paximum.paxassist.auth.security.JwtService;
@@ -169,5 +170,90 @@ class AuthServiceTest {
         authService.logout(7L);
 
         verify(refreshTokenService).revokeAllForUser(7L);
+    }
+
+    @Test
+    void updateEmail_changesEmailAndReturnsUpdatedUser() {
+        User user = User.builder()
+                .id(5L)
+                .email("old@example.com")
+                .passwordHash("hashed")
+                .displayName("Zehra")
+                .role(Role.USER)
+                .build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmailIgnoreCase("new@example.com")).thenReturn(false);
+
+        var dto = authService.updateEmail(5L, "new@example.com");
+
+        assertThat(dto.email()).isEqualTo("new@example.com");
+        assertThat(user.getEmail()).isEqualTo("new@example.com");
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateEmail_throwsWhenEmailTakenByAnotherAccount() {
+        User user = User.builder()
+                .id(5L)
+                .email("old@example.com")
+                .passwordHash("hashed")
+                .role(Role.USER)
+                .build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+        when(userRepository.existsByEmailIgnoreCase("taken@example.com")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.updateEmail(5L, "taken@example.com"))
+                .isInstanceOf(EmailAlreadyExistsException.class);
+
+        assertThat(user.getEmail()).isEqualTo("old@example.com");
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateEmail_isNoOpWhenEmailUnchangedIgnoringCase() {
+        User user = User.builder()
+                .id(5L)
+                .email("same@example.com")
+                .passwordHash("hashed")
+                .role(Role.USER)
+                .build();
+        when(userRepository.findById(5L)).thenReturn(Optional.of(user));
+
+        var dto = authService.updateEmail(5L, "SAME@example.com");
+
+        assertThat(dto.email()).isEqualTo("same@example.com");
+        // Unchanged email must not trigger a uniqueness check or a write.
+        verify(userRepository, never()).existsByEmailIgnoreCase(anyString());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void resetPassword_setsHashedPasswordAndRevokesRefreshTokens() {
+        User user = User.builder()
+                .id(9L)
+                .email("user@example.com")
+                .passwordHash("old-hash")
+                .role(Role.USER)
+                .build();
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.encode("brand-new-password")).thenReturn("new-hash");
+
+        authService.resetPassword("user@example.com", "brand-new-password");
+
+        assertThat(user.getPasswordHash()).isEqualTo("new-hash");
+        verify(userRepository).save(user);
+        // Any other open session must be invalidated once the password changes.
+        verify(refreshTokenService).revokeAllForUser(9L);
+    }
+
+    @Test
+    void resetPassword_throwsWhenEmailNotRegistered() {
+        when(userRepository.findByEmailIgnoreCase("ghost@example.com")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.resetPassword("ghost@example.com", "brand-new-password"))
+                .isInstanceOf(EmailNotFoundException.class);
+
+        verify(userRepository, never()).save(any());
+        verifyNoInteractions(passwordEncoder, refreshTokenService);
     }
 }

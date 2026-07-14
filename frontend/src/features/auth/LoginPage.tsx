@@ -8,6 +8,7 @@ import { authApi, type ApiError, type AuthResponse } from '@/api'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { guestSessionStarted, sessionStarted } from '@/features/auth/authSlice'
 import { FloatingInput } from '@/components/ui/floating-input'
+import { ForgotPasswordModal } from '@/features/auth/ForgotPasswordModal'
 import { cn } from '@/lib/utils'
 
 type AuthMode = 'login' | 'register'
@@ -449,6 +450,7 @@ export default function LoginPage() {
   const user = useAppSelector((s) => s.auth.user)
   const [submitting, setSubmitting] = useState(false)
   const [apiError, setApiError] = useState('')
+  const [forgotOpen, setForgotOpen] = useState(false)
 
   // RequireAccount bir misafiri buraya yönlendirdiyse nedenini + geldiği sayfayı taşır.
   const redirectState = location.state as { reason?: string; from?: string } | null
@@ -483,21 +485,25 @@ export default function LoginPage() {
   }
 
   return (
-    <AuthScreen
-      submitting={submitting}
-      errorMessage={apiError}
-      onModeSwitch={() => setApiError('')}
-      onLogin={(email, password) => {
-        void runAuth(() => authApi.login({ email, password }))
-      }}
-      onRegister={({ email, fullName, password }) => {
-        void runAuth(() => authApi.register({ email, password, name: fullName || undefined }))
-      }}
-      onGuestContinue={() => {
-        dispatch(guestSessionStarted())
-        // Misafir korumalı sayfaya giremez; her zaman sohbete gönder ('from'u kullanma).
-        navigate('/chat', { replace: true })
-      }}
-    />
+    <>
+      <AuthScreen
+        submitting={submitting}
+        errorMessage={apiError}
+        onModeSwitch={() => setApiError('')}
+        onLogin={(email, password) => {
+          void runAuth(() => authApi.login({ email, password }))
+        }}
+        onRegister={({ email, fullName, password }) => {
+          void runAuth(() => authApi.register({ email, password, name: fullName || undefined }))
+        }}
+        onGuestContinue={() => {
+          dispatch(guestSessionStarted())
+          // Misafir korumalı sayfaya giremez; her zaman sohbete gönder ('from'u kullanma).
+          navigate('/chat', { replace: true })
+        }}
+        onForgotPassword={() => setForgotOpen(true)}
+      />
+      <ForgotPasswordModal open={forgotOpen} onClose={() => setForgotOpen(false)} />
+    </>
   )
 }

@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { Provider } from 'react-redux'
@@ -163,5 +163,79 @@ describe('LoginPage (authApi + MSW ile)', () => {
       guestId: null,
     })
     await screen.findByText('CHAT STUB')
+  })
+
+  describe('Şifremi unuttum akışı', () => {
+    it('e-posta + yeni şifreyle pop-up’tan şifreyi doğrudan değiştirir', async () => {
+      const user = userEvent.setup()
+      renderLogin()
+
+      await user.click(screen.getByRole('button', { name: 'Şifremi unuttum?' }))
+      const dialog = within(await screen.findByRole('dialog'))
+      await user.type(dialog.getByLabelText('E-posta'), 'zehra@example.com')
+      await user.type(dialog.getByLabelText('Yeni şifre'), 'yeni-sifre-123')
+      await user.type(dialog.getByLabelText('Yeni şifre (Tekrar)'), 'yeni-sifre-123')
+      await user.click(dialog.getByRole('button', { name: 'Şifreyi güncelle' }))
+
+      const status = await screen.findByRole('status')
+      expect(status.textContent).toContain('zehra@example.com')
+      expect(status.textContent).toContain('güncellendi')
+      // E-posta bağlantısı gönderilmedi — şifre doğrudan değiştirildi, giriş formuna dönmedi.
+      expect(screen.queryByText('CHAT STUB')).toBeNull()
+    })
+
+    it('geçersiz biçimli e-postayı backend’e gitmeden reddeder', async () => {
+      const user = userEvent.setup()
+      renderLogin()
+
+      await user.click(screen.getByRole('button', { name: 'Şifremi unuttum?' }))
+      const dialog = within(await screen.findByRole('dialog'))
+      await user.type(dialog.getByLabelText('E-posta'), 'gecersiz')
+      await user.click(dialog.getByRole('button', { name: 'Şifreyi güncelle' }))
+
+      const alert = await dialog.findByRole('alert')
+      expect(alert.textContent).toContain('Geçerli bir e-posta girin.')
+      expect(dialog.queryByRole('status')).toBeNull()
+    })
+
+    it('eşleşmeyen şifreleri backend’e gitmeden reddeder', async () => {
+      const user = userEvent.setup()
+      renderLogin()
+
+      await user.click(screen.getByRole('button', { name: 'Şifremi unuttum?' }))
+      const dialog = within(await screen.findByRole('dialog'))
+      await user.type(dialog.getByLabelText('E-posta'), 'zehra@example.com')
+      await user.type(dialog.getByLabelText('Yeni şifre'), 'yeni-sifre-123')
+      await user.type(dialog.getByLabelText('Yeni şifre (Tekrar)'), 'baska-sifre-123')
+      await user.click(dialog.getByRole('button', { name: 'Şifreyi güncelle' }))
+
+      const alert = await dialog.findByRole('alert')
+      expect(alert.textContent).toContain('Şifreler eşleşmiyor.')
+      expect(dialog.queryByRole('status')).toBeNull()
+    })
+
+    it('kayıtsız e-posta (404) hatasını modal içinde gösterir', async () => {
+      server.use(
+        http.post('/api/v1/auth/reset-password', () =>
+          HttpResponse.json(
+            { error: 'EMAIL_NOT_FOUND', message: "No account found for email" },
+            { status: 404 },
+          ),
+        ),
+      )
+      const user = userEvent.setup()
+      renderLogin()
+
+      await user.click(screen.getByRole('button', { name: 'Şifremi unuttum?' }))
+      const dialog = within(await screen.findByRole('dialog'))
+      await user.type(dialog.getByLabelText('E-posta'), 'ghost@example.com')
+      await user.type(dialog.getByLabelText('Yeni şifre'), 'yeni-sifre-123')
+      await user.type(dialog.getByLabelText('Yeni şifre (Tekrar)'), 'yeni-sifre-123')
+      await user.click(dialog.getByRole('button', { name: 'Şifreyi güncelle' }))
+
+      const alert = await dialog.findByRole('alert')
+      expect(alert.textContent).toContain('Bu e-posta ile kayıtlı bir hesap bulunamadı.')
+      expect(dialog.queryByRole('status')).toBeNull()
+    })
   })
 })

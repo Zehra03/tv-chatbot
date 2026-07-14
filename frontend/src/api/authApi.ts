@@ -4,11 +4,13 @@ import { apiClient } from './client'
  * Kimlik endpoint'leri. Gerçek doğrulama backend'de; frontend sadece oturumu
  * Redux'ta tutar (docs/frontend-architecture.md §5). Token OPAK bir dizedir —
  * frontend içeriğini yorumlamaz, hiçbir sır burada tutulmaz.
- *   POST /api/v1/auth/register
- *   POST /api/v1/auth/login
- *   POST /api/v1/auth/refresh   (kısa ömürlü access jetonunu refresh ile yeniler)
- *   POST /api/v1/auth/logout
- *   GET  /api/v1/auth/me   (Authorization: Bearer <token> — interceptor ekler)
+ *   POST  /api/v1/auth/register
+ *   POST  /api/v1/auth/login
+ *   POST  /api/v1/auth/refresh   (kısa ömürlü access jetonunu refresh ile yeniler)
+ *   POST  /api/v1/auth/logout
+ *   POST  /api/v1/auth/reset-password   (şifreyi doğrudan değiştirir — jetonsuz, e-posta bağlantısı yok)
+ *   GET   /api/v1/auth/me    (Authorization: Bearer <token> — interceptor ekler)
+ *   PATCH /api/v1/auth/me    (oturumdaki kullanıcının e-postasını günceller)
  * LoginPage bu API'ye bağlıdır; jetonlar authSlice → setAuthToken/setRefreshToken
  * ile taşınır. refresh çağrısı normalde client.ts interceptor'ında otomatik yapılır.
  */
@@ -28,6 +30,15 @@ export interface RegisterRequest {
   email: string
   password: string
   name?: string
+}
+
+export interface UpdateEmailRequest {
+  email: string
+}
+
+export interface ResetPasswordRequest {
+  email: string
+  password: string
 }
 
 export interface AuthResponse {
@@ -58,8 +69,24 @@ export const authApi = {
     await apiClient.post('/api/v1/auth/logout')
   },
 
+  /**
+   * Şifreyi doğrudan değiştirir — e-posta bağlantısı yok (SMTP kapsam dışı). Jetonsuz
+   * (public) çağrıdır: kullanıcı zaten şifresini unuttuğu için geçerli jetonu olmayabilir.
+   * Bağlantılı akıştan farklı olarak doğrudan sıfırladığı için e-postanın kayıtlı olup
+   * olmadığını zorunlu olarak ele verir — kayıtsız e-posta 404 EMAIL_NOT_FOUND döner.
+   */
+  async resetPassword(body: ResetPasswordRequest): Promise<void> {
+    await apiClient.post('/api/v1/auth/reset-password', body)
+  },
+
   async me(): Promise<AuthUser> {
     const res = await apiClient.get<AuthUser>('/api/v1/auth/me')
+    return res.data
+  },
+
+  /** Oturumdaki kullanıcının e-postasını günceller; güncel AuthUser döner. */
+  async updateEmail(body: UpdateEmailRequest): Promise<AuthUser> {
+    const res = await apiClient.patch<AuthUser>('/api/v1/auth/me', body)
     return res.data
   },
 }

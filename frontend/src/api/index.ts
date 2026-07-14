@@ -24,4 +24,11 @@ export { reservationApi } from './reservationApi'
 export type { CreateReservationRequest, ReservationPreview } from './reservationApi'
 
 export { authApi } from './authApi'
-export type { AuthUser, LoginRequest, RegisterRequest, AuthResponse } from './authApi'
+export type {
+  AuthUser,
+  LoginRequest,
+  RegisterRequest,
+  UpdateEmailRequest,
+  ResetPasswordRequest,
+  AuthResponse,
+} from './authApi'

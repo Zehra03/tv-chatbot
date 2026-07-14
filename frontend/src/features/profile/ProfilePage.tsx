@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { motion, type Variants } from 'framer-motion'
-import { CalendarCheck, LogOut, Mail, MessagesSquare, UserRound } from 'lucide-react'
+import { toast } from 'sonner'
+import { CalendarCheck, LogOut, Mail, MessagesSquare, Pencil, UserRound } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -10,9 +12,13 @@ import {
 } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { SplitText } from '@/components/SplitText'
+import { authApi, type ApiError } from '@/api'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { logout } from '@/features/auth/authSlice'
+import { logout, userRefreshed } from '@/features/auth/authSlice'
 import { useReservations } from '@/features/reservation/useReservations'
+
+/** Kaba e-posta biçim denetimi — backend @Email / MSW handler paritesi. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 /**
  * /profile — hesap sayfası (kontrollü açık bölge). Oturum bilgisi Redux'ta
@@ -37,8 +43,52 @@ export function ProfilePage() {
   const navigate = useNavigate()
   const reservations = useReservations()
 
+  // E-posta satır-içi düzenleme durumu (yalnızca üye oturumunda kullanılır).
+  const [editingEmail, setEditingEmail] = useState(false)
+  const [emailDraft, setEmailDraft] = useState('')
+  const [emailError, setEmailError] = useState('')
+  const [savingEmail, setSavingEmail] = useState(false)
+
   // ProtectedRoute garantisi — yine de tip daraltma için erken çıkış.
   if (!user) return null
+
+  const startEditEmail = () => {
+    setEmailDraft(user.email)
+    setEmailError('')
+    setEditingEmail(true)
+  }
+
+  const cancelEditEmail = () => {
+    setEditingEmail(false)
+    setEmailError('')
+  }
+
+  const saveEmail = async () => {
+    if (savingEmail) return
+    const next = emailDraft.trim()
+    if (!EMAIL_RE.test(next)) {
+      setEmailError('Geçerli bir e-posta girin.')
+      return
+    }
+    // Değişiklik yoksa boşuna backend'e gitme.
+    if (next.toLowerCase() === user.email.toLowerCase()) {
+      cancelEditEmail()
+      return
+    }
+    setSavingEmail(true)
+    setEmailError('')
+    try {
+      const updated = await authApi.updateEmail({ email: next })
+      // Backend gerçek kaynaktır; dönen kullanıcıyı Redux'a (ve localStorage'a) yaz.
+      dispatch(userRefreshed(updated))
+      setEditingEmail(false)
+      toast.success('E-posta güncellendi.')
+    } catch (err) {
+      setEmailError((err as ApiError).message || 'E-posta güncellenemedi — tekrar deneyin.')
+    } finally {
+      setSavingEmail(false)
+    }
+  }
 
   const displayName = user.name ?? user.email.split('@')[0]
   const initials = displayName
@@ -97,17 +147,74 @@ export function ProfilePage() {
           </CardHeader>
           <CardContent>
             <dl className="grid gap-3 text-sm sm:grid-cols-2">
-              <div className="flex items-center gap-3">
+              <div className="flex items-start gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
                 >
                   <Mail className="h-4 w-4" />
                 </span>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <dt className="text-brand-ice/70">E-posta</dt>
-                  {/* Misafir oturumunda e-posta yok — boş satır yerine tire. */}
-                  <dd className="truncate font-medium">{user.email || '—'}</dd>
+                  {editingEmail ? (
+                    <dd className="mt-1 space-y-2">
+                      <input
+                        type="email"
+                        aria-label="E-posta"
+                        value={emailDraft}
+                        autoFocus
+                        disabled={savingEmail}
+                        onChange={(e) => setEmailDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                            void saveEmail()
+                          } else if (e.key === 'Escape') {
+                            cancelEditEmail()
+                          }
+                        }}
+                        className="w-full rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-sm text-white placeholder:text-brand-ice/40 focus:border-brand-teal focus:outline-none focus:ring-1 focus:ring-brand-teal disabled:opacity-60"
+                      />
+                      {emailError && (
+                        <p role="alert" className="text-xs text-destructive">
+                          {emailError}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void saveEmail()}
+                          disabled={savingEmail}
+                          className="inline-flex items-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {savingEmail ? 'Kaydediliyor…' : 'Kaydet'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={cancelEditEmail}
+                          disabled={savingEmail}
+                          className="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium text-brand-ice/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60"
+                        >
+                          İptal
+                        </button>
+                      </div>
+                    </dd>
+                  ) : (
+                    <dd className="flex items-center gap-2">
+                      {/* Misafir oturumunda e-posta yok — boş satır yerine tire. */}
+                      <span className="truncate font-medium">{user.email || '—'}</span>
+                      {!user.guest && (
+                        <button
+                          type="button"
+                          onClick={startEditEmail}
+                          aria-label="E-postayı düzenle"
+                          className="shrink-0 text-brand-ice/60 transition-colors hover:text-brand-teal focus-visible:text-brand-teal focus-visible:outline-none"
+                        >
+                          <Pencil className="h-3.5 w-3.5" aria-hidden />
+                        </button>
+                      )}
+                    </dd>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-3">
