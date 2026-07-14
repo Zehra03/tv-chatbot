@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,12 +24,13 @@ import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
-import com.paximum.paxassist.orchestrator.date.TravelDateGuard;
+import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,14 +42,13 @@ class HotelSearchHandlerTest {
     private HotelSearchService hotelSearchService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    // Fixed "today" so the hardcoded 2026 dates below stay in the future regardless of wall clock.
-    private final TravelDateGuard dateGuard =
-            new TravelDateGuard(Clock.fixed(Instant.parse("2026-07-08T00:00:00Z"), ZoneOffset.UTC));
+    private SlotGuard slotGuard;
 
     private HotelSearchHandler handler() {
+        slotGuard = mock(SlotGuard.class);
+        when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
         return new HotelSearchHandler(
-                slotFilling, new HotelCriteriaMapper(), hotelSearchService, new ClarificationCatalog(), dateGuard);
+                slotFilling, new HotelCriteriaMapper(), hotelSearchService, new ClarificationCatalog(), slotGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
@@ -73,6 +74,21 @@ class HotelSearchHandlerTest {
     }
 
     @Test
+    void invalidLocationReturnsFriendlyClarify() {
+        OrchestrationContext context = contextWith(slots(Map.of("location", "lulubumbu")));
+        context.session().getAccumulatedCriteria().put("location", "lulubumbu");
+        when(hotelSearchService.searchHotels(any()))
+                .thenReturn(HotelSearchResponse.invalidLocation("lulubumbu"));
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        assertThat(result.redirectToReservation()).isFalse();
+        assertThat(result.reply()).contains("lulubumbu").contains("bulunamadı");
+        assertThat(context.session().getAccumulatedCriteria()).doesNotContainKey("location");
+    }
+
+    @Test
     void successReturnsCardsAndUpdatesSession() {
         SlotCriteria merged = slots(
                 Map.of("location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05", "adults", 2));
@@ -90,15 +106,17 @@ class HotelSearchHandlerTest {
     }
 
     @Test
-    void pastCheckInBecomesFriendlyClarifyBeforeSearch() {
-        OrchestrationContext context = contextWith(slots(
-                Map.of("location", "Antalya", "checkIn", "2026-06-25", "adults", 2)));
+    void pastDateGuard_shortCircuitsBeforeSearch() {
+        HotelSearchHandler handler = handler();
+        when(slotGuard.checkInvalidSlots(any()))
+                .thenReturn(Optional.of("Girdiğiniz tarih geçmişte kalıyor"));
 
-        OrchestrationResult result = handler().handle(context);
+        OrchestrationContext context = contextWith(slots(Map.of("checkIn", "2026-06-01")));
+
+        OrchestrationResult result = handler.handle(context);
 
         assertThat(result.cards()).isEmpty();
         assertThat(result.reply()).contains("geçmiş");
-        // Guard fires before the search — no TourVisio call.
         org.mockito.Mockito.verifyNoInteractions(hotelSearchService);
     }
 

@@ -21,7 +21,8 @@ public class ChatSession {
     // set only when the owner is an anonymous guest. Null for user-owned/legacy sessions.
     private String guestToken;
     private Map<String, Object> accumulatedCriteria;
-    private List<Object> lastResultCards;
+    private List<Object> lastApiResultCards; // Raw API results, before FILTER intent
+    private List<Object> lastResultCards;    // Results shown to the user (after FILTER)
     private final List<ChatMessage> messages = new ArrayList<>();
     // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
     // which result list they are acting on. Kept as a String so this domain type does not
@@ -31,6 +32,7 @@ public class ChatSession {
     public ChatSession(String id) {
         this.id = id;
         this.accumulatedCriteria = new HashMap<>();
+        this.lastApiResultCards = new ArrayList<>();
         this.lastResultCards = new ArrayList<>();
     }
 
@@ -46,6 +48,9 @@ public class ChatSession {
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
         this.accumulatedCriteria = accumulatedCriteria;
     }
+
+    public List<Object> getLastApiResultCards() { return lastApiResultCards; }
+    public void setLastApiResultCards(List<Object> lastApiResultCards) { this.lastApiResultCards = lastApiResultCards; }
 
     public List<Object> getLastResultCards() { return lastResultCards; }
     public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }

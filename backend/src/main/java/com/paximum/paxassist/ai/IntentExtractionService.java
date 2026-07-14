@@ -152,6 +152,9 @@ public class IntentExtractionService {
         - For exclusion phrases ("X olmasın", "X hariç", "X istemiyorum") do NOT put X into location
           or any other criterion.
         - Map typos to the nearest real city/phrase ("iştanbuıl" → İstanbul, "sanalya" → Antalya).
+        - When the user asks for a specific number of items to list (e.g. "ilk 3", "en ucuz 5 otel", "5 tanesini listele"), put this number in the "limit" field.
+        - When the user specifies a star rating range (e.g. "3-4 yıldızlı", "3 ve 4 yıldız arası"), specify both "stars" (minimum) and "maxStars" (maximum). E.g., "stars": 3, "maxStars": 4.
+        - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
         </rules>
 
         <output_format>
@@ -221,6 +224,31 @@ public class IntentExtractionService {
 
         Mesaj: "En ucuzdan sırala"
         Çıktı: {"intent":"FILTER","criteria":{"sortBy":"price_asc"}}
+
+        Mesaj: "en ucuz 5 oteli listele"
+        Çıktı: {"intent":"FILTER","criteria":{"sortBy":"price_asc","limit":5}}
+
+        Mesaj: "4 yıldız ve üstünü listele"
+        Çıktı: {"intent":"FILTER","criteria":{"stars":4}}
+
+        Mesaj: "3 ve 4 yıldızlı olanları getir"
+        Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":4}}
+
+        Sohbet Geçmişi: assistant: Aramanıza uygun 8 otel buldum:
+        Mesaj: "herşey dahil olanları listele"
+        Çıktı: {"intent":"FILTER","criteria":{"boardType":"AI"}}
+
+        Sohbet Geçmişi: assistant: Aramanıza uygun 8 otel buldum:
+        Mesaj: "all inclusive olan en ucuz 3 otel"
+        Çıktı: {"intent":"FILTER","criteria":{"boardType":"AI","sortBy":"price_asc","limit":3}}
+
+        Sohbet Geçmişi: assistant: İşte filtrelenmiş sonuçlar:
+        Mesaj: "filtreleri kaldır"
+        Çıktı: {"intent":"CLEAR_FILTER","criteria":null}
+
+        Sohbet Geçmişi: assistant: İşte filtrelenmiş sonuçlar:
+        Mesaj: "tekrar bütün otelleri listele"
+        Çıktı: {"intent":"CLEAR_FILTER","criteria":null}
 
         Mesaj: "İlk oteli istiyorum"
         Çıktı: {"intent":"SELECT","criteria":{"selectionReference":"1"}}

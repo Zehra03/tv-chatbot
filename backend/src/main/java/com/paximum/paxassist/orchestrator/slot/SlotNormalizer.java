@@ -15,7 +15,7 @@ import com.paximum.paxassist.ai.SlotCriteria;
  * - Ensures returnDate is not before departureDate.
  */
 @Component
-public class DateNormalizer {
+public class SlotNormalizer {
 
     public SlotCriteria normalize(SlotCriteria criteria) {
         if (criteria == null) {
@@ -27,9 +27,18 @@ public class DateNormalizer {
         // 1. Hotel Logic
         String checkInStr = criteria.checkIn();
         LocalDate checkIn = parseOrNull(checkInStr);
+        if (checkIn != null && checkIn.isBefore(today)) {
+            checkIn = null;
+            checkInStr = null;
+        }
 
         String checkOutStr = criteria.checkOut();
         LocalDate checkOut = parseOrNull(checkOutStr);
+        if (checkOut != null && checkOut.isBefore(today)) {
+            checkOut = null;
+            checkOutStr = null;
+        }
+
         Integer nights = criteria.nights();
 
         if (checkIn != null) {
@@ -48,47 +57,74 @@ public class DateNormalizer {
                     nights = (int) ChronoUnit.DAYS.between(checkIn, checkOut);
                 }
             }
-        } else if (checkOut != null && checkOut.isBefore(today)) {
-            // No checkIn, but checkOut is in the past
-            checkOutStr = null;
         }
 
         // 2. Flight Logic
         String departureDateStr = criteria.departureDate();
         LocalDate departureDate = parseOrNull(departureDateStr);
+        if (departureDate != null && departureDate.isBefore(today)) {
+            departureDate = null;
+            departureDateStr = null;
+        }
 
         String returnDateStr = criteria.returnDate();
         LocalDate returnDate = parseOrNull(returnDateStr);
+        if (returnDate != null && returnDate.isBefore(today)) {
+            returnDate = null;
+            returnDateStr = null;
+        }
+
         if (returnDate != null && departureDate != null && returnDate.isBefore(departureDate)) {
             // Return date cannot be before departure date
             returnDate = departureDate.plusDays(1);
             returnDateStr = returnDate.toString();
         }
 
+        // 3. Numeric Limits
+        Integer adults = criteria.adults() != null && criteria.adults() > 0 ? criteria.adults() : null;
+        Integer children = criteria.children() != null && criteria.children() >= 0 ? criteria.children() : null;
+
+        java.util.List<Integer> childAges = criteria.childAges();
+        if (childAges != null) {
+            childAges = childAges.stream().filter(age -> age >= 0).toList();
+            if (childAges.isEmpty()) {
+                childAges = null;
+            }
+        }
+
+        Integer rooms = criteria.rooms() != null && criteria.rooms() > 0 ? criteria.rooms() : null;
+        Integer hotelMaxPrice = criteria.hotelMaxPrice() != null && criteria.hotelMaxPrice() > 0
+                ? criteria.hotelMaxPrice()
+                : null;
+        Integer flightMaxPrice = criteria.flightMaxPrice() != null && criteria.flightMaxPrice() > 0
+                ? criteria.flightMaxPrice()
+                : null;
+
         return new SlotCriteria(
                 criteria.location(),
                 checkInStr,
                 checkOutStr,
                 nights,
-                criteria.rooms(),
+                rooms,
                 criteria.stars(),
+                criteria.maxStars(),
                 criteria.boardType(),
                 criteria.features(),
-                criteria.hotelMaxPrice(),
+                hotelMaxPrice,
                 criteria.origin(),
                 criteria.destination(),
                 departureDateStr,
                 returnDateStr,
                 criteria.cabinClass(),
-                criteria.flightMaxPrice(),
-                criteria.adults(),
-                criteria.children(),
-                criteria.childAges(),
+                flightMaxPrice,
+                adults,
+                children,
+                childAges,
                 criteria.nationality(),
                 criteria.currency(),
                 criteria.sortBy(),
-                criteria.selectionReference()
-        );
+                criteria.limit(),
+                criteria.selectionReference());
     }
 
     private LocalDate parseOrNull(String dateStr) {

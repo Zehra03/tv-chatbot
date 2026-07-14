@@ -29,6 +29,7 @@ public record SlotCriteria(
         Integer nights,           // number of nights when the user gives a count instead of a checkout date
         Integer rooms,
         Integer stars,            // minimum star rating
+        Integer maxStars,         // maximum star rating
         String boardType,         // AI | HB | BB | RO
         List<String> features,    // requested hotel features, e.g. ["SEAFRONT","POOL"] — see orchestrator.intent.HotelFeature
         Integer hotelMaxPrice,    // upper price limit for a HOTEL search, e.g. "otelde 18000 tl max" → 18000
@@ -50,6 +51,7 @@ public record SlotCriteria(
 
         // ── Filter / sort (FILTER intent) ────────────────────────────────────
         String sortBy,            // price_asc | price_desc | stars_desc
+        Integer limit,            // number of results to display
 
         // ── Selection (SELECT intent) ─────────────────────────────────────────
         String selectionReference // raw user text: "1", "ilk", "en ucuz olan"
@@ -63,6 +65,6 @@ public record SlotCriteria(
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null, null);
+                null, null, null, null);
     }
 }

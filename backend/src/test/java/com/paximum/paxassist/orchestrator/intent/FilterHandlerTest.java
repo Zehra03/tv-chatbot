@@ -28,6 +28,7 @@ class FilterHandlerTest {
 
     private OrchestrationResult filter(List<Object> cards, String sortBy) {
         ChatSession session = new ChatSession("s1");
+        session.setLastApiResultCards(cards);
         session.setLastResultCards(cards);
         SlotCriteria criteria = sortBy == null
                 ? null
@@ -61,9 +62,31 @@ class FilterHandlerTest {
     }
 
     @Test
-    void asksHowToSortWhenNoSortCriteria() {
+    void asksForCriteriaWhenNoCriteria() {
         OrchestrationResult result = filter(List.of(MID_5STAR), null);
         assertThat(result.cards()).isEmpty();
-        assertThat(result.reply()).contains("sırala");
+        assertThat(result.reply()).contains("kriteri anlaşılamadı");
+    }
+
+    @Test
+    void filtersByLimit() {
+        ChatSession session = new ChatSession("s1");
+        session.setLastApiResultCards(List.of(MID_5STAR, PRICEY_4STAR, CHEAP_3STAR));
+        session.setLastResultCards(List.of(MID_5STAR, PRICEY_4STAR, CHEAP_3STAR));
+        SlotCriteria criteria = objectMapper.convertValue(Map.of("limit", 2), SlotCriteria.class);
+        OrchestrationResult result = handler.handle(new OrchestrationContext(session, "msg", IntentType.FILTER, criteria));
+        
+        assertThat(result.cards()).containsExactly(MID_5STAR, PRICEY_4STAR);
+    }
+
+    @Test
+    void filtersByStarsAndSorts() {
+        ChatSession session = new ChatSession("s1");
+        session.setLastApiResultCards(List.of(CHEAP_3STAR, MID_5STAR, PRICEY_4STAR));
+        session.setLastResultCards(List.of(CHEAP_3STAR, MID_5STAR, PRICEY_4STAR));
+        SlotCriteria criteria = objectMapper.convertValue(Map.of("stars", 4, "sortBy", "price_asc"), SlotCriteria.class);
+        OrchestrationResult result = handler.handle(new OrchestrationContext(session, "msg", IntentType.FILTER, criteria));
+        
+        assertThat(result.cards()).containsExactly(MID_5STAR, PRICEY_4STAR); // Wait, MID_5STAR is 1500, PRICEY_4STAR is 2000. So MID then PRICEY.
     }
 }
