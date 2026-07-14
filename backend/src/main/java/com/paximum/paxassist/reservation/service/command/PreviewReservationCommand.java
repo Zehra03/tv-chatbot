@@ -10,6 +10,9 @@ import com.paximum.paxassist.reservation.domain.TripType;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
@@ -46,10 +49,98 @@ public record PreviewReservationCommand(
         @Valid Hotel hotel,
         @Valid Flight flight) {
 
+    /**
+     * Age at which a traveller must be booked as {@link PassengerType#ADULT}. Mirrors the flight age
+     * policy: a 12+ passenger may travel unaccompanied, so 12+ IS an adult for booking purposes.
+     *
+     * <p>NOTE: the policy also names an "infant" band (0–1), but {@link PassengerType} and the
+     * {@code ck_passengers_type} DB constraint only know ADULT/CHILD — an infant cannot be represented
+     * without a new enum value, a Flyway migration and a frontend option. Until that decision is made,
+     * 0–11 is CHILD, and the rules below deliberately do not pretend an infant band exists.
+     */
+    private static final int ADULT_MIN_AGE = 12;
+
     /** Cross-field rule: a reservation must include at least a hotel or a flight (product type is derived, never trusted). */
     @AssertTrue(message = "A reservation must include at least a hotel or a flight")
     public boolean isAtLeastOneProductPresent() {
         return hotel != null || flight != null;
+    }
+
+    /**
+     * Cross-field rule: at least one ADULT traveller. A child-only (unaccompanied minor) booking is not
+     * sellable — TourVisio rejects it during the transaction flow, i.e. only AFTER the confirm button,
+     * once the preview has already been consumed by the atomic claim. Reject it at the boundary instead.
+     *
+     * <p>Null/empty lists return true so {@code @NotEmpty} raises the single accurate violation.
+     */
+    @AssertTrue(message = "Rezervasyonda en az bir yetişkin yolcu bulunmalıdır (yalnız çocuk seyahat edemez)")
+    public boolean isAdultTravellerPresent() {
+        if (travellers == null || travellers.isEmpty()) {
+            return true;
+        }
+        return travellers.stream()
+                .anyMatch(t -> t != null && t.passengerType() == PassengerType.ADULT);
+    }
+
+    /**
+     * Cross-field rule: the lead traveller must be an adult. The frontend writes the contact e-mail and
+     * phone onto the first traveller, so without this a 7-year-old could end up as the booking's lead
+     * guest and contact person.
+     *
+     * <p>The lead is the one flagged {@code leader}, or the first traveller when none is flagged —
+     * matching how the entity mapper and the TourVisio request mapper pick it.
+     */
+    @AssertTrue(message = "Ana misafir (iletişim kurulacak yolcu) yetişkin olmalıdır")
+    public boolean isLeadTravellerAnAdult() {
+        if (travellers == null || travellers.isEmpty()) {
+            return true;
+        }
+        Traveller lead = travellers.stream()
+                .filter(t -> t != null && t.leader())
+                .findFirst()
+                .orElse(travellers.get(0));
+        return lead == null || lead.passengerType() == null || lead.passengerType() == PassengerType.ADULT;
+    }
+
+    /**
+     * Cross-field rule: a stated age must agree with the declared passenger type (ADULT ≥ 12,
+     * CHILD &lt; 12). Without it, {@code passengerType=CHILD, age=45} (child pricing for an adult) or
+     * {@code ADULT, age=3} passes every layer and reaches the DB and TourVisio.
+     * Age is optional; travellers without one are not checked here.
+     */
+    @AssertTrue(message = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 12 ve üzeri, çocuk: 12 yaş altı)")
+    public boolean isTravellerAgeConsistentWithType() {
+        if (travellers == null) {
+            return true;
+        }
+        return travellers.stream()
+                .filter(t -> t != null && t.age() != null && t.passengerType() != null)
+                .allMatch(t -> t.passengerType() == PassengerType.ADULT
+                        ? t.age() >= ADULT_MIN_AGE
+                        : t.age() < ADULT_MIN_AGE);
+    }
+
+    /**
+     * Cross-field rule: the traveller list must match the party size frozen in the product snapshot —
+     * hotel {@code adults + children}, flight {@code passengerCount}. The snapshot is what was priced
+     * and what TourVisio will be asked to book, so a request carrying five travellers for a
+     * three-person offer is priced for three and would fail (or silently under-charge) downstream.
+     *
+     * <p>A combined booking must satisfy both counts. Null counts are left to their own {@code @NotNull}.
+     */
+    @AssertTrue(message = "Yolcu sayısı seçilen ürünün kişi sayısıyla eşleşmiyor")
+    public boolean isTravellerCountMatchingTheProduct() {
+        if (travellers == null || travellers.isEmpty()) {
+            return true;
+        }
+        int count = travellers.size();
+        if (hotel != null && hotel.adults() != null) {
+            int expected = hotel.adults() + (hotel.children() == null ? 0 : hotel.children());
+            if (count != expected) {
+                return false;
+            }
+        }
+        return flight == null || flight.passengerCount() == null || count == flight.passengerCount();
     }
 
     /** Returns a copy with the given owner id (the controller injects the authenticated user id here). */
@@ -68,9 +159,9 @@ public record PreviewReservationCommand(
             @NotBlank String firstName,
             @NotBlank String lastName,
             @NotNull PassengerType passengerType,
-            Integer age,
+            @PositiveOrZero @Max(120) Integer age,
             String nationalityCode,
-            String email,
+            @Email String email,
             String phone,
             boolean leader,
             Integer title,
@@ -114,7 +205,7 @@ public record PreviewReservationCommand(
             String region,
             Short stars,
             String boardType,
-            @NotNull LocalDate checkIn,
+            @NotNull @FutureOrPresent LocalDate checkIn,
             @NotNull LocalDate checkOut,
             @NotNull @Positive Short rooms,
             @NotNull @Positive Short adults,
@@ -131,6 +222,15 @@ public record PreviewReservationCommand(
         @AssertTrue(message = "Rooms cannot exceed the number of adults (each room needs at least one adult)")
         public boolean isRoomsWithinAdults() {
             return rooms == null || adults == null || rooms <= adults;
+        }
+
+        /**
+         * Cross-field rule: check-out must be strictly after check-in — otherwise the stay is zero or
+         * negative nights, which TourVisio rejects mid-transaction rather than at the boundary.
+         */
+        @AssertTrue(message = "Çıkış tarihi giriş tarihinden sonra olmalıdır")
+        public boolean isCheckOutAfterCheckIn() {
+            return checkIn == null || checkOut == null || checkOut.isAfter(checkIn);
         }
     }
 
