@@ -9,6 +9,7 @@ import type { HotelLocation, HotelProduct } from '@/types'
 export const hotelFixtures: HotelProduct[] = [
   {
     id: 'htl-mock-001',
+    offerId: 'off-htl-mock-001',
     hotelName: 'MOCK Grand Antalya Resort',
     region: 'Antalya',
     stars: 5,
@@ -21,6 +22,7 @@ export const hotelFixtures: HotelProduct[] = [
   },
   {
     id: 'htl-mock-002',
+    offerId: 'off-htl-mock-002',
     hotelName: 'Test Seaside Hotel Bodrum',
     region: 'Bodrum',
     stars: 4,
@@ -32,6 +34,7 @@ export const hotelFixtures: HotelProduct[] = [
   },
   {
     id: 'htl-mock-003',
+    offerId: 'off-htl-mock-003',
     hotelName: 'MOCK City Suites İstanbul',
     region: 'İstanbul',
     stars: 4,
@@ -43,6 +46,7 @@ export const hotelFixtures: HotelProduct[] = [
   },
   {
     id: 'htl-mock-004',
+    offerId: 'off-htl-mock-004',
     hotelName: 'Sample Boutique Kapadokya',
     region: 'Nevşehir',
     stars: 3,
@@ -55,6 +59,7 @@ export const hotelFixtures: HotelProduct[] = [
   },
   {
     id: 'htl-mock-005',
+    offerId: 'off-htl-mock-005',
     hotelName: 'MOCK Palace İzmir',
     region: 'İzmir',
     stars: 5,

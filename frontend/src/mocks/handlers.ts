@@ -1,11 +1,18 @@
 import { http, HttpResponse, type RequestHandler } from 'msw'
-import type { FlightSearchCriteria, HotelSearchCriteria, Reservation } from '@/types'
+import type {
+  FlightSearchCriteria,
+  HotelSearchCriteria,
+  ReservationDetail,
+  ReservationSummary,
+} from '@/types'
 import type {
   AuthUser,
-  CreateReservationRequest,
+  ConfirmRequest,
   LoginRequest,
+  NeedsConfirmationResponse,
+  PreviewReservationCommand,
+  PreviewResponse,
   RegisterRequest,
-  ReservationPreview,
   SendMessageRequest,
 } from '@/api'
 import {
@@ -30,12 +37,82 @@ import {
  * değişmez. Fixture verileri ⚠️ MOCK'tur; fiyat/uygunluk uydurulmaz (bkz. fixtures).
  */
 
-/** Oluşturulan rezervasyonlar için tohumlanmış, çağrılar arası kalıcı bellek deposu. */
-const reservations: Reservation[] = reservationFixtures.map((r) => ({
+/** Oluşturulan rezervasyonlar için tohumlanmış, çağrılar arası kalıcı bellek deposu (tam detay). */
+const reservations: ReservationDetail[] = reservationFixtures.map((r) => ({
   ...r,
   passengers: r.passengers?.map((p) => ({ ...p })),
 }))
 let nextReservationId = 2000
+
+/** Aktif önizlemeler (previewId → komut) ve uyarı-sonrası bekleyen commit'ler (token → komut). */
+const previewStore = new Map<string, PreviewReservationCommand>()
+const pendingCommits = new Map<string, PreviewReservationCommand>()
+let nextPreviewSeq = 1
+
+/** Bir komutun ürün tipini hangi blokların dolu olduğundan türetir (backend paritesi). */
+function deriveProductType(cmd: PreviewReservationCommand): ReservationDetail['productType'] {
+  if (cmd.hotel && cmd.flight) return 'combined'
+  return cmd.flight ? 'flight' : 'hotel'
+}
+
+/** Test/dev'de uyarı dalını (NeedsUserConfirmation) tetikleyen sinyal: offerId 'OFFER-DUP'. */
+function shouldWarn(cmd: PreviewReservationCommand): boolean {
+  return (cmd.offerIds ?? []).includes('OFFER-DUP')
+}
+
+/** Komuttan tam rezervasyon detayı üretir (onaylı) — çift-jetonlu backend commit'inin karşılığı. */
+function reservationFromCommand(cmd: PreviewReservationCommand, id: number): ReservationDetail {
+  return {
+    id,
+    reservationNumber: `PAX-MOCK-${id}`,
+    externalReservationNumber: `RC${String(id).padStart(6, '0')}`,
+    productType: deriveProductType(cmd),
+    status: 'confirmed',
+    reservationDate: new Date().toISOString().slice(0, 10),
+    totalAmount: cmd.totalAmount,
+    currency: cmd.currency,
+    leadGuestName: cmd.leadGuestName,
+    passengers: (cmd.travellers ?? []).map((t) => ({
+      firstName: t.firstName,
+      lastName: t.lastName,
+      passengerType: t.passengerType,
+      age: t.age ?? null,
+      nationality: t.nationalityCode ?? null,
+      email: t.email ?? null,
+      phone: t.phone ?? null,
+    })),
+    hotel: cmd.hotel ? { ...cmd.hotel } : null,
+    flight: cmd.flight ? { ...cmd.flight } : null,
+    cancellationOptions: [
+      {
+        reasonId: 'RSN-USER',
+        reasonName: 'Kullanıcı talebi',
+        cancelable: true,
+        price: { amount: 0, currency: cmd.currency },
+        services: [],
+      },
+    ],
+  }
+}
+
+/** Özet görünüm — liste satırı / oluşturma yanıtı (detaydan yalnız başlık alanları). */
+function toReservationSummary(r: ReservationDetail): ReservationSummary {
+  return {
+    id: r.id,
+    reservationNumber: r.reservationNumber,
+    externalReservationNumber: r.externalReservationNumber,
+    status: r.status,
+    productType: r.productType,
+    reservationDate: r.reservationDate,
+    totalAmount: r.totalAmount,
+    currency: r.currency,
+    leadGuestName: r.leadGuestName,
+  }
+}
+
+/** Başarısız/ara sonuç gövdesi (backend OutcomeResponse paritesi). */
+const outcomeResponse = (code: string, message: string, status: number) =>
+  HttpResponse.json({ outcome: code, message }, { status })
 
 /**
  * Mock oturum — gerçek backend'in kalıcı kullanıcı tablosunun karşılığı olarak
@@ -86,30 +163,8 @@ function errorBody(error: string, message: string) {
   return { error, message, timestamp: new Date().toISOString() }
 }
 
-/** Ürün-tipi bağımsız özet — preview/create için fixture'lardan ürün çözer. */
-function findProduct(id: string) {
-  const h = hotelFixtures.find((x) => x.id === id)
-  if (h) {
-    return {
-      productType: 'hotel' as const,
-      title: h.hotelName,
-      summary: `${h.region} · ${h.stars}★ · ${h.boardType}`,
-      price: h.price,
-      currency: h.currency,
-    }
-  }
-  const f = flightFixtures.find((x) => x.id === id)
-  if (f) {
-    return {
-      productType: 'flight' as const,
-      title: `${f.airline} ${f.origin} → ${f.destination}`,
-      summary: `${f.departTime} · ${f.stops === 0 ? 'direkt' : `${f.stops} aktarma`} · ${f.baggage}`,
-      price: f.price,
-      currency: f.currency,
-    }
-  }
-  return undefined
-}
+/** Kaba e-posta biçim denetimi — backend Bean Validation @Email paritesi. */
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 const notFound = (message: string) => HttpResponse.json({ message }, { status: 404 })
 
@@ -172,69 +227,91 @@ export const handlers: RequestHandler[] = [
 
   http.post('/api/v1/flights/search', async ({ request }) => {
     const criteria = (await request.json()) as FlightSearchCriteria
-    const nd = criteria?.destination ? norm(criteria.destination) : ''
+    // Form artık seçilen konumun id/kodunu (ör. "AYT") gönderir; gerçek backend
+    // bunu TourVisio konumuna çözer. Mock da id/kod'u fixture konum adına çözer
+    // ("AYT" → "Antalya Havalimanı (AYT)") ki şehir bazlı fixture eşleşmesi tutsun.
+    // Serbest metin ("Antalya") çözülmez, olduğu gibi kalır — geriye dönük uyumlu.
+    const resolveLoc = (value: string) => {
+      const loc = flightLocationFixtures.find((l) => l.id === value || l.code === value)
+      return norm(loc ? loc.name : value)
+    }
+    const nd = criteria?.destination ? resolveLoc(criteria.destination) : ''
     let results = flightFixtures
     if (nd) {
-      const filtered = flightFixtures.filter((f) => norm(f.destination).includes(nd))
+      const filtered = flightFixtures.filter(
+        (f) => nd.includes(norm(f.destination)) || norm(f.destination).includes(nd),
+      )
       if (filtered.length) results = filtered
     }
     return HttpResponse.json(results)
   }),
 
-  // ── Reservation ───────────────────────────────────────────────────────────
+  // ── Reservation (stateful preview→confirm; backend reservation/ modülü paritesi) ──────────
+  // POST /preview: snapshot'ı dondur, previewId üret (yazma/TourVisio yok).
   http.post('/api/v1/reservations/preview', async ({ request }) => {
-    const body = (await request.json()) as CreateReservationRequest
-    const product = findProduct(body.productId)
-    if (!product) return notFound('Ürün bulunamadı.')
-    const preview: ReservationPreview = {
-      productType: product.productType,
-      productId: body.productId,
-      title: product.title,
-      summary: product.summary,
-      totalAmount: product.price,
-      currency: body.currency ?? product.currency,
-      passengers: body.passengers ?? [],
+    const cmd = (await request.json()) as PreviewReservationCommand
+    const previewId = `preview-${nextPreviewSeq++}`
+    previewStore.set(previewId, cmd)
+    const body: PreviewResponse = {
+      previewId,
+      expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      productType: deriveProductType(cmd),
+      totalAmount: cmd.totalAmount,
+      currency: cmd.currency,
+      leadGuestName: cmd.leadGuestName,
+      passengerNames: (cmd.travellers ?? []).map((t) => `${t.firstName} ${t.lastName}`),
+      hasHotel: !!cmd.hotel,
+      hasFlight: !!cmd.flight,
     }
-    return HttpResponse.json(preview)
+    return HttpResponse.json(body)
   }),
 
+  // POST /: kesin onay. confirmationToken → uyarı sonrası devam; previewId → normal onay.
   http.post('/api/v1/reservations', async ({ request }) => {
-    const body = (await request.json()) as CreateReservationRequest
-    const product = findProduct(body.productId)
-    if (!product) return notFound('Ürün bulunamadı.')
-    const id = String(nextReservationId++)
-    const now = new Date().toISOString()
-    const lead = body.passengers?.[0]
-    const reservation: Reservation = {
-      id,
-      reservationNumber: `PAX-MOCK-${id}`,
-      productType: product.productType,
-      status: 'confirmed',
-      reservationDate: now.slice(0, 10),
-      totalAmount: product.price,
-      currency: body.currency ?? product.currency,
-      leadGuestName: lead ? `${lead.firstName} ${lead.lastName}` : undefined,
-      createdAt: now,
-      updatedAt: now,
-      passengers: body.passengers ?? [],
+    const body = (await request.json()) as ConfirmRequest
+
+    if (body.confirmationToken) {
+      const cmd = pendingCommits.get(body.confirmationToken)
+      if (!cmd) return outcomeResponse('PREVIEW_EXPIRED', 'Preview expired, please start again.', 410)
+      pendingCommits.delete(body.confirmationToken)
+      const created = reservationFromCommand(cmd, nextReservationId++)
+      reservations.unshift(created)
+      return HttpResponse.json(toReservationSummary(created), { status: 201 })
     }
-    reservations.unshift(reservation)
-    return HttpResponse.json(reservation, { status: 201 })
+
+    const cmd = body.previewId ? previewStore.get(body.previewId) : undefined
+    if (!cmd) return outcomeResponse('PREVIEW_EXPIRED', 'Preview expired, please start again.', 410)
+    previewStore.delete(body.previewId as string)
+
+    // Uyarı dalı (ör. çift rezervasyon): commit'i beklet, token döndür (200).
+    if (shouldWarn(cmd)) {
+      const token = `token-${nextPreviewSeq++}`
+      pendingCommits.set(token, cmd)
+      const warn: NeedsConfirmationResponse = {
+        confirmationToken: token,
+        warnings: ['Bu ürün için mevcut bir rezervasyon bulundu (DuplicateReservationFound).'],
+      }
+      return HttpResponse.json(warn, { status: 200 })
+    }
+
+    const created = reservationFromCommand(cmd, nextReservationId++)
+    reservations.unshift(created)
+    return HttpResponse.json(toReservationSummary(created), { status: 201 })
   }),
 
-  http.get('/api/v1/reservations', () => HttpResponse.json(reservations)),
+  http.get('/api/v1/reservations', () => HttpResponse.json(reservations.map(toReservationSummary))),
 
   http.get('/api/v1/reservations/:id', ({ params }) => {
-    const r = reservations.find((x) => x.id === String(params.id))
+    const r = reservations.find((x) => x.id === Number(params.id))
     return r ? HttpResponse.json(r) : notFound('Rezervasyon bulunamadı.')
   }),
 
   http.patch('/api/v1/reservations/:id/cancel', ({ params }) => {
-    const r = reservations.find((x) => x.id === String(params.id))
+    const r = reservations.find((x) => x.id === Number(params.id))
     if (!r) return notFound('Rezervasyon bulunamadı.')
     r.status = 'cancelled'
-    r.updatedAt = new Date().toISOString()
-    return HttpResponse.json(r)
+    r.cancellationOptions = []
+    return outcomeResponse('CANCELLED', `Reservation ${r.id} is now cancelled`, 200)
   }),
 
   // ── Auth (mock; gerçek doğrulama backend'de — şifre burada denetlenmez) ────
@@ -317,6 +394,33 @@ export const handlers: RequestHandler[] = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  // Şifreyi doğrudan değiştirir (jetonsuz/public) — e-posta bağlantısı yok. Backend
+  // paritesi: geçersiz biçim/kısa şifre 400 VALIDATION_ERROR. Mock diğer auth uçları gibi
+  // gerçek kimliği denetlemez, bu yüzden geçerli girdide başarı döner; 404 EMAIL_NOT_FOUND
+  // gerçek-backend davranışıdır ve testlerde server.use override ile ele alınır.
+  http.post('/api/v1/auth/reset-password', async ({ request }) => {
+    const body = (await request.json().catch(() => null)) as {
+      email?: string
+      password?: string
+    } | null
+    const email = (body?.email ?? '').trim()
+    const password = body?.password ?? ''
+    if (!EMAIL_RE.test(email)) {
+      return HttpResponse.json(errorBody('VALIDATION_ERROR', 'email: Geçerli bir e-posta girin.'), {
+        status: 400,
+      })
+    }
+    if (password.length < 8) {
+      return HttpResponse.json(
+        errorBody('VALIDATION_ERROR', 'password: Şifre en az 8 karakter olmalıdır.'),
+        { status: 400 },
+      )
+    }
+    return HttpResponse.json({
+      message: 'Şifreniz güncellendi. Yeni şifrenle giriş yapabilirsin.',
+    })
+  }),
+
   // Gerçek backend gibi Authorization: Bearer <token> ister — istemcinin jeton
   // gönderme zinciri (authSlice → setAuthToken → interceptor) mock'ta da doğrulanır.
   http.get('/api/v1/auth/me', ({ request }) => {
@@ -328,5 +432,39 @@ export const handlers: RequestHandler[] = [
       })
     }
     return HttpResponse.json(session.user)
+  }),
+
+  // Oturumdaki kullanıcının e-postasını günceller. GET /me ile aynı jeton denetimi;
+  // geçersiz biçim 400, başka bir kayıtlı e-postayla çakışma 409 (register paritesi).
+  // Başarıda oturumu günceller ve güncel AuthUser döner.
+  http.patch('/api/v1/auth/me', async ({ request }) => {
+    const session = readAuthSession()
+    const header = request.headers.get('Authorization')
+    if (!session || header !== `Bearer ${session.token}`) {
+      return HttpResponse.json(errorBody('UNAUTHENTICATED', 'Oturum yok ya da jeton geçersiz.'), {
+        status: 401,
+      })
+    }
+    const body = (await request.json().catch(() => null)) as { email?: string } | null
+    const email = (body?.email ?? '').trim()
+    if (!EMAIL_RE.test(email)) {
+      return HttpResponse.json(errorBody('VALIDATION_ERROR', 'email: Geçerli bir e-posta girin.'), {
+        status: 400,
+      })
+    }
+    const current = session.user.email.toLowerCase()
+    const next = email.toLowerCase()
+    if (next !== current && registeredEmails.has(next)) {
+      return HttpResponse.json(
+        errorBody('EMAIL_ALREADY_EXISTS', `Bu e-posta zaten kayıtlı: ${email}`),
+        { status: 409 },
+      )
+    }
+    // Kayıtlı e-posta kümesini de taşı ki sonraki çakışma denetimleri tutarlı kalsın.
+    registeredEmails.delete(current)
+    registeredEmails.add(next)
+    const updated: AuthUser = { ...session.user, email }
+    writeAuthSession({ ...session, user: updated })
+    return HttpResponse.json(updated)
   }),
 ]

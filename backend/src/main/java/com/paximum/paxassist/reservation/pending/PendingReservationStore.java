@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -51,6 +52,9 @@ public class PendingReservationStore {
         this.objectMapper = JsonMapper.builder()
                 .addModule(new JavaTimeModule())
                 .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+                // Bean Validation'ın türetilmiş boolean metotları (ör. @AssertTrue isAtLeastOneProductPresent)
+                // serileşirken JSON'a sızabilir; geri okurken bilinmeyen alanlar deserializasyonu bozmasın.
+                .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
                 .build();
         this.previewTtl = Duration.ofMinutes(previewTtlMinutes);
         this.awaitingTtl = Duration.ofMinutes(confirmTtlMinutes);

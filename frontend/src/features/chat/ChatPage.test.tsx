@@ -98,6 +98,24 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
   })
 
+  it('mesaj gönderilip yanıt gelince imleç sohbet input\'una geri döner (odak korunur)', async () => {
+    const user = userEvent.setup()
+    renderChat()
+
+    const input = () => screen.getByLabelText('Mesaj') as HTMLTextAreaElement
+    // Gönder'e tıklamak odağı butona kaçırır ve istek pending iken input disabled olur.
+    await send(user, 'merhaba')
+
+    // Yanıt gelip composer tekrar etkinleşince odak input'a geri döner —
+    // kullanıcı yeniden tıklamadan yazmaya devam edebilir (madde 11).
+    await screen.findByText(
+      'Otel araması mı yoksa uçuş araması mı yapmak istersiniz?',
+      {},
+      { timeout: 3000 },
+    )
+    await waitFor(() => expect(document.activeElement).toBe(input()))
+  })
+
   it('istek uçuştayken "Yeni sohbet"e geçilince composer yeniden yazılabilir olur', async () => {
     const user = userEvent.setup()
     // İlk yanıtı askıda tut: sessionId hâlâ null iken yeni sohbet senaryosu —
@@ -120,21 +138,23 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     await waitFor(() => expect(input().disabled).toBe(false))
   })
 
-  it('tam kriterde kartlar thread içinde görünür; Seç taslağı yazıp forma yönlendirir', async () => {
+  it('tam kriterde sonuç paneli + "Sonuçları göster" özeti çıkar; Seç forma yönlendirir', async () => {
     const user = userEvent.setup()
     const { store } = renderChat()
 
     await send(user, 'Antalya otel 2026-08-01 2026-08-05 2 kişi')
 
-    // Kriterler tamam → fixture kartı thread'de.
+    // Kriterler tamam → sağ sonuç panelinde fixture kartı; thread'de özet düğmesi
+    // (kartlar artık balonlara yığılmıyor — madde 8).
     expect(await screen.findByText('MOCK Grand Antalya Resort', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /sonuçları göster/i })).toBeTruthy()
 
     // Seç → reservationDraft dolar, kontrollü forma yönlendirilir (booking yok).
     await user.click(screen.getByRole('button', { name: /seç/i }))
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toMatchObject({
       productType: 'hotel',
-      productId: 'htl-mock-001',
+      offerId: 'off-htl-mock-001',
       title: 'MOCK Grand Antalya Resort',
       currency: 'EUR',
     })

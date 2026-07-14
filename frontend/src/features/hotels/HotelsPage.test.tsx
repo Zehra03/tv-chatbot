@@ -47,8 +47,16 @@ function renderPage() {
   return { store }
 }
 
-async function search(user: ReturnType<typeof userEvent.setup>, destination: string) {
+// Destinasyon artık yalnızca dropdown önerisinden seçilebilir: yaz → öneriyi bekle
+// → tıkla. optionPattern verilmezse yazılan metnin tam eşleşmesi aranır.
+async function search(
+  user: ReturnType<typeof userEvent.setup>,
+  destination: string,
+  optionPattern: RegExp = new RegExp(`^${destination}$`),
+) {
   await user.type(screen.getByLabelText('Nereye'), destination)
+  const option = await screen.findByRole('option', { name: optionPattern }, { timeout: 3000 })
+  await user.click(option)
   fireEvent.change(screen.getByLabelText('Giriş'), { target: { value: '2026-08-01' } })
   fireEvent.change(screen.getByLabelText('Çıkış'), { target: { value: '2026-08-05' } })
   await user.click(screen.getByRole('button', { name: 'Ara' }))
@@ -59,8 +67,9 @@ describe('HotelsPage (MSW ile)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    // Mock, eşleşmeyen bölgede tüm fixture'ları döndürür → 5 sonuç.
-    await search(user, 'Mars')
+    // Bursa listede var ama otel fixture'ı yok → mock eşleşmeyen bölgede tüm
+    // fixture'ları döndürür → 5 sonuç (filtreleri denemek için tüm liste gerekir).
+    await search(user, 'Bursa')
     expect(await screen.findByText('MOCK Grand Antalya Resort', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('5 sonuç')).toBeTruthy()
 
@@ -98,6 +107,21 @@ describe('HotelsPage (MSW ile)', () => {
     expect(screen.queryByRole('option', { name: /Antalya/ })).toBeNull()
   })
 
+  it('listeden seçmeden serbest metinle arama yapmaz, uyarı gösterir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    // Öneri açılır ama seçilmez → serbest metin aramaya gitmemeli.
+    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    fireEvent.change(screen.getByLabelText('Giriş'), { target: { value: '2026-08-01' } })
+    fireEvent.change(screen.getByLabelText('Çıkış'), { target: { value: '2026-08-05' } })
+    await user.click(screen.getByRole('button', { name: 'Ara' }))
+
+    expect(await screen.findByText(/varış yerini listeden seçin/i)).toBeTruthy()
+    // Geçersiz kriterde arama tetiklenmez → "N sonuç" satırı görünmez.
+    expect(screen.queryByText(/\d+ sonuç/)).toBeNull()
+  })
+
   it('Seç, taslağı yazıp rezervasyon formuna yönlendirir', async () => {
     const user = userEvent.setup()
     const { store } = renderPage()
@@ -109,7 +133,7 @@ describe('HotelsPage (MSW ile)', () => {
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toMatchObject({
       productType: 'hotel',
-      productId: 'htl-mock-001',
+      offerId: 'off-htl-mock-001',
     })
   })
 

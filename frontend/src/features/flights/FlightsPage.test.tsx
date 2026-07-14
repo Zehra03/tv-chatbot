@@ -46,9 +46,21 @@ function renderPage() {
   return { store }
 }
 
+// Konum alanı artık yalnızca dropdown önerisinden seçilebilir: yaz → öneriyi bekle → tıkla.
+async function selectLocation(
+  user: ReturnType<typeof userEvent.setup>,
+  label: string,
+  text: string,
+  optionPattern: RegExp,
+) {
+  await user.type(screen.getByLabelText(label), text)
+  const option = await screen.findByRole('option', { name: optionPattern }, { timeout: 3000 })
+  await user.click(option)
+}
+
 async function search(user: ReturnType<typeof userEvent.setup>) {
-  await user.type(screen.getByLabelText('Nereden'), 'İstanbul')
-  await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+  await selectLocation(user, 'Nereden', 'İstanbul', /İstanbul Havalimanı/)
+  await selectLocation(user, 'Nereye', 'Antalya', /Antalya Havalimanı/)
   fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2026-08-01' } })
   await user.click(screen.getByRole('button', { name: 'Ara' }))
 }
@@ -114,16 +126,30 @@ describe('FlightsPage (MSW ile)', () => {
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
     expect(store.getState().reservationDraft.draft).toMatchObject({
       productType: 'flight',
-      productId: 'flt-mock-002',
+      offerId: 'flt-mock-002',
     })
+  })
+
+  it('listeden seçmeden serbest metinle arama yapmaz, uyarı gösterir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    // Öneri açılır ama seçilmez → serbest metin aramaya gitmemeli.
+    await user.type(screen.getByLabelText('Nereden'), 'İstanbul')
+    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2026-08-01' } })
+    await user.click(screen.getByRole('button', { name: 'Ara' }))
+
+    expect(await screen.findByText(/kalkış yerini listeden seçin/i)).toBeTruthy()
+    expect(screen.queryByText(/\d+ sonuç/)).toBeNull()
   })
 
   it('geçmiş gidiş tarihinde uyarı gösterir ve arama yapmaz', async () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.type(screen.getByLabelText('Nereden'), 'İstanbul')
-    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    await selectLocation(user, 'Nereden', 'İstanbul', /İstanbul Havalimanı/)
+    await selectLocation(user, 'Nereye', 'Antalya', /Antalya Havalimanı/)
     fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2020-01-01' } })
     await user.click(screen.getByRole('button', { name: 'Ara' }))
 
@@ -136,8 +162,9 @@ describe('FlightsPage (MSW ile)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.type(screen.getByLabelText('Nereden'), 'Antalya')
-    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    // İki alanda da aynı konumu (Antalya) listeden seç → kalkış = varış.
+    await selectLocation(user, 'Nereden', 'Antalya', /Antalya Havalimanı/)
+    await selectLocation(user, 'Nereye', 'Antalya', /Antalya Havalimanı/)
     fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2026-08-01' } })
     await user.click(screen.getByRole('button', { name: 'Ara' }))
 
@@ -149,8 +176,8 @@ describe('FlightsPage (MSW ile)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.type(screen.getByLabelText('Nereden'), 'İstanbul')
-    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    await selectLocation(user, 'Nereden', 'İstanbul', /İstanbul Havalimanı/)
+    await selectLocation(user, 'Nereye', 'Antalya', /Antalya Havalimanı/)
     // Yön → Gidiş-dönüş (DropdownSelect listbox: tetikleyiciye tıkla, seçeneğe tıkla).
     await user.click(screen.getByLabelText('Yön'))
     await user.click(await screen.findByRole('option', { name: 'Gidiş-dönüş' }))

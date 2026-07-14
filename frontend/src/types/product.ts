@@ -12,6 +12,12 @@ import type { TripType } from './search'
 
 export interface HotelProduct {
   id: string
+  /**
+   * TourVisio teklif jetonu — rezervasyonu başlatan BeginTransaction API'sinin istediği opak token
+   * (backend `hotel/HotelProduct.java` `offerId`). `id` (otel kimliği) ile KARIŞTIRILMAMALI:
+   * booking `offerId` ile yapılır. Uçuşta ayrı alan yoktur — orada `FlightProduct.id` zaten offer jetonu.
+   */
+  offerId: string
   hotelName: string
   region: string
   /** 1–5. DB: stars smallint. */
