@@ -23,6 +23,11 @@
         <gatling.version>3.11.5</gatling.version>
         <gatling-maven-plugin.version>4.8.0</gatling-maven-plugin.version>
         <jjwt.version>0.12.6</jjwt.version>
+        <!-- Ahead of the Spring Boot 3.5.0 BOM (1.21.0), whose docker-java client still negotiates an
+             old Engine API version. Docker Engine 29 rejects it with a 400, and Testcontainers reports
+             the misleading "Could not find a valid Docker environment" — so every container-backed test
+             fails on an up-to-date Docker Desktop. 1.21.4 talks to the current API. -->
+        <testcontainers.version>1.21.4</testcontainers.version>
     </properties>
 
     <dependencyManagement>
