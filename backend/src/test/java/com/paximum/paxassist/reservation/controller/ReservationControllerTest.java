@@ -1,5 +1,6 @@
 package com.paximum.paxassist.reservation.controller;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -34,6 +35,7 @@ import com.paximum.paxassist.reservation.domain.Reservation;
 import com.paximum.paxassist.reservation.domain.ReservationStatus;
 import com.paximum.paxassist.reservation.service.CancelResult;
 import com.paximum.paxassist.reservation.service.ConfirmationResult;
+import com.paximum.paxassist.reservation.service.PreviewResult;
 import com.paximum.paxassist.reservation.service.ReservationDetailResult;
 import com.paximum.paxassist.reservation.service.ReservationPreview;
 import com.paximum.paxassist.reservation.service.ReservationService;
@@ -80,13 +82,13 @@ class ReservationControllerTest {
                 .build();
     }
 
-    @Test
-    void preview_validRequest_routesToServiceAndReturnsMappedResponse() throws Exception {
-        // Given
-        // The traveller list must match the snapshot's party size (1 adult -> 1 traveller), and the
-        // stay must be in the future: dates are derived from today so the fixture cannot rot.
+    /**
+     * A valid booking body. The traveller list must match the snapshot's party size (1 adult ->
+     * 1 traveller) and the stay must be in the future, so the dates are derived from today.
+     */
+    private String previewBody() {
         java.time.LocalDate checkIn = java.time.LocalDate.now().plusDays(30);
-        String requestJson = """
+        return """
                 {
                     "currency": "EUR",
                     "totalAmount": 1500.00,
@@ -103,21 +105,27 @@ class ReservationControllerTest {
                     }
                 }
                 """.formatted(checkIn, checkIn.plusDays(4));
+    }
 
-        ReservationPreview previewResult = new ReservationPreview("preview-123", java.time.Instant.now(), ProductType.HOTEL, java.math.BigDecimal.valueOf(1500), "EUR", "John Doe", List.of("John Doe"), true, false);
-        when(reservationService.previewReservation(any(PreviewReservationCommand.class))).thenReturn(previewResult);
-        
+    @Test
+    void preview_validRequest_routesToServiceAndReturnsMappedResponse() throws Exception {
+        ReservationPreview previewResult = new ReservationPreview("preview-123", java.time.Instant.now(),
+                ProductType.HOTEL, java.math.BigDecimal.valueOf(1500), "EUR", "John Doe",
+                List.of("John Doe"), true, false, false, null);
+        when(reservationService.previewReservation(any(PreviewReservationCommand.class)))
+                .thenReturn(new PreviewResult.Priced(previewResult));
+
         PreviewResponse previewResponse = new PreviewResponse(
                 "preview-123", java.time.Instant.now(), ProductType.HOTEL, java.math.BigDecimal.valueOf(1500),
-                "EUR", "John Doe", List.of("John Doe"), true, false);
+                "EUR", "John Doe", List.of("John Doe"), true, false, false, null);
         when(mapper.toPreviewResponse(previewResult)).thenReturn(previewResponse);
 
-        // When & Then
         mockMvc.perform(post("/api/v1/reservations/preview")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(requestJson))
+                        .content(previewBody()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.previewId").value("preview-123"));
+                .andExpect(jsonPath("$.previewId").value("preview-123"))
+                .andExpect(jsonPath("$.priceChanged").value(false));
 
         verify(reservationService).previewReservation(any(PreviewReservationCommand.class));
     }
@@ -242,14 +250,17 @@ class ReservationControllerTest {
     }
 
     @Test
-    void confirm_tourVisioRejected_returns422WithTheProviderMessage() throws Exception {
+    void confirm_tourVisioRejected_returns422WithAUserFacingMessageNotTheProvidersOwn() throws Exception {
+        // The provider's text is written for an integrator, not a traveller: the user gets a plain
+        // sentence that also states the important fact — nothing was purchased.
         confirmWithPreviewId(new ConfirmationResult.TourVisioRejected(
-                "commitTransaction", "PRICE_CHANGED", "Fiyat değişti"));
+                "commitTransaction", "ERR_4021", "OfferPriceMismatchException at BookingService.commit"));
 
         postConfirm(PREVIEW_BODY)
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.outcome").value("TOURVISIO_REJECTED"))
-                .andExpect(jsonPath("$.message").value("Fiyat değişti"));
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("Rezervasyon yapılmadı")));
     }
 
     @Test
@@ -304,6 +315,104 @@ class ReservationControllerTest {
                 .andExpect(status().isBadRequest());
 
         org.mockito.Mockito.verifyNoInteractions(reservationService);
+    }
+
+    /**
+     * Technical detail must never reach the traveller: no "read timed out", no host/port, no provider
+     * internals. The outcome CODE is what the frontend branches on; the message is what the user reads.
+     * Each of these results carries an internal description — none of it may appear in the body.
+     */
+    @Test
+    void confirm_failureMessages_leakNoInternalDetail() throws Exception {
+        record Case(ConfirmationResult result, int status, String secret) {}
+        List<Case> cases = List.of(
+                new Case(new ConfirmationResult.TourVisioUnavailable("beginTransaction",
+                        "Connection refused: tourvisio-db:5432 read timed out"), 502, "5432"),
+                new Case(new ConfirmationResult.CommitOutcomeUnknown("TV-99",
+                        "java.net.SocketTimeoutException at RestClientTourVisioBookingClient"), 202, "SocketTimeoutException"),
+                new Case(new ConfirmationResult.OrphanedBooking("TV-99",
+                        "SQLException: relation \"reservations\" violates constraint"), 500, "SQLException"),
+                new Case(new ConfirmationResult.TourVisioRejected("commitTransaction", "ERR_501",
+                        "Internal provider stack: com.tourvisio.Booking.commit()"), 422, "com.tourvisio"));
+
+        for (Case c : cases) {
+            org.mockito.Mockito.reset(reservationService);
+            when(reservationService.confirmReservation("preview-123", 123L)).thenReturn(c.result());
+
+            String body = postConfirm(PREVIEW_BODY)
+                    .andExpect(status().is(c.status()))
+                    .andReturn().getResponse().getContentAsString();
+
+            assertThat(body).doesNotContain(c.secret());
+            assertThat(body).doesNotContain("timed out", "Exception", "Connection refused");
+        }
+    }
+
+    @Test
+    void cancel_failureMessages_leakNoInternalDetail() throws Exception {
+        when(reservationService.cancelReservation(eq(1L), eq(123L), any(), any()))
+                .thenReturn(new CancelResult.TourVisioUnavailable("Connection refused: 10.0.0.5:8443"));
+
+        String body = mockMvc.perform(patch("/api/v1/reservations/1/cancel")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Vazgeçtim\"}"))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.outcome").value("TOURVISIO_UNAVAILABLE"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("10.0.0.5", "Connection refused");
+    }
+
+    // =============================================================================================
+    // POST /api/v1/reservations/preview — K21: re-priced and re-checked against TourVisio.
+    // =============================================================================================
+
+    @Test
+    void preview_soldOutProduct_returns409WithAPlainExplanation() throws Exception {
+        when(reservationService.previewReservation(any()))
+                .thenReturn(new PreviewResult.Unavailable("OfferNotAvailable"));
+
+        mockMvc.perform(post("/api/v1/reservations/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(previewBody()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.outcome").value("PRODUCT_UNAVAILABLE"))
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("artık müsait değil")));
+    }
+
+    @Test
+    void preview_providerUnavailable_returns502AndLeaksNothing() throws Exception {
+        when(reservationService.previewReservation(any()))
+                .thenReturn(new PreviewResult.ProviderUnavailable("read timed out at tourvisio:443"));
+
+        String body = mockMvc.perform(post("/api/v1/reservations/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(previewBody()))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.outcome").value("PROVIDER_UNAVAILABLE"))
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(body).doesNotContain("tourvisio:443", "timed out");
+    }
+
+    @Test
+    void preview_priceChanged_handsBothAmountsToTheUi() throws Exception {
+        ReservationPreview preview = new ReservationPreview("preview-1", java.time.Instant.now(),
+                ProductType.HOTEL, new java.math.BigDecimal("1750.00"), "EUR", "Ada Yılmaz",
+                List.of("Ada Yılmaz"), true, false, true, new java.math.BigDecimal("1500.00"));
+        when(reservationService.previewReservation(any())).thenReturn(new PreviewResult.Priced(preview));
+        when(mapper.toPreviewResponse(preview)).thenReturn(new PreviewResponse("preview-1",
+                java.time.Instant.now(), ProductType.HOTEL, new java.math.BigDecimal("1750.00"), "EUR",
+                "Ada Yılmaz", List.of("Ada Yılmaz"), true, false, true, new java.math.BigDecimal("1500.00")));
+
+        mockMvc.perform(post("/api/v1/reservations/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(previewBody()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.priceChanged").value(true))
+                .andExpect(jsonPath("$.previousAmount").value(1500.00))
+                .andExpect(jsonPath("$.totalAmount").value(1750.00));
     }
 
     // =============================================================================================

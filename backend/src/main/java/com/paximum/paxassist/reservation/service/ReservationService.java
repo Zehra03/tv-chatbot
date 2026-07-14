@@ -94,31 +94,89 @@ public class ReservationService {
     }
 
     // =========================================================================================
-    // Step 1 — PREVIEW. No TourVisio. No DB.
+    // Step 1 — PREVIEW. Re-prices against TourVisio. Still NO purchase and NO DB write.
     // =========================================================================================
 
     /**
-     * Freezes the validated input as a Redis snapshot and returns a summary. Makes no TourVisio call
-     * and no DB write of any kind.
+     * Re-validates the offer against TourVisio, then freezes the result as a Redis snapshot and returns
+     * the summary (K21: "rezervasyona geçerken güncel fiyat ve müsaitlik yeniden doğrulanır").
+     *
+     * <p>The price the client sends comes from a search result that may be minutes old — the hotel/flight
+     * caches hold results for 5 minutes. Previously the preview trusted it and made no provider call, so a
+     * sold-out room or a moved price only surfaced after the user pressed confirm, as an opaque failure
+     * mid-transaction. {@code beginTransaction} is TourVisio's own pricing of the offer, and it is not a
+     * purchase (only {@code commitTransaction} buys), so it is used here to answer both questions at once:
+     * <ul>
+     *   <li>a business rejection means the offer is <b>gone</b> → {@link PreviewResult.Unavailable};</li>
+     *   <li>a technical failure means availability <b>could not be verified</b> → nothing is frozen, rather
+     *       than freezing a price we did not check ({@link PreviewResult.ProviderUnavailable});</li>
+     *   <li>on success the <b>provider's price</b> — not the client's — is what gets frozen, so a tampered
+     *       or stale {@code totalAmount} can never become the amount recorded in the DB.</li>
+     * </ul>
+     *
+     * <p>The invariant this must not break: <b>no purchase without an explicit confirm</b>. It holds —
+     * {@code commitTransaction} is still reached only from {@code confirmReservation}. The transaction
+     * opened here is abandoned and expires on TourVisio's side; confirm opens its own and re-verifies the
+     * price again, so the check is not weakened by the gap between the two steps.
      */
-    public ReservationPreview previewReservation(PreviewReservationCommand command) {
+    public PreviewResult previewReservation(PreviewReservationCommand command) {
         ProductType productType = deriveProductType(command); // also validates at least one detail present
 
+        TourVisioCallResult<TransactionResponse> priced =
+                bookingClient.beginTransactionWithOffer(requestMapper.toBeginRequest(command));
+
+        if (priced instanceof BusinessFailure<TransactionResponse> rejected) {
+            TourVisioResponseHeader header = rejected.header();
+            log.info("Preview refused by TourVisio (offer no longer bookable): code={}",
+                    header == null ? null : header.primaryCode());
+            return new PreviewResult.Unavailable(firstMessage(header));
+        }
+        if (!(priced instanceof Success<TransactionResponse> success)) {
+            String description = priced instanceof TechnicalFailure<TransactionResponse> tf
+                    ? tf.description() : "unknown technical failure";
+            log.warn("Preview could not verify availability — TourVisio unavailable: {}", description);
+            return new PreviewResult.ProviderUnavailable(description);
+        }
+
+        // The live price wins over the client's. A difference is not an error here — it is exactly what
+        // the user must be shown before they agree to it.
+        BigDecimal declared = command.totalAmount();
+        Optional<TourVisioPrice> livePrice = TourVisioPriceExtractor.extract(
+                success.body() == null || success.body().body() == null
+                        ? null : success.body().body().reservationData());
+
+        BigDecimal amount = livePrice.map(TourVisioPrice::amount).filter(Objects::nonNull).orElse(declared);
+        String currency = livePrice.map(TourVisioPrice::currency).filter(Objects::nonNull).orElse(command.currency());
+        boolean priceChanged = declared != null && amount.compareTo(declared) != 0;
+
+        if (livePrice.isEmpty()) {
+            log.warn("Preview could not read TourVisio's price; freezing the declared amount {} {}.",
+                    declared, command.currency());
+        } else if (priceChanged) {
+            log.info("Price changed since search: {} {} -> {} {}. Freezing the live price.",
+                    declared, command.currency(), amount, currency);
+        }
+
+        // Freeze what TourVisio actually charges, so confirm and the persisted reservation both carry it.
+        PreviewReservationCommand repriced = command.withTotalAmount(amount, currency);
         String previewId = UUID.randomUUID().toString();
-        PendingReservation snapshot = new PendingReservation(previewId, command.userId(), Instant.now(), command);
+        PendingReservation snapshot = new PendingReservation(previewId, command.userId(), Instant.now(), repriced);
         pendingStore.savePreview(snapshot);
 
-        log.info("Reservation preview created: previewId={}, productType={}, ttl={}", previewId, productType, pendingStore.previewTtl());
-        return new ReservationPreview(
+        log.info("Reservation preview created: previewId={}, productType={}, ttl={}",
+                previewId, productType, pendingStore.previewTtl());
+        return new PreviewResult.Priced(new ReservationPreview(
                 previewId,
                 Instant.now().plus(pendingStore.previewTtl()),
                 productType,
-                command.totalAmount(),
-                command.currency(),
+                amount,
+                currency,
                 command.leadGuestName(),
                 passengerNames(command),
                 command.hotel() != null,
-                command.flight() != null);
+                command.flight() != null,
+                priceChanged,
+                priceChanged ? declared : null));
     }
 
     // =========================================================================================

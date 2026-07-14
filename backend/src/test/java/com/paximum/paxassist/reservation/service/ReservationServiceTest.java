@@ -51,35 +51,115 @@ class ReservationServiceTest {
     private ReservationService reservationService;
 
     @Test
-    void previewReservation_doesNotTriggerTourVisioAndSavesToStore() {
-        PreviewReservationCommand.Hotel mockHotel = new PreviewReservationCommand.Hotel(
-                "Hotel A", "Region", (short) 4, "BB",
-                java.time.LocalDate.now(), java.time.LocalDate.now().plusDays(2),
-                (short) 1, (short) 1, (short) 0, "TR", new BigDecimal("1500.00"), "EUR"
-        );
-
-        PreviewReservationCommand.Traveller mockTraveller = new PreviewReservationCommand.Traveller(
-                "1", "John", "Doe", com.paximum.paxassist.reservation.domain.PassengerType.ADULT,
-                30, "TR", "test@test.com", "555", true, 1, 1, java.time.LocalDate.of(1990, 1, 1),
-                "123", null, null, null
-        );
-
-        PreviewReservationCommand command = new PreviewReservationCommand(
-                123L, "EUR", new BigDecimal("1500.00"), "en-US", "John Doe",
-                "Notes", "Agency-1", List.of("OFFER-1"), List.of(),
-                List.of(mockTraveller), null, mockHotel, null);
-
+    void previewReservation_repricesTheOfferAndFreezesTheSnapshot() {
+        // The preview now asks TourVisio to price the offer (K21) — but it still writes nothing to the DB
+        // and still buys nothing. See previewReservation_neverBuysAnything for that invariant.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
         when(pendingStore.previewTtl()).thenReturn(java.time.Duration.ofMinutes(10));
 
-        // When
-        ReservationPreview preview = reservationService.previewReservation(command);
+        ReservationPreview preview = ((PreviewResult.Priced)
+                reservationService.previewReservation(command)).preview();
 
-        // Then
         assertThat(preview.productType()).isEqualTo(ProductType.HOTEL);
         assertThat(preview.previewId()).isNotBlank();
-        
+
         verify(pendingStore).savePreview(any(PendingReservation.class));
-        verifyNoInteractions(bookingClient); // CRITICAL: TourVisio MUST NOT be called
+        verifyNoInteractions(reservationRepository);
+    }
+
+    // =============================================================================================
+    // K21 — the preview re-validates price and availability against TourVisio.
+    // =============================================================================================
+
+    @Test
+    void previewReservation_soldOutOffer_stopsTheFlowInsteadOfFreezingIt() {
+        // TourVisio refuses to price the offer: it is gone. The user finds out here, not after confirm.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any())).thenReturn(
+                new TourVisioCallResult.BusinessFailure<>(new TourVisioResponseHeader("req-1", false, List.of())));
+
+        PreviewResult result = reservationService.previewReservation(command);
+
+        assertThat(result).isInstanceOf(PreviewResult.Unavailable.class);
+        // Nothing is frozen: a preview the user cannot actually book must not exist.
+        verify(pendingStore, org.mockito.Mockito.never()).savePreview(any());
+    }
+
+    @Test
+    void previewReservation_providerDown_freezesNothingRatherThanAnUncheckedPrice() {
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.TechnicalFailure<TransactionResponse>("read timed out", null));
+
+        PreviewResult result = reservationService.previewReservation(command);
+
+        assertThat(result).isInstanceOf(PreviewResult.ProviderUnavailable.class);
+        verify(pendingStore, org.mockito.Mockito.never()).savePreview(any());
+    }
+
+    @Test
+    void previewReservation_priceMovedSinceSearch_showsBothAmountsAndFreezesTheLiveOne() {
+        // The search said 1500; TourVisio now says 1750. The user must see both — and whatever they
+        // then confirm must be the REAL price, not the stale one.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1750.00")));
+        when(pendingStore.previewTtl()).thenReturn(java.time.Duration.ofMinutes(15));
+
+        PreviewResult result = reservationService.previewReservation(command);
+
+        ReservationPreview preview = ((PreviewResult.Priced) result).preview();
+        assertThat(preview.priceChanged()).isTrue();
+        assertThat(preview.previousAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+        assertThat(preview.totalAmount()).isEqualByComparingTo(new BigDecimal("1750.00"));
+
+        // The frozen snapshot carries the live price, so the DB can never record the stale figure.
+        org.mockito.ArgumentCaptor<PendingReservation> captor =
+                org.mockito.ArgumentCaptor.forClass(PendingReservation.class);
+        verify(pendingStore).savePreview(captor.capture());
+        assertThat(captor.getValue().command().totalAmount()).isEqualByComparingTo(new BigDecimal("1750.00"));
+    }
+
+    @Test
+    void previewReservation_unchangedPrice_isNotFlaggedAsAChange() {
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(pendingStore.previewTtl()).thenReturn(java.time.Duration.ofMinutes(15));
+
+        ReservationPreview preview = ((PreviewResult.Priced)
+                reservationService.previewReservation(command)).preview();
+
+        assertThat(preview.priceChanged()).isFalse();
+        assertThat(preview.previousAmount()).isNull();
+    }
+
+    @Test
+    void previewReservation_neverBuysAnything() {
+        // The invariant the re-pricing must not break: beginTransaction prices, only commit buys.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(pendingStore.previewTtl()).thenReturn(java.time.Duration.ofMinutes(15));
+
+        reservationService.previewReservation(command);
+
+        verify(bookingClient, org.mockito.Mockito.never()).commitTransaction(any());
+        verify(bookingClient, org.mockito.Mockito.never()).setReservationInfo(any());
         verifyNoInteractions(reservationRepository);
     }
 

@@ -31,7 +31,9 @@ public class ReservationWebMapper {
                 preview.leadGuestName(),
                 preview.passengerNames(),
                 preview.hasHotel(),
-                preview.hasFlight());
+                preview.hasFlight(),
+                preview.priceChanged(),
+                preview.previousAmount());
     }
 
     public ReservationSummaryResponse toSummary(Reservation r) {

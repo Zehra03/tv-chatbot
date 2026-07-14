@@ -11,7 +11,10 @@ import com.paximum.paxassist.reservation.domain.ProductType;
  * Carries the {@link #previewId()} the caller must pass to {@code confirmReservation}, plus the frozen
  * price/passengers/product summary and the {@link #expiresAt()} of the Redis snapshot.
  *
- * <p>No TourVisio call produced this — it is assembled purely from validated input.
+ * <p>{@link #totalAmount()} is TourVisio's own live price, re-read while building this preview — never
+ * the client's declared figure. When the two differ, {@link #priceChanged()} is true and
+ * {@link #previousAmount()} carries what the user was originally shown, so the UI can present old vs
+ * new and take an explicit acceptance before confirming (K21).
  */
 public record ReservationPreview(
         String previewId,
@@ -22,5 +25,7 @@ public record ReservationPreview(
         String leadGuestName,
         List<String> passengerNames,
         boolean hasHotel,
-        boolean hasFlight) {
+        boolean hasFlight,
+        boolean priceChanged,
+        BigDecimal previousAmount) {
 }

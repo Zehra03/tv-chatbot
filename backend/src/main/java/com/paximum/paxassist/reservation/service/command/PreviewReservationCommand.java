@@ -178,6 +178,16 @@ public record PreviewReservationCommand(
                 agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
     }
 
+    /**
+     * Returns a copy carrying TourVisio's own price. The preview re-prices the offer against the provider
+     * and freezes THIS copy, so the amount that reaches confirm and the DB is the one the provider will
+     * charge — never the figure the client sent.
+     */
+    public PreviewReservationCommand withTotalAmount(BigDecimal amount, String amountCurrency) {
+        return new PreviewReservationCommand(userId, amountCurrency, amount, culture, leadGuestName, reservationNote,
+                agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
+    }
+
     /** An additional service/offer to attach via AddServices (optional; primary offers go in {@link #offerIds()}). */
     public record AddOffer(String offerId, List<String> travellerIds) {
     }
