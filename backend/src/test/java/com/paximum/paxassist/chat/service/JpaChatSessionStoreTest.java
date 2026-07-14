@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatMessageEntity;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.domain.ChatSessionEntity;
@@ -29,7 +30,7 @@ class JpaChatSessionStoreTest {
 
     @Test
     void mintsPersistsAndReloadsTranscriptAndCriteria() {
-        ChatSession session = store.getOrCreate(null, null);
+        ChatSession session = store.getOrCreate(null, ChatCaller.ANONYMOUS);
         assertThat(session.getId()).isNotBlank();
 
         session.getAccumulatedCriteria().put("location", "Antalya");
@@ -47,7 +48,7 @@ class JpaChatSessionStoreTest {
 
     @Test
     void appendsOnlyNewMessagesOnSubsequentSaves() {
-        ChatSession session = store.getOrCreate(null, null);
+        ChatSession session = store.getOrCreate(null, ChatCaller.ANONYMOUS);
         session.addMessage("user", "ilk");
         session.addMessage("assistant", "cevap1");
         store.save(session);
@@ -62,7 +63,7 @@ class JpaChatSessionStoreTest {
 
     @Test
     void unknownIdMintsAFreshPersistedSession() {
-        ChatSession session = store.getOrCreate("999999", null);
+        ChatSession session = store.getOrCreate("999999", ChatCaller.ANONYMOUS);
         assertThat(session.getId()).isNotEqualTo("999999");
         assertThat(repository.existsById(Long.valueOf(session.getId()))).isTrue();
     }

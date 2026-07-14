@@ -10,6 +10,7 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatMessage;
 import com.paximum.paxassist.chat.domain.ChatMessageEntity;
 import com.paximum.paxassist.chat.domain.ChatSession;
@@ -41,16 +42,15 @@ public class JpaChatSessionStore implements ChatSessionStore {
 
     @Override
     @Transactional
-    public ChatSession getOrCreate(String sessionId, Long userId) {
+    public ChatSession getOrCreate(String sessionId, ChatCaller caller) {
         if (sessionId != null) {
             ChatSession cached = liveCache.get(sessionId);
-            if (cached != null && ownedBy(cached, userId)) {
+            if (cached != null && ownedBy(cached, caller)) {
                 return cached;
             }
             Long id = tryParseId(sessionId);
             if (id != null) {
-                Optional<ChatSession> loaded = repository.findByIdAndUserIdWithMessages(id, userId)
-                        .map(this::toDomain);
+                Optional<ChatSession> loaded = loadOwned(id, caller).map(this::toDomain);
                 if (loaded.isPresent()) {
                     liveCache.put(loaded.get().getId(), loaded.get());
                     return loaded.get();
@@ -59,16 +59,38 @@ public class JpaChatSessionStore implements ChatSessionStore {
             // Unknown / unparseable / foreign id → fall through and mint a fresh owned session.
         }
         ChatSessionEntity entity = new ChatSessionEntity(new HashMap<>());
-        entity.setUserId(userId);
+        entity.setUserId(caller.userId());
+        entity.setGuestToken(caller.guestToken());
         ChatSessionEntity created = repository.save(entity);
         ChatSession session = new ChatSession(String.valueOf(created.getId()));
-        session.setUserId(userId);
+        session.setUserId(caller.userId());
+        session.setGuestToken(caller.guestToken());
         liveCache.put(session.getId(), session);
         return session;
     }
 
-    private boolean ownedBy(ChatSession session, Long userId) {
-        return session.getUserId() == null || session.getUserId().equals(userId);
+    /** Owner-scoped DB load: by userId for a user, by guest token for a guest, nothing otherwise. */
+    private Optional<ChatSessionEntity> loadOwned(Long id, ChatCaller caller) {
+        if (caller.userId() != null) {
+            return repository.findByIdAndUserIdWithMessages(id, caller.userId());
+        }
+        if (caller.guestToken() != null) {
+            return repository.findByIdAndGuestTokenWithMessages(id, caller.guestToken());
+        }
+        return Optional.empty();
+    }
+
+    private boolean ownedBy(ChatSession session, ChatCaller caller) {
+        if (caller.userId() != null) {
+            // A user owns sessions with a matching userId, plus ownerless legacy rows (no user AND
+            // no guest) — but never a guest's cached session (that has a guest token).
+            return caller.userId().equals(session.getUserId())
+                    || (session.getUserId() == null && session.getGuestToken() == null);
+        }
+        if (caller.guestToken() != null) {
+            return caller.guestToken().equals(session.getGuestToken());
+        }
+        return session.getUserId() == null && session.getGuestToken() == null;
     }
 
     @Override
@@ -94,17 +116,28 @@ public class JpaChatSessionStore implements ChatSessionStore {
 
     @Override
     @Transactional
-    public boolean delete(String sessionId, Long userId) {
+    public boolean delete(String sessionId, ChatCaller caller) {
         if (sessionId == null) {
             return false;
         }
         Long id = tryParseId(sessionId);
-        if (id == null || !repository.existsByIdAndUserId(id, userId)) {
+        if (id == null || !ownsPersisted(id, caller)) {
             return false;
         }
         liveCache.remove(sessionId);
         repository.deleteById(id);
         return true;
+    }
+
+    /** Owner-scoped existence check mirroring {@link #loadOwned}, for delete authorization. */
+    private boolean ownsPersisted(Long id, ChatCaller caller) {
+        if (caller.userId() != null) {
+            return repository.existsByIdAndUserId(id, caller.userId());
+        }
+        if (caller.guestToken() != null) {
+            return repository.existsByIdAndGuestToken(id, caller.guestToken());
+        }
+        return false;
     }
 
     @Override
@@ -142,6 +175,7 @@ public class JpaChatSessionStore implements ChatSessionStore {
     private ChatSession toDomain(ChatSessionEntity entity) {
         ChatSession session = new ChatSession(String.valueOf(entity.getId()));
         session.setUserId(entity.getUserId());
+        session.setGuestToken(entity.getGuestToken());
         session.setAccumulatedCriteria(new HashMap<>(entity.getAccumulatedCriteria()));
         List<Object> lastCards = new ArrayList<>();
         for (ChatMessageEntity message : entity.getMessages()) {

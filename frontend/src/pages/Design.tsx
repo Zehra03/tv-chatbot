@@ -2,7 +2,6 @@ import { useState, type ReactNode } from 'react'
 import { Logo } from '@/components/Logo'
 import { Button } from '@/components/ui/button'
 import { FloatingInput } from '@/components/ui/floating-input'
-import DarkVeil from '@/components/DarkVeil'
 import { AnimatedAIChat } from '@/components/ui/animated-ai-chat'
 
 /**
@@ -171,15 +170,14 @@ export default function Design() {
               <Button variant="destructive">Sil</Button>
             </div>
 
-            {/* Deneme: React Bits DarkVeil arka planı — hero adayı */}
+            {/* Hero arka planı — statik CSS gradyan (eski WebGL DarkVeil kaldırıldı). */}
             <div className="relative h-80 overflow-hidden rounded-xl border">
-              <DarkVeil hueShift={25} />
+              <div className="absolute inset-0 bg-gradient-to-b from-[#1a1040] via-brand-navy to-brand-navy" />
+              <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,theme(colors.brand.teal/12%),transparent_70%)]" />
               {/* dark: koyu görsel üstündeki buton/metin token'ları koyu bölgeyle uysun. */}
               <div className="dark absolute inset-0 flex flex-col items-center justify-center gap-2">
                 <p className="text-3xl font-semibold text-white">Gece uçuşuna hazır mısın?</p>
-                <p className="text-sm text-white/70">
-                  DarkVeil — @react-bits arka planı, hero denemesi
-                </p>
+                <p className="text-sm text-white/70">Statik gradyan hero — hafif ve akıcı</p>
                 <Button className="mt-2">Uçuş ara</Button>
               </div>
             </div>

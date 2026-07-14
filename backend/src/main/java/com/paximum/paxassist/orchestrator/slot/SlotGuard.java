@@ -1,4 +1,4 @@
-package com.paximum.paxassist.orchestrator.date;
+package com.paximum.paxassist.orchestrator.slot;
 
 import java.time.Clock;
 import java.time.LocalDate;
@@ -22,17 +22,17 @@ import com.paximum.paxassist.ai.SlotCriteria;
  * fixed date. No Spring bean is required — the no-arg constructor wires the system clock.
  */
 @Component
-public class TravelDateGuard {
+public class SlotGuard {
 
     private final Clock clock;
 
-    public TravelDateGuard() {
+    public SlotGuard() {
         this(Clock.systemDefaultZone());
     }
 
     // Spring uses the no-arg constructor (system clock). This one lets tests inject a fixed clock
     // for deterministic past/future-date assertions.
-    public TravelDateGuard(Clock clock) {
+    public SlotGuard(Clock clock) {
         this.clock = clock;
     }
 
@@ -41,7 +41,7 @@ public class TravelDateGuard {
      *         today; otherwise {@link Optional#empty()}. Unparsable/blank dates are ignored (the
      *         module's own missing-field handling deals with those).
      */
-    public Optional<String> checkPastDate(SlotCriteria criteria) {
+    public Optional<String> checkInvalidSlots(SlotCriteria criteria) {
         if (criteria == null) {
             return Optional.empty();
         }
@@ -55,6 +55,29 @@ public class TravelDateGuard {
                         "Girdiğiniz tarih (" + date + ") geçmişte kalıyor. İleri bir tarih verir misiniz?");
             }
         }
+        
+        if (criteria.adults() != null && criteria.adults() <= 0) {
+            return Optional.of("Yetişkin sayısı en az 1 olmalıdır. Lütfen geçerli bir kişi sayısı giriniz.");
+        }
+        if (criteria.children() != null && criteria.children() < 0) {
+            return Optional.of("Çocuk sayısı negatif olamaz. Lütfen geçerli bir çocuk sayısı giriniz.");
+        }
+        if (criteria.childAges() != null && criteria.childAges().stream().anyMatch(age -> age < 0)) {
+            return Optional.of("Çocuk yaşları negatif olamaz. Lütfen geçerli yaşlar giriniz.");
+        }
+        if (criteria.rooms() != null && criteria.rooms() <= 0) {
+            return Optional.of("Oda sayısı en az 1 olmalıdır. Lütfen geçerli bir oda sayısı giriniz.");
+        }
+        if (criteria.hotelMaxPrice() != null && criteria.hotelMaxPrice() <= 0) {
+            return Optional.of("Bütçe 0'dan büyük olmalıdır. Lütfen geçerli bir bütçe giriniz.");
+        }
+        if (criteria.flightMaxPrice() != null && criteria.flightMaxPrice() <= 0) {
+            return Optional.of("Bütçe 0'dan büyük olmalıdır. Lütfen geçerli bir bütçe giriniz.");
+        }
+        if (criteria.nights() != null && criteria.nights() <= 0) {
+            return Optional.of("Gece sayısı en az 1 olmalıdır. Lütfen geçerli bir gece sayısı giriniz.");
+        }
+
         return Optional.empty();
     }
 

@@ -3,7 +3,6 @@ import { motion } from 'framer-motion'
 import { Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { TiltedCard } from '@/components/TiltedCard'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
@@ -67,8 +66,6 @@ export function ReservationsPage() {
       )}
 
       {data && data.length > 0 && (
-        // Geniş tablo yüzeyi: eğim çok küçük, büyüme yok — satır butonları kaymasın.
-        <TiltedCard rotateAmplitude={3} scaleOnHover={1}>
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -138,7 +135,6 @@ export function ReservationsPage() {
             </tbody>
           </table>
         </motion.div>
-        </TiltedCard>
       )}
     </div>
   )

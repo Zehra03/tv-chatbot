@@ -57,6 +57,28 @@ final class ResultFilters {
         return filtered.isEmpty() ? cards : filtered;
     }
 
+    static List<Object> applyStars(List<Object> cards, Integer minStars, Integer maxStars) {
+        if (cards == null || cards.isEmpty() || (minStars == null && maxStars == null)) {
+            return cards;
+        }
+        return cards.stream()
+                .filter(card -> {
+                    Integer stars = ProductCards.starsOf(card);
+                    if (stars == null) return true; // keep if stars unknown
+                    boolean minOk = minStars == null || stars >= minStars;
+                    boolean maxOk = maxStars == null || stars <= maxStars;
+                    return minOk && maxOk;
+                })
+                .collect(Collectors.toList());
+    }
+
+    static List<Object> applyLimit(List<Object> cards, Integer limit) {
+        if (cards == null || cards.isEmpty() || limit == null || limit <= 0) {
+            return cards;
+        }
+        return cards.stream().limit(limit).collect(Collectors.toList());
+    }
+
     /**
      * Keep hotel cards that confirm ALL requested {@link HotelFeature}s against their REAL provider
      * data ({@link HotelProduct#features()} = TourVisio facilities ∪ themes). Unlike
@@ -117,11 +139,11 @@ final class ResultFilters {
         }
         String b = board.toLowerCase(Locale.ROOT);
         return switch (requested.trim().toUpperCase(Locale.ROOT)) {
-            case "AI" -> containsAny(b, "herşey", "her şey", "all inclusive", "ultra");
-            case "HB" -> containsAny(b, "yarım", "half");
-            case "BB" -> containsAny(b, "kahvaltı", "breakfast", "bed & breakfast", "bed and breakfast");
+            case "AI", "ALL INCLUSIVE", "ALL-INCLUSIVE", "HERŞEY DAHIL", "HERŞEY DAHİL", "HER ŞEY DAHİL" -> containsAny(b, "herşey", "her şey", "all inclusive", "ultra");
+            case "HB", "HALF BOARD", "YARIM PANSIYON", "YARIM PANSİYON" -> containsAny(b, "yarım", "half");
+            case "BB", "BED & BREAKFAST", "BED AND BREAKFAST", "ODA KAHVALTI" -> containsAny(b, "kahvaltı", "breakfast", "bed & breakfast", "bed and breakfast");
             // Room-only: check AFTER breakfast so "Oda Kahvaltı" (BB) is not mistaken for RO.
-            case "RO" -> !containsAny(b, "kahvaltı", "breakfast")
+            case "RO", "ROOM ONLY", "SADECE ODA" -> !containsAny(b, "kahvaltı", "breakfast")
                     && containsAny(b, "sadece oda", "room only", "oda", "room");
             default -> true; // unrecognized board code → don't filter anything out
         };

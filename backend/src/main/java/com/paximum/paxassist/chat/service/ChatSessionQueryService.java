@@ -7,6 +7,7 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatMessageEntity;
 import com.paximum.paxassist.chat.domain.ChatSessionEntity;
 import com.paximum.paxassist.chat.dto.ChatMessageDto;
@@ -34,8 +35,8 @@ public class ChatSessionQueryService {
     }
 
     @Transactional(readOnly = true)
-    public List<ChatSessionSummaryDto> listSummaries(Long userId) {
-        return repository.findSummariesByUserId(userId).stream()
+    public List<ChatSessionSummaryDto> listSummaries(ChatCaller caller) {
+        return summaryRows(caller).stream()
                 .map(v -> new ChatSessionSummaryDto(
                         String.valueOf(v.getId()),
                         v.getTitle(),
@@ -44,13 +45,29 @@ public class ChatSessionQueryService {
                 .toList();
     }
 
+    private List<ChatSessionRepository.ChatSessionSummaryView> summaryRows(ChatCaller caller) {
+        if (caller.userId() != null) {
+            return repository.findSummariesByUserId(caller.userId());
+        }
+        if (caller.guestToken() != null) {
+            return repository.findSummariesByGuestToken(caller.guestToken());
+        }
+        return List.of();
+    }
+
     @Transactional(readOnly = true)
-    public Optional<ChatSessionDto> getSession(String sessionId, Long userId) {
+    public Optional<ChatSessionDto> getSession(String sessionId, ChatCaller caller) {
         Long id = tryParseId(sessionId);
         if (id == null) {
             return Optional.empty();
         }
-        return repository.findByIdAndUserIdWithMessages(id, userId).map(this::toDto);
+        if (caller.userId() != null) {
+            return repository.findByIdAndUserIdWithMessages(id, caller.userId()).map(this::toDto);
+        }
+        if (caller.guestToken() != null) {
+            return repository.findByIdAndGuestTokenWithMessages(id, caller.guestToken()).map(this::toDto);
+        }
+        return Optional.empty();
     }
 
     private ChatSessionDto toDto(ChatSessionEntity entity) {

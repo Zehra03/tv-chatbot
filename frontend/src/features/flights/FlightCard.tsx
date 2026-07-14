@@ -2,7 +2,6 @@ import { Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AnimatedPrice } from '@/components/ui/animated-price'
-import { TiltedCard } from '@/components/TiltedCard'
 import { useSelectProduct } from '@/features/reservation/useSelectProduct'
 import { formatDateTime } from '@/utils/format'
 import type { FlightProduct } from '@/types'
@@ -10,16 +9,13 @@ import type { FlightProduct } from '@/types'
 /**
  * Uçuş sonuç kartı — hem /flights listesinde hem chat thread'inde kullanılır.
  * Görsel dil login vitrinindeki uçuş kartından: cam yüzey, noktalı rota
- * çizgisi, hover'da teal kenar + 3B eğim (TiltedCard). Fiyat backend'den
- * geldiği gibi gösterilir (AnimatedPrice sr-only ikizinde formatPrice). Seç,
- * ürünü taslağa yazıp kontrollü rezervasyon formuna yönlendirir.
- *
- * `tilt` — chat thread'inde eğim istemiyoruz (arama sonrası kartlar); orada
- * `tilt={false}` geçilir, sonuç sayfalarında varsayılan (eğimli) kalır.
+ * çizgisi, hover'da teal kenar. Fiyat backend'den geldiği gibi gösterilir
+ * (AnimatedPrice sr-only ikizinde formatPrice). Seç, ürünü taslağa yazıp
+ * kontrollü rezervasyon formuna yönlendirir.
  */
-export function FlightCard({ product, tilt = true }: { product: FlightProduct; tilt?: boolean }) {
+export function FlightCard({ product }: { product: FlightProduct }) {
   const select = useSelectProduct()
-  const content = (
+  return (
       <div className="glass-card p-5 transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]">
         <div className="flex items-center justify-between gap-3">
           <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-white/70">
@@ -93,5 +89,4 @@ export function FlightCard({ product, tilt = true }: { product: FlightProduct; t
         </div>
       </div>
   )
-  return tilt ? <TiltedCard>{content}</TiltedCard> : content
 }

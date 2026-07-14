@@ -15,10 +15,14 @@ public class ChatSession {
 
     private final String id;
     // Owner (users.id). Sessions are scoped to the authenticated user so listing/loading/deleting
-    // never crosses users. Null only for legacy/in-memory sessions with no principal.
+    // never crosses users. Null for guest-owned (see guestToken) or legacy/in-memory sessions.
     private Long userId;
+    // Opaque per-visitor key for guest-owned sessions (X-Guest-Id). Mutually exclusive with userId:
+    // set only when the owner is an anonymous guest. Null for user-owned/legacy sessions.
+    private String guestToken;
     private Map<String, Object> accumulatedCriteria;
-    private List<Object> lastResultCards;
+    private List<Object> lastApiResultCards; // Raw API results, before FILTER intent
+    private List<Object> lastResultCards;    // Results shown to the user (after FILTER)
     private final List<ChatMessage> messages = new ArrayList<>();
     // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
     // which result list they are acting on. Kept as a String so this domain type does not
@@ -28,6 +32,7 @@ public class ChatSession {
     public ChatSession(String id) {
         this.id = id;
         this.accumulatedCriteria = new HashMap<>();
+        this.lastApiResultCards = new ArrayList<>();
         this.lastResultCards = new ArrayList<>();
     }
 
@@ -36,10 +41,16 @@ public class ChatSession {
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
 
+    public String getGuestToken() { return guestToken; }
+    public void setGuestToken(String guestToken) { this.guestToken = guestToken; }
+
     public Map<String, Object> getAccumulatedCriteria() { return accumulatedCriteria; }
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
         this.accumulatedCriteria = accumulatedCriteria;
     }
+
+    public List<Object> getLastApiResultCards() { return lastApiResultCards; }
+    public void setLastApiResultCards(List<Object> lastApiResultCards) { this.lastApiResultCards = lastApiResultCards; }
 
     public List<Object> getLastResultCards() { return lastResultCards; }
     public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }

@@ -31,6 +31,18 @@ public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, 
     boolean existsByIdAndUserId(Long id, Long userId);
 
     /**
+     * Guest-scoped transcript load — the {@code guest_token} twin of
+     * {@link #findByIdAndUserIdWithMessages}. Returns empty when the session belongs to another guest
+     * (or to a user), so a guest can never open someone else's conversation even by guessing the id.
+     */
+    @Query("select s from ChatSessionEntity s left join fetch s.messages "
+            + "where s.id = :id and s.guestToken = :guestToken")
+    Optional<ChatSessionEntity> findByIdAndGuestTokenWithMessages(@Param("id") Long id,
+                                                                  @Param("guestToken") String guestToken);
+
+    boolean existsByIdAndGuestToken(Long id, String guestToken);
+
+    /**
      * Lightweight rows for the history panel — no message bodies, newest first. {@code size(...)}
      * counts the transcript without loading it.
      */
@@ -38,6 +50,12 @@ public interface ChatSessionRepository extends JpaRepository<ChatSessionEntity, 
             + "(select count(m.id) from ChatMessageEntity m where m.session = s) as messageCount "
             + "from ChatSessionEntity s where s.userId = :userId order by s.updatedAt desc")
     List<ChatSessionSummaryView> findSummariesByUserId(@Param("userId") Long userId);
+
+    /** Guest history panel — the {@code guest_token} twin of {@link #findSummariesByUserId}. */
+    @Query("select s.id as id, s.title as title, s.updatedAt as updatedAt, "
+            + "(select count(m.id) from ChatMessageEntity m where m.session = s) as messageCount "
+            + "from ChatSessionEntity s where s.guestToken = :guestToken order by s.updatedAt desc")
+    List<ChatSessionSummaryView> findSummariesByGuestToken(@Param("guestToken") String guestToken);
 
     /** Interface projection backing {@link #findSummariesByUserId(Long)}. */
     interface ChatSessionSummaryView {
