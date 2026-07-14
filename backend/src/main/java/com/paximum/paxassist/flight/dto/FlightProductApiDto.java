@@ -13,6 +13,7 @@ import com.paximum.paxassist.flight.domain.TripType;
  */
 public record FlightProductApiDto(
         String id,
+        String offerId,
         String airline,
         String origin,
         String destination,
@@ -31,6 +32,7 @@ public record FlightProductApiDto(
     public static FlightProductApiDto from(FlightProduct product, TripType tripType) {
         return new FlightProductApiDto(
                 product.getId(),
+                product.getOfferId(),
                 product.getAirline(),
                 product.getOrigin(),
                 product.getDestination(),

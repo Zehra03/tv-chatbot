@@ -35,7 +35,7 @@ public class MockFlightSearchService implements FlightSearchService {
                 build(criteria, "FLT-1", "Turkish Airlines", "TK1980", 8, 4, 0, "20kg", "2500.00", cur),
                 build(criteria, "FLT-2", "Pegasus", "PC2110", 12, 5, 1, "15kg", "1450.00", cur),
                 build(criteria, "FLT-3", "SunExpress", "XQ640", 18, 4, 0, "20kg", "1980.00", cur));
-        return FlightSearchOutcome.complete(products);
+        return FlightSearchOutcome.complete(FlightResultFilter.apply(criteria, products));
     }
 
     private FlightProduct build(FlightSearchCriteria c, String id, String airline, String flightNumber,

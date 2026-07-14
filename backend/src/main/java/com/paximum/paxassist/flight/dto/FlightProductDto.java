@@ -5,6 +5,7 @@ import java.time.Instant;
 
 public record FlightProductDto(
         String id,
+        String offerId,
         String airline,
         String flightNumber,
         String origin,

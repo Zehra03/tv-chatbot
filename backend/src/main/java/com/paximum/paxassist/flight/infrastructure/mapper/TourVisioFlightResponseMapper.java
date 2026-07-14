@@ -3,8 +3,10 @@ package com.paximum.paxassist.flight.infrastructure.mapper;
 import java.time.DateTimeException;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -28,6 +30,10 @@ import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSe
 public class TourVisioFlightResponseMapper {
 
     private static final Logger log = LoggerFactory.getLogger(TourVisioFlightResponseMapper.class);
+
+    /** TourVisio marks each segment's leg with {@code route}: 1 = outbound, 2 = inbound/return. */
+    private static final int ROUTE_OUTBOUND = 1;
+    private static final int ROUTE_RETURN = 2;
 
     private final TourVisioProperties tourVisioProperties;
 
@@ -57,41 +63,82 @@ public class TourVisioFlightResponseMapper {
             return Optional.empty();
         }
 
-        TourVisioFlightItem item = flight.items().get(0);
+        List<TourVisioFlightItem> outbound = legSegments(flight.items(), ROUTE_OUTBOUND);
+        List<TourVisioFlightItem> inbound = legSegments(flight.items(), ROUTE_RETURN);
+
+        if (outbound.isEmpty()) {
+            log.warn("Skipping flight result {}: no outbound (route={}) segments", flight.id(), ROUTE_OUTBOUND);
+            return Optional.empty();
+        }
+
+        // A leg with a layover arrives as several segments: the leg departs with the first and
+        // lands with the last.
+        TourVisioFlightItem first = outbound.get(0);
+        TourVisioFlightItem last = outbound.get(outbound.size() - 1);
         TourVisioOffer offer = flight.offer();
 
-        if (item.departure() == null || item.departure().airport() == null
-                || item.arrival() == null || item.arrival().airport() == null) {
+        if (first.departure() == null || first.departure().airport() == null
+                || last.arrival() == null || last.arrival().airport() == null) {
             log.warn("Skipping flight result {} due to missing departure/arrival airport data", flight.id());
             return Optional.empty();
         }
 
-        if (requestedTripType == TripType.ROUND_TRIP) {
-            // TourVisio's pricesearch response gives no signal (in the schema seen so far) for
-            // distinguishing a return leg from outbound connection segments, so round-trip
-            // results are mapped as outbound-only until a live round-trip sample is available.
-            log.warn("Flight result {} has no resolvable return leg for a round-trip search; "
-                    + "mapping outbound data only", flight.id());
+        if (requestedTripType == TripType.ROUND_TRIP && inbound.isEmpty()) {
+            log.warn("Round-trip search returned flight result {} with no return (route={}) segments; "
+                    + "mapping outbound data only", flight.id(), ROUTE_RETURN);
         }
 
         return Optional.of(FlightProduct.builder()
-                .id(offer.offerId())
-                .airline(item.airline() != null ? item.airline().internationalCode() : null)
-                .flightNumber(FlightNumberParser.parse(item.flightNo()).number())
-                .origin(item.departure().airport().id())
-                .destination(item.arrival().airport().id())
-                .originCity(cityNameOf(item.departure()))
-                .destinationCity(cityNameOf(item.arrival()))
-                .departTime(toInstant(item.departure().date()))
-                .arriveTime(toInstant(item.arrival().date()))
-                .returnDepartTime(null)
-                .returnArriveTime(null)
-                .stops(item.stopCount())
-                .durationMinutes(item.duration())
-                .baggage(summarizeBaggage(item.baggageInformations()))
+                .id(flight.id())
+                .offerId(offer.offerId())
+                .airline(first.airline() != null ? first.airline().internationalCode() : null)
+                .flightNumber(FlightNumberParser.parse(first.flightNo()).number())
+                .origin(first.departure().airport().id())
+                .destination(last.arrival().airport().id())
+                .originCity(cityNameOf(first.departure()))
+                .destinationCity(cityNameOf(last.arrival()))
+                .departTime(toInstant(first.departure().date()))
+                .arriveTime(toInstant(last.arrival().date()))
+                .returnDepartTime(legDepartTime(inbound))
+                .returnArriveTime(legArriveTime(inbound))
+                .stops(stopsOf(outbound))
+                .durationMinutes(durationOf(outbound))
+                .baggage(summarizeBaggage(first.baggageInformations()))
                 .price(offer.price() != null ? offer.price().amount() : null)
                 .currency(offer.price() != null ? offer.price().currency() : null)
                 .build());
+    }
+
+    /** Segments of one leg, in payload order. A missing {@code route} means a one-way payload → outbound. */
+    private List<TourVisioFlightItem> legSegments(List<TourVisioFlightItem> items, int route) {
+        return items.stream()
+                .filter(item -> item != null)
+                .filter(item -> (item.route() != null ? item.route() : ROUTE_OUTBOUND) == route)
+                .toList();
+    }
+
+    private Instant legDepartTime(List<TourVisioFlightItem> leg) {
+        if (leg.isEmpty() || leg.get(0).departure() == null) {
+            return null;
+        }
+        return toInstant(leg.get(0).departure().date());
+    }
+
+    private Instant legArriveTime(List<TourVisioFlightItem> leg) {
+        if (leg.isEmpty()) {
+            return null;
+        }
+        TourVisioFlightPoint arrival = leg.get(leg.size() - 1).arrival();
+        return arrival == null ? null : toInstant(arrival.date());
+    }
+
+    /** Each connection between two segments is a stop, on top of any stop a segment reports itself. */
+    private int stopsOf(List<TourVisioFlightItem> leg) {
+        return leg.stream().mapToInt(TourVisioFlightItem::stopCount).sum() + leg.size() - 1;
+    }
+
+    private int durationOf(List<TourVisioFlightItem> leg) {
+        return leg.stream().mapToInt(TourVisioFlightItem::duration).sum();
     }
 
     /** City name the flight point sits in (e.g. airport SAW → "Istanbul"), null when absent. */
@@ -108,6 +155,11 @@ public class TourVisioFlightResponseMapper {
                 .collect(Collectors.joining(", "));
     }
 
+    /**
+     * TourVisio sends timestamps either bare ("2026-08-01T10:00:00", meaning local time in the
+     * configured airport timezone) or with an explicit offset ("2021-08-20T06:45:00Z"). Honour the
+     * offset when one is present, otherwise apply the configured zone.
+     */
     private Instant toInstant(String date) {
         if (date == null) {
             return null;
@@ -115,8 +167,12 @@ public class TourVisioFlightResponseMapper {
         if (tourVisioProperties.timezone() == null || tourVisioProperties.timezone().isBlank()) {
             throw new DateTimeException("Missing tourvisio timezone");
         }
-        LocalDateTime localDateTime = LocalDateTime.parse(date, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+        TemporalAccessor parsed = DateTimeFormatter.ISO_DATE_TIME
+                .parseBest(date, OffsetDateTime::from, LocalDateTime::from);
+        if (parsed instanceof OffsetDateTime offsetDateTime) {
+            return offsetDateTime.toInstant();
+        }
         ZoneId zone = ZoneId.of(tourVisioProperties.timezone());
-        return localDateTime.atZone(zone).toInstant();
+        return ((LocalDateTime) parsed).atZone(zone).toInstant();
     }
 }

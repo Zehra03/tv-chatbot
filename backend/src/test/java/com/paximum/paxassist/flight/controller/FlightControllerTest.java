@@ -2,6 +2,7 @@ package com.paximum.paxassist.flight.controller;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -50,10 +51,16 @@ class FlightControllerTest {
 
     private MockMvc mockMvc;
 
+    // Relative to today: departDate/returnDate carry @FutureOrPresent, so a pinned literal date would
+    // silently turn these tests red the day it fell into the past.
+    private static final LocalDate DEPART = LocalDate.now().plusDays(30);
+    private static final LocalDate RETURN = DEPART.plusDays(5);
+
     @BeforeEach
     void setUp() {
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         mockMvc = MockMvcBuilders.standaloneSetup(flightController)
+                .setControllerAdvice(new FlightExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
     }
@@ -71,7 +78,7 @@ class FlightControllerTest {
 
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"2026-08-10\","
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
                                 + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("F1"))
@@ -83,16 +90,76 @@ class FlightControllerTest {
                 .andExpect(jsonPath("$[0].flightNumber").doesNotExist());
     }
 
+    /**
+     * A body missing origin/departDate/passengers used to reach the service and come back as an empty
+     * array. Those fields are now required, so it is a 400 and the search service is never called —
+     * @Min/@FutureOrPresent alone would have skipped the nulls and let a zero-passenger search through.
+     */
     @Test
-    void search_incompleteReturnsEmptyArray() throws Exception {
-        when(flightSearchService.search(any()))
-                .thenReturn(FlightSearchOutcome.incomplete(List.of("origin")));
-
+    void search_missingRequiredFieldsWith400() throws Exception {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"destination\":\"LHR\",\"tripType\":\"one_way\"}"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(0));
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsNullPassengersWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsZeroPassengersWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"passengers\":0,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsPastDepartDateWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\""
+                                + LocalDate.now().minusDays(1) + "\",\"passengers\":1,\"currency\":\"EUR\","
+                                + "\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsReturnDateBeforeDepartDateWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + RETURN + "\","
+                                + "\"returnDate\":\"" + DEPART + "\",\"passengers\":1,\"currency\":\"EUR\","
+                                + "\"tripType\":\"round_trip\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsSameOriginAndDestinationWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"ist\",\"departDate\":\"" + DEPART + "\","
+                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
     }
 
     @Test

@@ -12,6 +12,8 @@ import lombok.extern.jackson.Jacksonized;
 @Jacksonized
 public class FlightProduct {
     private final String id;
+    /** Offer token from TourVisio, required when handing the flight off to the reservation flow. */
+    private final String offerId;
     private final String airline;
     private final String flightNumber;
     private final String origin;
