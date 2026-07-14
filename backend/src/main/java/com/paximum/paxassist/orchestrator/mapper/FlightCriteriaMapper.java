@@ -49,8 +49,8 @@ public class FlightCriteriaMapper {
                 .tripType(tripType)
                 .passengers(passengers)
                 .currency(c.currency())
-                .nonstop(null)
-                .preferredAirline(null)
+                .nonstop(c.nonstop())
+                .preferredAirline(c.preferredAirline())
                 .build();
     }
 

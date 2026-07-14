@@ -57,6 +57,8 @@ public class SlotMerger {
                 pick(update.returnDate(), base.returnDate()),
                 pick(update.cabinClass(), base.cabinClass()),
                 pick(update.flightMaxPrice(), base.flightMaxPrice()),
+                pick(update.nonstop(), base.nonstop()),
+                pick(update.preferredAirline(), base.preferredAirline()),
                 pick(update.adults(), base.adults()),
                 pick(update.children(), base.children()),
                 pick(update.childAges(), base.childAges()),

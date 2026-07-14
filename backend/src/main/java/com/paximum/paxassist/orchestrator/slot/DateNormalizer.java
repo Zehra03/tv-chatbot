@@ -81,6 +81,8 @@ public class DateNormalizer {
                 returnDateStr,
                 criteria.cabinClass(),
                 criteria.flightMaxPrice(),
+                criteria.nonstop(),
+                criteria.preferredAirline(),
                 criteria.adults(),
                 criteria.children(),
                 criteria.childAges(),

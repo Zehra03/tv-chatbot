@@ -12,7 +12,8 @@ import java.util.List;
  *
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
  *                nationality, currency, rooms, stars, boardType, features, hotelMaxPrice, sortBy
- * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice
+ * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice,
+ *                nonstop, preferredAirline
  * Shared        : adults, children, childAges, nationality, currency
  * SELECT intent : selectionReference
  *
@@ -40,6 +41,8 @@ public record SlotCriteria(
         String returnDate,        // YYYY-MM-DD — null means one-way
         String cabinClass,        // ECONOMY | BUSINESS | FIRST
         Integer flightMaxPrice,   // upper price limit for a FLIGHT search, e.g. "uçuşa 3000 tl max" → 3000
+        Boolean nonstop,          // true when the user wants only direct/non-stop flights ("aktarmasız", "direkt"); null if unstated
+        String preferredAirline,  // a carrier the user restricts to ("sadece THY", "Pegasus ile") — maps to FlightSearchCriteria.preferredAirline
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -63,6 +66,6 @@ public record SlotCriteria(
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null, null);
+                null, null, null, null);
     }
 }
