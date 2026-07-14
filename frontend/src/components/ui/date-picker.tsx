@@ -4,7 +4,7 @@ import {
   useState,
   type MouseEvent as ReactMouseEvent,
 } from 'react'
-import { format, isValid, parseISO } from 'date-fns'
+import { format, isValid, parseISO, startOfToday } from 'date-fns'
 import { Calendar, calendarPopoverClass } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -25,6 +25,8 @@ interface DatePickerProps {
   onChange: (value: string) => void
   min?: string
   required?: boolean
+  /** true → bugünden önceki günler takvimde seçilemez (geçmiş tarih önleme). */
+  disablePast?: boolean
   /** Native alana giydirilecek ek sınıf (ör. koyu yüzey cam görünümü). */
   fieldClassName?: string
 }
@@ -42,6 +44,7 @@ export function DatePicker({
   onChange,
   min,
   required,
+  disablePast,
   fieldClassName,
 }: DatePickerProps) {
   const [open, setOpen] = useState(false)
@@ -64,6 +67,8 @@ export function DatePicker({
   }, [open])
 
   const selected = parseDay(value)
+  // Geçmiş günleri takvim seviyesinde kapat (submit doğrulamasına ek önlem).
+  const disabledDays = disablePast ? { before: startOfToday() } : undefined
 
   const openCalendar = (e: ReactMouseEvent<HTMLInputElement>) => {
     e.preventDefault()
@@ -94,6 +99,7 @@ export function DatePicker({
             numberOfMonths={1}
             selected={selected}
             defaultMonth={selected}
+            disabled={disabledDays}
             onSelect={(day) => {
               onChange(day ? format(day, 'yyyy-MM-dd') : '')
               if (day) setOpen(false)

@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
+import { format } from 'date-fns'
 import { ArrowRightLeft, Plane } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownSelect } from '@/components/ui/dropdown-select'
@@ -45,6 +46,8 @@ export function FlightsPage() {
   const [passengers, setPassengers] = useState(prefill?.passengers ?? 1)
   const [tripType, setTripType] = useState<TripType>(prefill?.tripType ?? 'one_way')
   const [criteria, setCriteria] = useState<FlightSearchCriteria | null>(null)
+  // Sınırda (submit) doğrulama mesajı — geçersiz kriterde arama tetiklenmez.
+  const [formError, setFormError] = useState<string | null>(null)
 
   const query = useFlightSearch(criteria)
   const filters = useAppSelector((s) => s.ui.flightFilters)
@@ -68,12 +71,46 @@ export function FlightsPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!origin.trim() || !destination.trim() || !departDate) return
+
+    // Sınır doğrulaması: geçersiz kriter aramaya/backend'e gitmesin; kullanıcı
+    // sessiz bir "hiçbir şey olmadı" yerine net bir mesaj görsün.
+    // Listeden seçildiyse TourVisio konum id'si; değilse yazılan serbest metin.
+    const from = originCode ?? origin.trim()
+    const to = destinationCode ?? destination.trim()
+
+    if (!origin.trim() || !destination.trim()) {
+      setFormError('Lütfen kalkış ve varış yerlerini girin.')
+      return
+    }
+    if (from.toLowerCase() === to.toLowerCase()) {
+      setFormError('Kalkış ve varış yeri aynı olamaz.')
+      return
+    }
+    if (!departDate) {
+      setFormError('Lütfen gidiş tarihini seçin.')
+      return
+    }
+    // ISO 'yyyy-MM-dd' dizeleri sözlük sırası = tarih sırası; güvenle kıyaslanır.
+    const todayStr = format(new Date(), 'yyyy-MM-dd')
+    if (departDate < todayStr) {
+      setFormError('Gidiş tarihi geçmişte olamaz.')
+      return
+    }
+    if (tripType === 'round_trip') {
+      if (!returnDate) {
+        setFormError('Gidiş-dönüş seçtiniz; lütfen dönüş tarihini de seçin.')
+        return
+      }
+      if (returnDate < departDate) {
+        setFormError('Dönüş tarihi gidiş tarihinden önce olamaz.')
+        return
+      }
+    }
+
+    setFormError(null)
     setCriteria({
-      // Listeden seçildiyse TourVisio konum id'si; değilse yazılan serbest metin
-      // (backend yine autocomplete ile çözer).
-      origin: originCode ?? origin.trim(),
-      destination: destinationCode ?? destination.trim(),
+      origin: from,
+      destination: to,
       departDate,
       passengers,
       currency: 'EUR',
@@ -194,6 +231,8 @@ export function FlightsPage() {
                 checkOutLabel="Dönüş tarihi"
                 fieldClassName={heroFieldClass}
                 required
+                // Geçmiş günler takvimde seçilemez (gidiş de dönüş de).
+                disablePast
                 // Uçuşta gidiş-dönüş bir konaklama aralığı değil — ara günler boyanmaz.
                 endpointsOnly
                 // Tarih alanları formun sağına yakın — sola hizalı panel taşar.
@@ -206,6 +245,7 @@ export function FlightsPage() {
                 value={departDate}
                 onChange={setDepartDate}
                 required
+                disablePast
                 fieldClassName={heroFieldClass}
               />
             )}
@@ -225,6 +265,16 @@ export function FlightsPage() {
               Ara
             </Button>
           </div>
+
+          {/* Doğrulama mesajı — role="alert" ile ekran okuyucuya anons edilir. */}
+          {formError && (
+            <p
+              role="alert"
+              className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm font-medium text-red-100"
+            >
+              {formError}
+            </p>
+          )}
         </form>
       </SearchHero>
 
