@@ -53,6 +53,7 @@ public class FlightSearchMapper {
     private FlightProductDto toDto(FlightProduct product) {
         return new FlightProductDto(
                 product.getId(),
+                product.getOfferId(),
                 product.getAirline(),
                 product.getFlightNumber(),
                 product.getOrigin(),

@@ -54,6 +54,7 @@ class FlightControllerTest {
     void setUp() {
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         mockMvc = MockMvcBuilders.standaloneSetup(flightController)
+                .setControllerAdvice(new FlightExceptionHandler())
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
                 .build();
     }
@@ -93,6 +94,40 @@ class FlightControllerTest {
                         .content("{\"destination\":\"LHR\",\"tripType\":\"one_way\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    void search_rejectsPastDepartDateWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"2020-01-01\","
+                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsReturnDateBeforeDepartDateWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"2026-08-10\","
+                                + "\"returnDate\":\"2026-08-05\",\"passengers\":1,\"currency\":\"EUR\","
+                                + "\"tripType\":\"round_trip\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsSameOriginAndDestinationWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"ist\",\"departDate\":\"2026-08-10\","
+                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
     }
 
     @Test
