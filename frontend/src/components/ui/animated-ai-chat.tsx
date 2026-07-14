@@ -205,9 +205,9 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
             const commandButton = document.querySelector('[data-command-button]');
-            
-            if (commandPaletteRef.current && 
-                !commandPaletteRef.current.contains(target) && 
+
+            if (commandPaletteRef.current &&
+                !commandPaletteRef.current.contains(target) &&
                 !commandButton?.contains(target)) {
                 setShowCommandPalette(false);
             }
@@ -218,6 +218,18 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, []);
+
+    // Mesaj gönderilince composer pending boyunca `disabled` olur ve odağı yitirir
+    // (Gönder'e tıklandıysa odak zaten butondadır). Yanıt gelip alan tekrar
+    // etkinleşince (disabled true→false) imleci input'a geri getir — kullanıcı her
+    // mesajdan sonra sohbet balonuna yeniden tıklamak zorunda kalmasın (madde 11).
+    const prevDisabled = useRef(disabled);
+    useEffect(() => {
+        if (prevDisabled.current && !disabled) {
+            textareaRef.current?.focus();
+        }
+        prevDisabled.current = disabled;
+    }, [disabled, textareaRef]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
         if (showCommandPalette) {
@@ -261,6 +273,10 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
             onSend(trimmed);
             setValue("");
             adjustHeight(true);
+            // İmleç sohbette kalsın: Gönder'e tıklandıysa odağı butondan input'a
+            // al. Pending'e girilirse `disabled` bunu blur eder; yanıt gelince
+            // yukarıdaki effect odağı geri getirir (madde 11).
+            textareaRef.current?.focus();
             return;
         }
         // Playground: backend yokken gönderimi simüle et.

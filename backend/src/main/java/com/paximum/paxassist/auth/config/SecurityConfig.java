@@ -74,6 +74,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/register",
                                 "/api/v1/auth/login",
                                 "/api/v1/auth/refresh",
+                                // Public: a user who forgot their password has no valid token. Resets
+                                // the password directly from the popup (no email link) — see AuthService.
+                                "/api/v1/auth/reset-password",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
                                 "/actuator/health",

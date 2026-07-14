@@ -1,13 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { motion, type Variants } from 'framer-motion'
+import { ChevronRight, Hotel, Plane } from 'lucide-react'
 import { ErrorState } from '@/components/ErrorState'
 import { SplitText } from '@/components/SplitText'
-import { ResultCards } from '@/features/chat/ResultCards'
 import { ChoiceCard } from '@/features/chat/ChoiceCard'
 import { TypingIndicator } from '@/features/chat/TypingIndicator'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
-import type { ChatMessage } from '@/types'
+import type { ChatMessage, ResultCard } from '@/types'
 import { cn } from '@/lib/utils'
 
 /**
@@ -22,6 +22,44 @@ interface MessageListProps {
   onRetry?: () => void
   /** Belirsizlik kartındaki bir seçenek seçilince çağrılır (value yeni tur olarak gönderilir). */
   onSelectOption?: (value: string) => void
+  /** Bir sonuç mesajının "Sonuçları göster" düğmesine basılınca çağrılır —
+   * o kümeyi sağ panele/mobil drawer'a taşır (madde 8). */
+  onShowResults?: (messageId: string) => void
+}
+
+/** Thread içi kompakt sonuç özeti — kartları balonların içinde yığmak yerine
+ * (mobilde ekranı kaplıyordu) sonuçları sağ panele/drawer'a açan tek düğme. */
+function ResultSummaryButton({
+  cards,
+  onClick,
+}: {
+  cards: ResultCard[]
+  onClick: () => void
+}) {
+  const isFlight = cards[0]?.productType === 'flight'
+  const Icon = isFlight ? Plane : Hotel
+  const noun = isFlight ? 'uçuş' : 'otel'
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="glass-card group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]"
+    >
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal">
+        <Icon className="h-4 w-4" aria-hidden />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-white">
+          {cards.length} {noun} sonucu
+        </span>
+        <span className="block text-xs text-brand-ice/60">Sonuçları göster</span>
+      </span>
+      <ChevronRight
+        className="h-4 w-4 shrink-0 text-brand-ice/50 transition-transform group-hover:translate-x-0.5"
+        aria-hidden
+      />
+    </button>
+  )
 }
 
 const listVariants: Variants = {
@@ -54,7 +92,13 @@ function Bubble({ message }: { message: ChatMessage }) {
   )
 }
 
-export function MessageList({ pending, error, onRetry, onSelectOption }: MessageListProps) {
+export function MessageList({
+  pending,
+  error,
+  onRetry,
+  onSelectOption,
+  onShowResults,
+}: MessageListProps) {
   const messages = useAppSelector((s) => s.chat.messages)
   const bottomRef = useRef<HTMLDivElement>(null)
 
@@ -100,7 +144,9 @@ export function MessageList({ pending, error, onRetry, onSelectOption }: Message
         {messages.map((m) => (
           <motion.div key={m.id} variants={itemVariants} className="space-y-2">
             <Bubble message={m} />
-            {m.cards && m.cards.length > 0 && <ResultCards cards={m.cards} />}
+            {m.cards && m.cards.length > 0 && (
+              <ResultSummaryButton cards={m.cards} onClick={() => onShowResults?.(m.id)} />
+            )}
             {m.options && m.options.length > 0 && (
               <ChoiceCard
                 options={m.options}
