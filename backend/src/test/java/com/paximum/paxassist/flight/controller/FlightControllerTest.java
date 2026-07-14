@@ -3,11 +3,13 @@ package com.paximum.paxassist.flight.controller;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -21,10 +23,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
 import com.paximum.paxassist.flight.domain.FlightLocation;
 import com.paximum.paxassist.flight.domain.FlightProduct;
+import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.service.FlightLocationService;
 import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 import com.paximum.paxassist.flight.service.FlightSearchService;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -149,6 +153,48 @@ class FlightControllerTest {
                 .andExpect(status().isBadRequest());
 
         org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsMalformedDepartTimeRangeWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
+                                + "\"departTimeRange\":{\"from\":\"25:00\",\"to\":\"12:00\"}}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsInvertedDepartTimeRangeWith400() throws Exception {
+        // "from 18:00 to 06:00" would match nothing; reject it rather than return a silent empty list.
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
+                                + "\"departTimeRange\":{\"from\":\"18:00\",\"to\":\"06:00\"}}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_passesDepartTimeRangeToTheSearchCriteria() throws Exception {
+        ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
+        when(flightSearchService.search(captor.capture()))
+                .thenReturn(FlightSearchOutcome.complete(List.of()));
+
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
+                                + "\"departTimeRange\":{\"from\":\"08:00\",\"to\":\"12:00\"}}"))
+                .andExpect(status().isOk());
+
+        assertThat(captor.getValue().getDepartTimeFrom()).isEqualTo(LocalTime.of(8, 0));
+        assertThat(captor.getValue().getDepartTimeTo()).isEqualTo(LocalTime.of(12, 0));
     }
 
     @Test

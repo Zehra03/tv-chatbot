@@ -1,6 +1,7 @@
 package com.paximum.paxassist.flight.domain;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,6 +20,13 @@ public class FlightSearchCriteria {
     private final String currency;
     private final Boolean nonstop;
     private final String preferredAirline;
+    /**
+     * Optional departure-time window (inclusive), local to the departure timestamps of whichever
+     * search service produced the results — TourVisio's configured {@code tourvisio.timezone} for the
+     * real path. Either bound may stand alone: only {@code departTimeFrom} means "at or after".
+     */
+    private final LocalTime departTimeFrom;
+    private final LocalTime departTimeTo;
 
     public String toCacheKey() {
         return String.join("|",
@@ -30,6 +38,8 @@ public class FlightSearchCriteria {
                 String.valueOf(currency),
                 String.valueOf(nonstop),
                 String.valueOf(preferredAirline),
+                String.valueOf(departTimeFrom),
+                String.valueOf(departTimeTo),
                 passengers == null
                         ? "0A0C0I"
                         : passengers.getAdults() + "A" + passengers.getChildren() + "C" + passengers.getInfants() + "I");

@@ -1,6 +1,7 @@
 package com.paximum.paxassist.flight.service;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -65,5 +66,61 @@ class FlightResultFilterTest {
                 criteria().nonstop(true).preferredAirline("Pegasus").build()).results();
 
         assertThat(results).isEmpty();
+    }
+
+    // ── Departure-time window ────────────────────────────────────────────────────────────────
+    // The fixture departs at 08:00 (FLT-1), 12:00 (FLT-2) and 18:00 (FLT-3) UTC, which is the zone
+    // MockFlightSearchService builds and the filter reads them in.
+
+    @Test
+    void search_departWindow_keepsOnlyFlightsInsideIt() {
+        List<FlightProduct> results = service.search(
+                criteria().departTimeFrom(LocalTime.of(11, 0)).departTimeTo(LocalTime.of(13, 0)).build()).results();
+
+        assertThat(results).extracting(FlightProduct::getId).containsExactly("FLT-2");
+    }
+
+    @Test
+    void search_departWindowBoundsAreInclusive() {
+        List<FlightProduct> results = service.search(
+                criteria().departTimeFrom(LocalTime.of(8, 0)).departTimeTo(LocalTime.of(12, 0)).build()).results();
+
+        assertThat(results).extracting(FlightProduct::getId).containsExactly("FLT-1", "FLT-2");
+    }
+
+    @Test
+    void search_departWindowWithOnlyAFrom_meansAtOrAfter() {
+        List<FlightProduct> results = service.search(
+                criteria().departTimeFrom(LocalTime.of(12, 0)).build()).results();
+
+        assertThat(results).extracting(FlightProduct::getId).containsExactly("FLT-2", "FLT-3");
+    }
+
+    @Test
+    void search_departWindowWithOnlyATo_meansAtOrBefore() {
+        List<FlightProduct> results = service.search(
+                criteria().departTimeTo(LocalTime.of(11, 59)).build()).results();
+
+        assertThat(results).extracting(FlightProduct::getId).containsExactly("FLT-1");
+    }
+
+    @Test
+    void search_departWindowMatchingNothing_returnsEmpty() {
+        List<FlightProduct> results = service.search(
+                criteria().departTimeFrom(LocalTime.of(3, 0)).departTimeTo(LocalTime.of(5, 0)).build()).results();
+
+        assertThat(results).isEmpty();
+    }
+
+    @Test
+    void search_combinesDepartWindowWithNonstop() {
+        // 08:00–13:00 leaves FLT-1 (0 stops) and FLT-2 (1 stop); nonstop then drops FLT-2.
+        List<FlightProduct> results = service.search(criteria()
+                .departTimeFrom(LocalTime.of(8, 0))
+                .departTimeTo(LocalTime.of(13, 0))
+                .nonstop(true)
+                .build()).results();
+
+        assertThat(results).extracting(FlightProduct::getId).containsExactly("FLT-1");
     }
 }
