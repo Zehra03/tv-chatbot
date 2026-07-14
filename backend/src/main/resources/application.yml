@@ -82,6 +82,15 @@ tourvisio:
 
 server:
   port: ${SERVER_PORT:${BACKEND_PORT:8080}}
+  error:
+    # Pinned, not left to Spring's defaults: an unhandled error is answered by
+    # GlobalExceptionHandler's fixed INTERNAL_ERROR body, and nothing about the cause
+    # (stack trace, exception message, binding errors) may reach the client. The detail
+    # lives in the log, findable by the errorId echoed in the response.
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false
 
 management:
   endpoints:
@@ -92,6 +101,10 @@ management:
 app:
   cors:
     allowed-origin: ${FRONTEND_ORIGIN:http://localhost:5173}
+  guard:
+    # Second layer behind ChatRequest.message's @Size cap — keep the two values identical, or a
+    # message could pass the DTO and be rejected by the guard (or the reverse).
+    max-message-length: ${GUARD_MAX_MESSAGE_LENGTH:2000}
   auth:
     jwt:
       # Dev-only default; production MUST override via AUTH_JWT_SECRET (never commit a real secret).

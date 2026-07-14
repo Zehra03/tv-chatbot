@@ -36,7 +36,7 @@ class OutOfScopeGuardTest {
     private ValueOperations<String, String> valueOps;
 
     private static GuardProperties props(boolean enabled, boolean failOpen) {
-        return new GuardProperties(new GuardProperties.OutOfScope(enabled, 5, 1800, 900, failOpen));
+        return new GuardProperties(new GuardProperties.OutOfScope(enabled, 5, 1800, 900, failOpen), null);
     }
 
     private OutOfScopeGuard guard(boolean enabled, boolean failOpen) {
