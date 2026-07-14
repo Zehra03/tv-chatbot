@@ -38,7 +38,7 @@ class ValidationOrchestratorTest {
         ValidationOrchestrator orchestrator = orchestrator(true, false, 2, true);
 
         // When
-        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 1);
+        ValidationOutcome outcome = orchestrator.validate("s1", "soru", "aday", "bağlam", 1);
 
         // Then
         assertThat(outcome.result().verdict()).isEqualTo(ValidationResult.Verdict.APPROVED);
@@ -54,7 +54,7 @@ class ValidationOrchestratorTest {
         ValidationOrchestrator orchestrator = orchestrator(true, false, 2, true);
 
         // When
-        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 1);
+        ValidationOutcome outcome = orchestrator.validate("s1", "soru", "aday", "bağlam", 1);
 
         // Then
         assertThat(outcome.retryAllowed()).isTrue();
@@ -68,7 +68,7 @@ class ValidationOrchestratorTest {
         ValidationOrchestrator orchestrator = orchestrator(true, false, 2, true);
 
         // When
-        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 2);
+        ValidationOutcome outcome = orchestrator.validate("s1", "soru", "aday", "bağlam", 2);
 
         // Then
         assertThat(outcome.retryAllowed()).isFalse();
@@ -80,7 +80,7 @@ class ValidationOrchestratorTest {
         ValidationOrchestrator orchestrator = orchestrator(false, false, 2, true);
 
         // When
-        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 1);
+        ValidationOutcome outcome = orchestrator.validate("s1", "soru", "aday", "bağlam", 1);
 
         // Then
         assertThat(outcome.result().verdict()).isEqualTo(ValidationResult.Verdict.APPROVED);
@@ -94,7 +94,7 @@ class ValidationOrchestratorTest {
         ValidationOrchestrator orchestrator = orchestrator(true, true, 2, false);
 
         // When
-        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 1);
+        ValidationOutcome outcome = orchestrator.validate("s1", "soru", "aday", "bağlam", 1);
 
         // Then
         assertThat(outcome.cohort()).isEqualTo(Cohort.A_CONTROL);
@@ -110,10 +110,24 @@ class ValidationOrchestratorTest {
         ValidationOrchestrator orchestrator = orchestrator(true, true, 2, true);
 
         // When
-        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 1);
+        ValidationOutcome outcome = orchestrator.validate("s1", "soru", "aday", "bağlam", 1);
 
         // Then
         assertThat(outcome.cohort()).isEqualTo(Cohort.B_TREATMENT);
+        verify(validatorService).validate("soru", "aday", "bağlam");
+    }
+
+    @Test
+    void shouldValidateWithoutATraceIdViaTheUntracedOverload() {
+        // The current caller (orchestrator's FallbackHandler) passes no trace id yet; that path must
+        // keep working and still reach the validator.
+        when(validatorService.validate(anyString(), anyString(), any()))
+                .thenReturn(callResult(ValidationResult.Verdict.APPROVED));
+        ValidationOrchestrator orchestrator = orchestrator(true, false, 2, true);
+
+        ValidationOutcome outcome = orchestrator.validate("soru", "aday", "bağlam", 1);
+
+        assertThat(outcome.result().verdict()).isEqualTo(ValidationResult.Verdict.APPROVED);
         verify(validatorService).validate("soru", "aday", "bağlam");
     }
 
