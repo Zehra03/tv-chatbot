@@ -35,6 +35,7 @@ class PreviewReservationCommandTest {
     private static final String COUNT_MISMATCH = "Yolcu sayısı seçilen ürünün kişi sayısıyla eşleşmiyor";
     private static final String INFANT_NEEDS_FLIGHT = "Bebek (infant) yolcu yalnızca uçuş içeren rezervasyonlarda eklenebilir";
     private static final String INFANT_NEEDS_ADULT = "Her bebek (infant) için bir yetişkin gerekir; bebek sayısı yetişkin sayısını aşamaz";
+    private static final String LEAD_NOT_CONTACTABLE = "Ana misafirin e-posta ve telefon bilgisi zorunludur";
 
     private static ValidatorFactory factory;
     private static Validator validator;
@@ -50,10 +51,11 @@ class PreviewReservationCommandTest {
         factory.close();
     }
 
+    /** Carries contact details on every traveller: the lead must be reachable (e-mail + phone). */
     private PreviewReservationCommand.Traveller traveller(String name, PassengerType type, Integer age,
                                                           boolean leader) {
         return new PreviewReservationCommand.Traveller(null, name, "Yılmaz", type, age,
-                null, "ada@example.com", null, leader, null, null, null, null, null, null, null);
+                null, "ada@example.com", "+905551112233", leader, null, null, null, null, null, null, null);
     }
 
     private PreviewReservationCommand.Traveller adult(String name) {
@@ -132,6 +134,52 @@ class PreviewReservationCommandTest {
     void adultFirstWithAChildBehind_isAccepted() {
         assertThat(violations(command(List.of(adult("Ada"), child("Max")), hotelFor(1, 1), null)))
                 .isEmpty();
+    }
+
+    // ── The booking must be contactable ──────────────────────────────────────────────────────
+
+    /** Same as traveller(), but with the contact fields the form collects left out. */
+    private PreviewReservationCommand.Traveller withContact(String name, String email, String phone) {
+        return new PreviewReservationCommand.Traveller(null, name, "Yılmaz", PassengerType.ADULT, 34,
+                null, email, phone, true, null, null, null, null, null, null, null);
+    }
+
+    @Test
+    void leadTravellerWithoutAnEmail_isRejected() {
+        // Without contact details the voucher, a schedule change and a cancellation notice have nowhere
+        // to go — and the booking would still confirm.
+        assertThat(violations(command(List.of(withContact("Ada", null, "+905551112233")), hotelFor(1, 0), null)))
+                .contains(LEAD_NOT_CONTACTABLE);
+    }
+
+    @Test
+    void leadTravellerWithoutAPhone_isRejected() {
+        assertThat(violations(command(List.of(withContact("Ada", "ada@example.com", null)), hotelFor(1, 0), null)))
+                .contains(LEAD_NOT_CONTACTABLE);
+    }
+
+    @Test
+    void blankContactFields_countAsMissing() {
+        assertThat(violations(command(List.of(withContact("Ada", "  ", "  ")), hotelFor(1, 0), null)))
+                .contains(LEAD_NOT_CONTACTABLE);
+    }
+
+    @Test
+    void leadTravellerWithBothContactFields_isAccepted() {
+        assertThat(violations(command(
+                List.of(withContact("Ada", "ada@example.com", "+905551112233")), hotelFor(1, 0), null)))
+                .isEmpty();
+    }
+
+    @Test
+    void nonLeadTravellersNeedNoContactDetails() {
+        // A child does not carry a phone; only the lead is the contact person.
+        PreviewReservationCommand.Traveller lead = withContact("Ada", "ada@example.com", "+905551112233");
+        PreviewReservationCommand.Traveller kid = new PreviewReservationCommand.Traveller(
+                null, "Max", "Yılmaz", PassengerType.CHILD, 8, null, null, null,
+                false, null, null, null, null, null, null, null);
+
+        assertThat(violations(command(List.of(lead, kid), hotelFor(1, 1), null))).isEmpty();
     }
 
     // ── Age / type cross-check ───────────────────────────────────────────────────────────────

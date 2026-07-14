@@ -150,6 +150,33 @@ class ReservationControllerValidationTest {
     }
 
     @Test
+    void preview_leadGuestWithoutContactDetails_isRejectedBeforeService() throws Exception {
+        // Required-field check: no e-mail / no phone on the lead guest -> the booking cannot proceed.
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34}
+                """, 1, 1, 0));
+    }
+
+    @Test
+    void preview_leadGuestWithoutAPhone_isRejectedBeforeService() throws Exception {
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34,
+                 "email": "ada@example.com"}
+                """, 1, 1, 0));
+    }
+
+    @Test
+    void preview_travellerWithoutAName_isRejectedBeforeService() throws Exception {
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "", "lastName": "", "passengerType": "ADULT", "age": 34,
+                 "email": "ada@example.com", "phone": "+905551112233"}
+                """, 1, 1, 0));
+    }
+
+    @Test
     void preview_invalidTravellerEmail_isRejectedBeforeService() throws Exception {
         expectRejectedBeforeService(hotelBooking(
                 """

@@ -87,14 +87,41 @@ public record PreviewReservationCommand(
      */
     @AssertTrue(message = "Ana misafir (iletişim kurulacak yolcu) yetişkin olmalıdır")
     public boolean isLeadTravellerAnAdult() {
-        if (travellers == null || travellers.isEmpty()) {
+        Traveller lead = leadTraveller();
+        return lead == null || lead.passengerType() == null || lead.passengerType() == PassengerType.ADULT;
+    }
+
+    /**
+     * Cross-field rule: the booking must be contactable — the lead traveller carries an e-mail AND a
+     * phone. Both were optional, so a booking could be confirmed with no way to reach the guest at all:
+     * the voucher, any schedule change and any cancellation notice have nowhere to go.
+     *
+     * <p>The e-mail's format is checked by {@code @Email} on the field; this rule is about presence, on
+     * the one traveller that actually holds the contact details (the lead — see
+     * {@link #isLeadTravellerAnAdult()}). Non-lead travellers stay optional: a child does not need a phone.
+     */
+    @AssertTrue(message = "Ana misafirin e-posta ve telefon bilgisi zorunludur")
+    public boolean isLeadTravellerContactable() {
+        Traveller lead = leadTraveller();
+        if (lead == null) {
             return true;
         }
-        Traveller lead = travellers.stream()
+        return isPresent(lead.email()) && isPresent(lead.phone());
+    }
+
+    private static boolean isPresent(String value) {
+        return value != null && !value.isBlank();
+    }
+
+    /** The traveller flagged {@code leader}, or the first one — how the mappers pick the lead guest. */
+    private Traveller leadTraveller() {
+        if (travellers == null || travellers.isEmpty()) {
+            return null;
+        }
+        return travellers.stream()
                 .filter(t -> t != null && t.leader())
                 .findFirst()
                 .orElse(travellers.get(0));
-        return lead == null || lead.passengerType() == null || lead.passengerType() == PassengerType.ADULT;
     }
 
     /**

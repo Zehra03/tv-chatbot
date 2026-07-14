@@ -33,7 +33,23 @@ public class ReservationWebMapper {
                 preview.hasHotel(),
                 preview.hasFlight(),
                 preview.priceChanged(),
-                preview.previousAmount());
+                preview.previousAmount(),
+                preview.available(),
+                toPreviewHotel(preview.hotel()),
+                toPreviewFlight(preview.flight()));
+    }
+
+    private PreviewResponse.Hotel toPreviewHotel(ReservationPreview.Hotel hotel) {
+        return hotel == null ? null : new PreviewResponse.Hotel(
+                hotel.hotelName(), hotel.region(), hotel.stars(), hotel.boardType(),
+                hotel.checkIn(), hotel.checkOut(), hotel.nights(),
+                hotel.rooms(), hotel.adults(), hotel.children());
+    }
+
+    private PreviewResponse.Flight toPreviewFlight(ReservationPreview.Flight flight) {
+        return flight == null ? null : new PreviewResponse.Flight(
+                flight.origin(), flight.destination(), flight.airline(), flight.tripType(),
+                flight.departTime(), flight.returnDepartTime(), flight.passengerCount());
     }
 
     public ReservationSummaryResponse toSummary(Reservation r) {

@@ -147,6 +147,36 @@ class ReservationServiceTest {
     }
 
     @Test
+    void previewReservation_summaryCarriesWhatTheUserIsAgreeingTo() {
+        // The summary screen must state the product, its dates, the party size, the price, the currency
+        // and that it is available — not just a number to click "confirm" on.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "EUR", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(pendingStore.previewTtl()).thenReturn(java.time.Duration.ofMinutes(15));
+
+        ReservationPreview preview = ((PreviewResult.Priced)
+                reservationService.previewReservation(command)).preview();
+
+        assertThat(preview.available()).isTrue();
+        assertThat(preview.currency()).isEqualTo("EUR");
+        assertThat(preview.totalAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+
+        ReservationPreview.Hotel hotel = preview.hotel();
+        assertThat(hotel.hotelName()).isEqualTo("Hotel A");
+        assertThat(hotel.checkIn()).isEqualTo(java.time.LocalDate.now().plusDays(30));
+        assertThat(hotel.checkOut()).isEqualTo(java.time.LocalDate.now().plusDays(32));
+        assertThat(hotel.nights()).isEqualTo(2);
+        assertThat(hotel.rooms()).isEqualTo((short) 1);
+        assertThat(hotel.adults()).isEqualTo((short) 1);
+        assertThat(hotel.children()).isEqualTo((short) 0);
+        assertThat(preview.passengerNames()).containsExactly("John Doe");
+        assertThat(preview.flight()).isNull();
+    }
+
+    @Test
     void previewReservation_neverBuysAnything() {
         // The invariant the re-pricing must not break: beginTransaction prices, only commit buys.
         PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));

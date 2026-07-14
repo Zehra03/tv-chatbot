@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -176,7 +177,34 @@ public class ReservationService {
                 command.hotel() != null,
                 command.flight() != null,
                 priceChanged,
-                priceChanged ? declared : null));
+                priceChanged ? declared : null,
+                // Availability is not assumed: reaching this line means TourVisio just priced the offer.
+                true,
+                hotelSummary(command.hotel()),
+                flightSummary(command.flight())));
+    }
+
+    /** The stay as the user must see it before agreeing to it — dates, nights, rooms, party size. */
+    private ReservationPreview.Hotel hotelSummary(PreviewReservationCommand.Hotel hotel) {
+        if (hotel == null) {
+            return null;
+        }
+        int nights = (hotel.checkIn() == null || hotel.checkOut() == null)
+                ? 0 : (int) ChronoUnit.DAYS.between(hotel.checkIn(), hotel.checkOut());
+        return new ReservationPreview.Hotel(
+                hotel.hotelName(), hotel.region(), hotel.stars(), hotel.boardType(),
+                hotel.checkIn(), hotel.checkOut(), nights,
+                hotel.rooms(), hotel.adults(), hotel.children());
+    }
+
+    /** The itinerary as the user must see it — route, trip type, departure/return, party size. */
+    private ReservationPreview.Flight flightSummary(PreviewReservationCommand.Flight flight) {
+        if (flight == null) {
+            return null;
+        }
+        return new ReservationPreview.Flight(
+                flight.origin(), flight.destination(), flight.airline(), flight.tripType(),
+                flight.departTime(), flight.returnDepartTime(), flight.passengerCount());
     }
 
     // =========================================================================================
