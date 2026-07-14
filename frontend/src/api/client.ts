@@ -17,6 +17,12 @@ import axios, {
 export interface ApiError {
   status: number | null
   message: string
+  /**
+   * Makine-okunur hata kodu (varsa). Auth hataları `error` (ör. "EMAIL_ALREADY_EXISTS"),
+   * rezervasyon hataları `outcome` (ör. "PREVIEW_EXPIRED", "TOURVISIO_REJECTED") döndürür —
+   * ikisi de buraya yansır ki çağıran ekran anlamlı bir mesaj eşleyebilsin.
+   */
+  code?: string
 }
 
 /**
@@ -142,7 +148,7 @@ apiClient.interceptors.response.use(
     }
     return response
   },
-  async (error: AxiosError<{ message?: string }>) => {
+  async (error: AxiosError<{ message?: string; error?: string; outcome?: string }>) => {
     const status = error.response?.status ?? null
     const original = error.config as RetriableRequestConfig | undefined
     const url = original?.url ?? ''
@@ -175,6 +181,7 @@ apiClient.interceptors.response.use(
       status,
       message:
         error.response?.data?.message ?? error.message ?? 'Beklenmeyen bir hata oluştu.',
+      code: error.response?.data?.error ?? error.response?.data?.outcome,
     }
     return Promise.reject(normalized)
   },

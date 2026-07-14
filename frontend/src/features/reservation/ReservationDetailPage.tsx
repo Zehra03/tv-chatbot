@@ -1,21 +1,172 @@
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { DropdownSelect } from '@/components/ui/dropdown-select'
+import { Spinner } from '@/components/ui/spinner'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { useReservation } from '@/features/reservation/useReservation'
+import { useCancelReservation } from '@/features/reservation/useCancelReservation'
 import {
+  RESERVATION_PRODUCT_TYPE_LABELS,
   RESERVATION_STATUS_LABELS,
   reservationStatusVariant,
 } from '@/features/reservation/status'
+import type { CancellationOption, ReservationDetail } from '@/types'
 import { formatDate, formatDateTime, formatPrice } from '@/utils/format'
 
+/** Etiket/değer satırı — detay ızgarasında tekrar eden desen. */
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <dt className="text-brand-ice/70">{label}</dt>
+      <dd className="font-medium">{children}</dd>
+    </div>
+  )
+}
+
+/** Rezerve edilmiş otel snapshot'ı. */
+function HotelBlock({ hotel }: { hotel: NonNullable<ReservationDetail['hotel']> }) {
+  return (
+    <div>
+      <h2 className="mb-2 flex items-center gap-2 font-semibold">
+        <Hotel className="h-4 w-4 text-brand-teal" aria-hidden /> Otel
+      </h2>
+      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+        <Field label="Otel">
+          {hotel.hotelName}
+          {hotel.stars ? ` · ${hotel.stars}★` : ''}
+        </Field>
+        {hotel.region && <Field label="Bölge">{hotel.region}</Field>}
+        {hotel.boardType && <Field label="Pansiyon">{hotel.boardType}</Field>}
+        <Field label="Giriş / çıkış">
+          {formatDate(hotel.checkIn)} — {formatDate(hotel.checkOut)}
+        </Field>
+        <Field label="Oda / kişi">
+          {hotel.rooms} oda · {hotel.adults} yetişkin
+          {hotel.children ? ` · ${hotel.children} çocuk` : ''}
+        </Field>
+      </dl>
+    </div>
+  )
+}
+
+/** Rezerve edilmiş uçuş snapshot'ı. */
+function FlightBlock({ flight }: { flight: NonNullable<ReservationDetail['flight']> }) {
+  return (
+    <div>
+      <h2 className="mb-2 flex items-center gap-2 font-semibold">
+        <Plane className="h-4 w-4 text-brand-teal" aria-hidden /> Uçuş
+      </h2>
+      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
+        <Field label="Rota">
+          {flight.origin} → {flight.destination}
+          {flight.airline ? ` · ${flight.airline}` : ''}
+        </Field>
+        <Field label="Kalkış">{formatDateTime(flight.departTime)}</Field>
+        {flight.arriveTime && <Field label="Varış">{formatDateTime(flight.arriveTime)}</Field>}
+        {flight.returnDepartTime && (
+          <Field label="Dönüş">{formatDateTime(flight.returnDepartTime)}</Field>
+        )}
+        <Field label="Aktarma / bagaj">
+          {flight.stops === 0 || flight.stops == null ? 'Direkt' : `${flight.stops} aktarma`}
+          {flight.baggage ? ` · Bagaj: ${flight.baggage}` : ''}
+        </Field>
+        <Field label="Yolcu">{flight.passengerCount}</Field>
+      </dl>
+    </div>
+  )
+}
+
+/** İptal seçeneği etiketi — sebep adı + (varsa) ceza tutarı. */
+function optionLabel(o: CancellationOption): string {
+  const penalty = o.price?.amount ? ` · ceza ${formatPrice(o.price.amount, o.price.currency)}` : ''
+  return `${o.reasonName ?? o.reasonId}${penalty}`
+}
+
 /**
- * /reservations/:id — seçilen rezervasyonun tam dökümü
- * (docs/frontend-architecture.md §3): başlık + durum, ürün/tutar bilgileri,
- * tarihler ve misafir listesi (iletişim dahil).
+ * İptal bölümü — yalnız iptal edilebilir seçenek varsa ve durum uygunsa (onaylı/beklemede) görünür.
+ * Kullanıcı bir sebep seçer, açık onay kutusunu işaretler ve iptal eder (destructive → çift kontrol).
+ * `reason` = seçilen `cancellationOptions[].reasonId`; backend TourVisio'ya iletir.
+ */
+function CancelSection({ reservation }: { reservation: ReservationDetail }) {
+  const cancel = useCancelReservation(reservation.id)
+  const options = useMemo(
+    () => (reservation.cancellationOptions ?? []).filter((o) => o.cancelable !== false),
+    [reservation.cancellationOptions],
+  )
+  const [reasonId, setReasonId] = useState(options[0]?.reasonId ?? '')
+  const [confirmed, setConfirmed] = useState(false)
+
+  const cancellable = reservation.status === 'confirmed' || reservation.status === 'pending'
+  if (!cancellable || options.length === 0) return null
+
+  const selected = options.find((o) => o.reasonId === reasonId)
+
+  return (
+    <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+      <h2 className="font-semibold text-white">Rezervasyonu iptal et</h2>
+      <div className="grid gap-1.5">
+        <label htmlFor="cancel-reason" className="text-sm text-brand-ice/70">
+          İptal sebebi
+        </label>
+        <DropdownSelect
+          id="cancel-reason"
+          value={reasonId}
+          options={options.map((o) => ({ value: o.reasonId, label: optionLabel(o) }))}
+          onChange={setReasonId}
+        />
+      </div>
+      {selected?.price?.amount ? (
+        <p className="text-sm text-brand-ice/70">
+          İptal cezası:{' '}
+          <span className="font-semibold text-white">
+            {formatPrice(selected.price.amount, selected.price.currency)}
+          </span>
+        </p>
+      ) : null}
+
+      <label className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-white">
+        <input
+          type="checkbox"
+          checked={confirmed}
+          onChange={(e) => setConfirmed(e.target.checked)}
+          className="mt-0.5 h-5 w-5 rounded border-white/30 accent-destructive"
+        />
+        Bu rezervasyonu iptal etmek istediğimi onaylıyorum.
+      </label>
+
+      {cancel.isError && (
+        <p role="alert" className="text-sm text-red-400">
+          {cancel.error.message}
+        </p>
+      )}
+
+      <Button
+        variant="destructive"
+        disabled={!confirmed || !reasonId || cancel.isPending}
+        onClick={() => cancel.mutate({ reason: reasonId })}
+      >
+        {cancel.isPending ? (
+          <>
+            <Spinner size={16} decorative className="text-white" />
+            İptal ediliyor…
+          </>
+        ) : (
+          'Rezervasyonu iptal et'
+        )}
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * /reservations/:id — seçilen rezervasyonun tam dökümü (docs/frontend-architecture.md §3):
+ * başlık + durum, ürün/tutar bilgileri, otel/uçuş snapshot'ı, misafir listesi ve (uygunsa)
+ * iptal bölümü (canlı TourVisio iptal seçenekleriyle).
  */
 export function ReservationDetailPage() {
   const { id } = useParams()
@@ -51,29 +202,20 @@ export function ReservationDetailPage() {
           </CardHeader>
           <CardContent className="space-y-6">
             <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="text-brand-ice/70">Ürün tipi</dt>
-                <dd className="font-medium">{data.productType === 'hotel' ? 'Otel' : 'Uçuş'}</dd>
-              </div>
-              <div>
-                <dt className="text-brand-ice/70">Rezervasyon tarihi</dt>
-                <dd className="font-medium">{formatDate(data.reservationDate)}</dd>
-              </div>
-              <div>
-                <dt className="text-brand-ice/70">Toplam tutar</dt>
-                <dd className="font-bold">{formatPrice(data.totalAmount, data.currency)}</dd>
-              </div>
-              <div>
-                <dt className="text-brand-ice/70">Oluşturulma</dt>
-                <dd className="font-medium">{formatDateTime(data.createdAt)}</dd>
-              </div>
-              {data.updatedAt && (
-                <div>
-                  <dt className="text-brand-ice/70">Güncellenme</dt>
-                  <dd className="font-medium">{formatDateTime(data.updatedAt)}</dd>
-                </div>
+              <Field label="Ürün tipi">{RESERVATION_PRODUCT_TYPE_LABELS[data.productType]}</Field>
+              <Field label="Rezervasyon tarihi">{formatDate(data.reservationDate)}</Field>
+              <Field label="Toplam tutar">
+                <span className="font-bold">{formatPrice(data.totalAmount, data.currency)}</span>
+              </Field>
+              {data.externalReservationNumber && (
+                <Field label="Sağlayıcı referansı">
+                  <span className="font-mono">{data.externalReservationNumber}</span>
+                </Field>
               )}
             </dl>
+
+            {data.hotel && <HotelBlock hotel={data.hotel} />}
+            {data.flight && <FlightBlock flight={data.flight} />}
 
             <div>
               <h2 className="mb-2 font-semibold">Misafirler</h2>
@@ -104,6 +246,8 @@ export function ReservationDetailPage() {
                 <p className="text-sm text-brand-ice/70">Misafir bilgisi bulunmuyor.</p>
               )}
             </div>
+
+            <CancelSection reservation={data} />
           </CardContent>
         </Card>
       )}

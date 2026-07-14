@@ -9,6 +9,7 @@ import { LoadingState } from '@/components/LoadingState'
 import { SplitText } from '@/components/SplitText'
 import { useReservations } from '@/features/reservation/useReservations'
 import {
+  RESERVATION_PRODUCT_TYPE_LABELS,
   RESERVATION_STATUS_LABELS,
   reservationStatusVariant,
 } from '@/features/reservation/status'
@@ -103,13 +104,13 @@ export function ReservationsPage() {
                         aria-hidden="true"
                         className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
                       >
-                        {r.productType === 'hotel' ? (
-                          <Hotel className="h-3.5 w-3.5" />
-                        ) : (
+                        {r.productType === 'flight' ? (
                           <Plane className="h-3.5 w-3.5" />
+                        ) : (
+                          <Hotel className="h-3.5 w-3.5" />
                         )}
                       </span>
-                      {r.productType === 'hotel' ? 'Otel' : 'Uçuş'}
+                      {RESERVATION_PRODUCT_TYPE_LABELS[r.productType]}
                     </span>
                   </td>
                   <td className="p-3">{formatDate(r.reservationDate)}</td>

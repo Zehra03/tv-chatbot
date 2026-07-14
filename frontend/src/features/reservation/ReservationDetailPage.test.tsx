@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -44,13 +45,17 @@ function renderPage(id: string) {
 }
 
 describe('ReservationDetailPage (MSW ile)', () => {
-  it('rezervasyonun tam dökümünü gösterir (misafirler dahil)', async () => {
+  it('rezervasyonun tam dökümünü gösterir (otel bloğu + misafirler)', async () => {
     renderPage('1003')
 
     expect(await screen.findByText('PAX-MOCK-1003', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('İptal edildi')).toBeTruthy()
-    expect(screen.getByText('Otel')).toBeTruthy()
+    // "Otel" iki yerde: ürün-tipi alanı + otel bloğu başlığı.
+    expect(screen.getAllByText('Otel').length).toBeGreaterThanOrEqual(1)
     expect(screen.getByText(/800/)).toBeTruthy()
+
+    // Otel snapshot bloğu.
+    expect(screen.getByText('Test Seaside Hotel Bodrum · 4★')).toBeTruthy()
 
     // Misafir dökümü: yetişkin + çocuk, iletişim yalnızca ana misafirde.
     expect(screen.getByText('Sample Guest')).toBeTruthy()
@@ -58,6 +63,32 @@ describe('ReservationDetailPage (MSW ile)', () => {
     expect(screen.getByText('Mini Guest')).toBeTruthy()
     expect(screen.getByText(/Çocuk · 8 yaş/)).toBeTruthy()
     expect(screen.getByText(/sample\.guest@example\.com/)).toBeTruthy()
+
+    // İptal edilmiş → iptal bölümü çıkmaz.
+    expect(screen.queryByRole('button', { name: 'Rezervasyonu iptal et' })).toBeNull()
+  })
+
+  it('onaylı rezervasyon iptal edilebilir (sebep + açık onay → PATCH → durum İptal edildi)', async () => {
+    const user = userEvent.setup()
+    renderPage('1001')
+
+    expect(await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText('Onaylandı')).toBeTruthy()
+
+    // İptal bölümü: sebep seçili (varsayılan), açık onay kutusu iptal butonunu açar.
+    const cancelBtn = screen.getByRole('button', { name: 'Rezervasyonu iptal et' })
+    expect((cancelBtn as HTMLButtonElement).disabled).toBe(true)
+    await user.click(screen.getByRole('checkbox'))
+    expect((cancelBtn as HTMLButtonElement).disabled).toBe(false)
+
+    await user.click(cancelBtn)
+
+    // İptal sonrası detay tazelenir → durum "İptal edildi", iptal bölümü kaybolur.
+    await waitFor(
+      () => expect(screen.getByText('İptal edildi')).toBeTruthy(),
+      { timeout: 3000 },
+    )
+    expect(screen.queryByRole('button', { name: 'Rezervasyonu iptal et' })).toBeNull()
   })
 
   it('bulunamayan rezervasyonda hata gösterir', async () => {

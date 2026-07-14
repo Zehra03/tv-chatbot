@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query'
 import { reservationApi, type ApiError } from '@/api'
-import type { Reservation } from '@/types'
+import type { ReservationSummary } from '@/types'
 
 /**
- * GET /api/v1/reservations — rezervasyon listesi (§5). Query key
- * ['reservations'] önekiyle başlar; useCreateReservation başarıda bu öneki
- * invalidate ettiğinden liste otomatik tazelenir.
+ * GET /api/v1/reservations — mevcut kullanıcının rezervasyonları (yeni→eski). Query key
+ * ['reservations'] önekiyle başlar; onay/iptal başarıda bu öneki invalidate ettiğinden liste
+ * otomatik tazelenir.
  */
 export function useReservations() {
-  return useQuery<Reservation[], ApiError>({
+  return useQuery<ReservationSummary[], ApiError>({
     queryKey: ['reservations'],
     queryFn: () => reservationApi.list(),
   })

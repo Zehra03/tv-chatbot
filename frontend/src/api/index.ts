@@ -21,7 +21,18 @@ export { flightApi } from './flightApi'
 export type { LocationDirection } from './flightApi'
 
 export { reservationApi } from './reservationApi'
-export type { CreateReservationRequest, ReservationPreview } from './reservationApi'
+export type {
+  TravellerInput,
+  HotelSnapshotInput,
+  FlightSnapshotInput,
+  PreviewReservationCommand,
+  PreviewResponse,
+  ConfirmRequest,
+  ConfirmResult,
+  NeedsConfirmationResponse,
+  OutcomeResponse,
+  CancelRequest,
+} from './reservationApi'
 
 export { authApi } from './authApi'
 export type { AuthUser, LoginRequest, RegisterRequest, AuthResponse } from './authApi'
