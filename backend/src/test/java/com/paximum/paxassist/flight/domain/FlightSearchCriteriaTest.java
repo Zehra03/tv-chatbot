@@ -1,6 +1,7 @@
 package com.paximum.paxassist.flight.domain;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -20,12 +21,34 @@ class FlightSearchCriteriaTest {
                 .currency("USD")
                 .nonstop(true)
                 .preferredAirline("TK")
+                .departTimeFrom(LocalTime.of(8, 0))
+                .departTimeTo(LocalTime.of(12, 0))
                 .passengers(PassengerCount.builder().adults(2).children(1).infants(0).build())
                 .build();
 
         String cacheKey = criteria.toCacheKey();
 
-        assertThat(cacheKey).isEqualTo("IST|LHR|2026-08-10|2026-08-20|ROUND_TRIP|USD|true|TK|2A1C0I");
+        assertThat(cacheKey)
+                .isEqualTo("IST|LHR|2026-08-10|2026-08-20|ROUND_TRIP|USD|true|TK|08:00|12:00|2A1C0I");
+    }
+
+    @Test
+    void toCacheKey_separatesDifferentDepartureWindows() {
+        // The window narrows the cached result set, so two windows must not share one cache entry.
+        FlightSearchCriteria.FlightSearchCriteriaBuilder base = FlightSearchCriteria.builder()
+                .origin("IST")
+                .destination("LHR")
+                .departDate(LocalDate.of(2026, 8, 10))
+                .tripType(TripType.ONE_WAY)
+                .currency("USD")
+                .passengers(PassengerCount.builder().adults(1).children(0).infants(0).build());
+
+        String morning = base.departTimeFrom(LocalTime.of(6, 0)).departTimeTo(LocalTime.of(12, 0))
+                .build().toCacheKey();
+        String evening = base.departTimeFrom(LocalTime.of(18, 0)).departTimeTo(LocalTime.of(23, 0))
+                .build().toCacheKey();
+
+        assertThat(morning).isNotEqualTo(evening);
     }
 
     @Test

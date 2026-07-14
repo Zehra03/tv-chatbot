@@ -1,5 +1,6 @@
 package com.paximum.paxassist.flight.service;
 
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -12,6 +13,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import com.paximum.paxassist.flight.config.TourVisioProperties;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.event.FlightSearchEvent;
@@ -36,6 +38,7 @@ public class TourVisioFlightSearchService implements FlightSearchService {
     private final ApplicationEventPublisher eventPublisher;
     private final TourVisioTokenProvider tokenProvider;
     private final TourVisioLocationResolver locationResolver;
+    private final TourVisioProperties tourVisioProperties;
 
     public TourVisioFlightSearchService(
             TourVisioFlightClient tourVisioFlightClient,
@@ -43,13 +46,15 @@ public class TourVisioFlightSearchService implements FlightSearchService {
             TourVisioFlightResponseMapper responseMapper,
             ApplicationEventPublisher eventPublisher,
             TourVisioTokenProvider tokenProvider,
-            TourVisioLocationResolver locationResolver) {
+            TourVisioLocationResolver locationResolver,
+            TourVisioProperties tourVisioProperties) {
         this.tourVisioFlightClient = tourVisioFlightClient;
         this.requestMapper = requestMapper;
         this.responseMapper = responseMapper;
         this.eventPublisher = eventPublisher;
         this.tokenProvider = tokenProvider;
         this.locationResolver = locationResolver;
+        this.tourVisioProperties = tourVisioProperties;
     }
 
     @Override
@@ -99,8 +104,12 @@ public class TourVisioFlightSearchService implements FlightSearchService {
                             .formatted(criteria.getOrigin(), criteria.getDestination()));
         }
 
+        // Read the departure-time window in the same zone the response mapper used to turn TourVisio's
+        // offset-less times into instants — otherwise "08:00–12:00" would silently mean 08:00–12:00 UTC.
         List<FlightProduct> products = FlightResultFilter.apply(
-                criteria, responseMapper.toFlightProducts(response, criteria.getTripType()));
+                criteria,
+                responseMapper.toFlightProducts(response, criteria.getTripType()),
+                ZoneId.of(tourVisioProperties.timezone()));
         eventPublisher.publishEvent(FlightSearchEvent.success(criteria, products.size()));
 
         log.info("Flight search completed: origin={}, destination={}, resultCount={}",

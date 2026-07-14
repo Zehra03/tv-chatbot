@@ -1,6 +1,8 @@
 package com.paximum.paxassist.flight.dto;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -8,11 +10,13 @@ import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.PassengerCount;
 import com.paximum.paxassist.flight.domain.TripType;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.FutureOrPresent;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 /**
@@ -43,7 +47,28 @@ public record FlightSearchApiRequest(
         String tripType,
         @FutureOrPresent(message = "returnDate must not be in the past") LocalDate returnDate,
         Boolean nonstop,
-        String airline) {
+        String airline,
+        @Valid TimeRange departTimeRange) {
+
+    /**
+     * Departure-time window from the search form ({@code TimeRange} in {@code frontend/src/types/search.ts}),
+     * as "HH:mm" strings. Both bounds are optional and inclusive: only {@code from} means "at or after".
+     */
+    public record TimeRange(
+            @Pattern(regexp = TIME_PATTERN, message = "from must be a HH:mm time") String from,
+            @Pattern(regexp = TIME_PATTERN, message = "to must be a HH:mm time") String to) {
+
+        /** Cross-field: an inverted window ("from 18:00 to 06:00") would match nothing — reject it. */
+        @AssertTrue(message = "departTimeRange.from must be at or before departTimeRange.to")
+        private boolean isRangeOrdered() {
+            LocalTime start = parseTime(from);
+            LocalTime end = parseTime(to);
+            return start == null || end == null || !start.isAfter(end);
+        }
+    }
+
+    /** 24-hour "HH:mm"; anchored so "9:00" or "25:00" is a 400 rather than a parse failure later. */
+    private static final String TIME_PATTERN = "^([01]\\d|2[0-3]):[0-5]\\d$";
 
     /** Cross-field: a round trip's return leg cannot depart before the outbound leg. */
     @AssertTrue(message = "returnDate must be on or after departDate")
@@ -75,7 +100,21 @@ public record FlightSearchApiRequest(
                 .currency(currency)
                 .nonstop(nonstop)
                 .preferredAirline(airline)
+                .departTimeFrom(departTimeRange == null ? null : parseTime(departTimeRange.from()))
+                .departTimeTo(departTimeRange == null ? null : parseTime(departTimeRange.to()))
                 .build();
+    }
+
+    /** Null/blank means "no bound". The @Pattern above has already rejected anything unparsable. */
+    private static LocalTime parseTime(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalTime.parse(value.trim());
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     private static TripType parseTripType(String value) {

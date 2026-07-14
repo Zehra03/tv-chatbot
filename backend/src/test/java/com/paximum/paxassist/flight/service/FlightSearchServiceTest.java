@@ -1,6 +1,9 @@
 package com.paximum.paxassist.flight.service;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.springframework.context.ApplicationEventPublisher;
 
+import com.paximum.paxassist.flight.config.TourVisioProperties;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.PassengerCount;
@@ -56,9 +60,13 @@ class FlightSearchServiceTest {
     @Mock
     private TourVisioLocationResolver locationResolver;
 
+    /** Only the timezone matters here — it is the zone the departure-time window is read in. */
+    private static final TourVisioProperties PROPERTIES =
+            new TourVisioProperties(null, null, "Europe/Istanbul", null, null, null);
+
     private FlightSearchService service() {
-        return new TourVisioFlightSearchService(
-                tourVisioFlightClient, requestMapper, responseMapper, eventPublisher, tokenProvider, locationResolver);
+        return new TourVisioFlightSearchService(tourVisioFlightClient, requestMapper, responseMapper,
+                eventPublisher, tokenProvider, locationResolver, PROPERTIES);
     }
 
     /** Stubs autocomplete to resolve the completeCriteria() origin/destination to themselves. */
@@ -107,6 +115,81 @@ class FlightSearchServiceTest {
         assertThat(outcome.complete()).isTrue();
         assertThat(outcome.results()).isEqualTo(mappedProducts);
         verify(eventPublisher).publishEvent(any(FlightSearchEvent.class));
+    }
+
+    /**
+     * TourVisio's price search takes none of nonstop / airline / departure window as a request
+     * parameter, so the service must narrow the mapped results itself — before this, the flags reached
+     * the criteria and were silently swallowed.
+     */
+    private FlightSearchOutcome searchWithMappedResults(FlightSearchCriteria criteria,
+                                                        List<FlightProduct> mapped) {
+        TourVisioPriceSearchRequest request = mock(TourVisioPriceSearchRequest.class);
+        TourVisioPriceSearchResponse response = new TourVisioPriceSearchResponse(
+                new TourVisioResponseHeader(true), new TourVisioResponseBody("search-1", List.of()));
+
+        resolveLocationsIdentity();
+        when(requestMapper.toRequest(any())).thenReturn(request);
+        when(tourVisioFlightClient.priceSearch(request)).thenReturn(response);
+        when(responseMapper.toFlightProducts(response, TripType.ONE_WAY)).thenReturn(mapped);
+
+        return service().search(criteria);
+    }
+
+    /** Departure at the given Istanbul wall-clock hour — the zone the window is read in (PROPERTIES). */
+    private FlightProduct flightDepartingAt(String id, String airline, int stops, int hour) {
+        Instant depart = LocalDate.of(2026, 8, 10)
+                .atTime(hour, 0)
+                .atZone(ZoneId.of("Europe/Istanbul"))
+                .toInstant();
+        return FlightProduct.builder().id(id).airline(airline).stops(stops).departTime(depart).build();
+    }
+
+    @Test
+    void search_departTimeWindow_narrowsResultsToTheRequestedHours() {
+        List<FlightProduct> mapped = List.of(
+                flightDepartingAt("early", "TK", 0, 6),
+                flightDepartingAt("morning", "TK", 0, 9),
+                flightDepartingAt("evening", "TK", 0, 20));
+        FlightSearchCriteria criteria = completeCriteria().toBuilder()
+                .departTimeFrom(LocalTime.of(8, 0))
+                .departTimeTo(LocalTime.of(12, 0))
+                .build();
+
+        FlightSearchOutcome outcome = searchWithMappedResults(criteria, mapped);
+
+        assertThat(outcome.results()).extracting(FlightProduct::getId).containsExactly("morning");
+    }
+
+    @Test
+    void search_nonstopAndAirline_narrowResults() {
+        List<FlightProduct> mapped = List.of(
+                flightDepartingAt("tk-direct", "TK", 0, 9),
+                flightDepartingAt("tk-connecting", "TK", 1, 9),
+                flightDepartingAt("pc-direct", "PC", 0, 9));
+        FlightSearchCriteria criteria = completeCriteria().toBuilder()
+                .nonstop(true)
+                .preferredAirline("TK")
+                .build();
+
+        FlightSearchOutcome outcome = searchWithMappedResults(criteria, mapped);
+
+        assertThat(outcome.results()).extracting(FlightProduct::getId).containsExactly("tk-direct");
+    }
+
+    @Test
+    void search_windowIsReadInTheConfiguredTourVisioZoneNotUtc() {
+        // 09:00 Istanbul is 06:00 UTC. A UTC reading would place it outside an 08:00-12:00 window and
+        // wrongly drop the flight — this is the regression the zone plumbing exists to prevent.
+        List<FlightProduct> mapped = List.of(flightDepartingAt("morning", "TK", 0, 9));
+        FlightSearchCriteria criteria = completeCriteria().toBuilder()
+                .departTimeFrom(LocalTime.of(8, 0))
+                .departTimeTo(LocalTime.of(12, 0))
+                .build();
+
+        FlightSearchOutcome outcome = searchWithMappedResults(criteria, mapped);
+
+        assertThat(outcome.results()).extracting(FlightProduct::getId).containsExactly("morning");
     }
 
     @Test
