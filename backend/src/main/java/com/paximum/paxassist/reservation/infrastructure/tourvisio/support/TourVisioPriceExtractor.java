@@ -45,15 +45,20 @@ public final class TourVisioPriceExtractor {
     }
 
     /**
-     * @param reservationData the {@code body.reservationData} node of a transaction response
+     * @param payload the pricing-bearing node: {@code body.reservationData} on a transaction response,
+     *                or the {@code body} itself on {@code getReservationDetail}, which nests the same
+     *                {@code reservationInfo} block. Both shapes are accepted, so the caller does not
+     *                have to know which endpoint it came from.
      * @return the amount the passenger is to pay, or empty when the payload carries none — meaning
      *         "could not verify", not "verified"
      */
-    public static Optional<TourVisioPrice> extract(JsonNode reservationData) {
-        if (reservationData == null || !reservationData.isObject()) {
+    public static Optional<TourVisioPrice> extract(JsonNode payload) {
+        if (payload == null || !payload.isObject()) {
             return Optional.empty();
         }
-        JsonNode reservationInfo = reservationData.get("reservationInfo");
+        JsonNode reservationData = payload.get("reservationData");
+        JsonNode source = (reservationData != null && reservationData.isObject()) ? reservationData : payload;
+        JsonNode reservationInfo = source.get("reservationInfo");
         if (reservationInfo == null || !reservationInfo.isObject()) {
             return Optional.empty();
         }

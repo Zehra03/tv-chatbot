@@ -27,6 +27,7 @@ import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.C
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancelReservationResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CancellationPenaltyResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CommitTransactionResponse;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.RawTourVisioResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TourVisioPrice;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TourVisioResponseHeader;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TransactionResponse;
@@ -557,7 +558,10 @@ public class ReservationService {
         String externalReservationNumber = body == null ? null : body.reservationNumber();
         String reservationNumber = generateReservationNumber();
 
-        Reservation reservation = entityMapper.toReservation(command, reservationNumber, externalReservationNumber);
+        // What we record must be what was actually charged, read back from the booking itself.
+        PreviewReservationCommand booked = reconcileWithBookedPrice(command, externalReservationNumber);
+
+        Reservation reservation = entityMapper.toReservation(booked, reservationNumber, externalReservationNumber);
         try {
             Reservation saved = reservationRepository.save(reservation);
             log.info("Reservation confirmed & persisted: id={}, reservationNumber={}, externalReservationNumber={}",
@@ -570,6 +574,69 @@ public class ReservationService {
             return new ConfirmationResult.OrphanedBooking(externalReservationNumber,
                     "Purchase succeeded on TourVisio but local persistence failed; flagged for manual reconciliation.");
         }
+    }
+
+    /**
+     * Reads the finalized price back from the booking itself and records THAT, not the amount we asked
+     * to be charged.
+     *
+     * <p>{@code commitTransaction} echoes identifiers only — no pricing — so the authoritative figure for
+     * a completed booking is {@code getReservationDetail}, whose body nests the same
+     * {@code reservationInfo} pricing block as the transaction responses. The pre-commit check
+     * ({@link #verifyPrice}) already refuses to buy at a wrong price, so this is the second half of the
+     * guarantee: it closes the window between the last price we saw and the price TourVisio actually
+     * committed, and it means the amount in "Rezervasyonlarım" is the amount on the booking.
+     *
+     * <p><b>Never fails the reservation.</b> The purchase has already happened and cannot be rolled back,
+     * so a lookup that errors, times out or returns no price must not turn a successful booking into an
+     * error: we fall back to the (already verified) amount and log the fact that it could not be
+     * reconciled. A figure that differs is logged at ERROR — it is the one case a human should look at.
+     */
+    private PreviewReservationCommand reconcileWithBookedPrice(PreviewReservationCommand command,
+                                                               String externalReservationNumber) {
+        if (externalReservationNumber == null || externalReservationNumber.isBlank()) {
+            log.warn("Booked price not reconciled: commit returned no reservation number. "
+                    + "Recording the verified amount {} {}.", command.totalAmount(), command.currency());
+            return command;
+        }
+
+        Optional<TourVisioPrice> booked;
+        try {
+            TourVisioCallResult<RawTourVisioResponse> detail =
+                    bookingClient.getReservationDetail(externalReservationNumber);
+            booked = detail instanceof Success<RawTourVisioResponse> success && success.body() != null
+                    ? TourVisioPriceExtractor.extract(success.body().body())
+                    : Optional.empty();
+        } catch (RuntimeException e) {
+            log.warn("Booked price not reconciled for {}: {}. Recording the verified amount {} {}.",
+                    externalReservationNumber, e.getMessage(), command.totalAmount(), command.currency());
+            return command;
+        }
+
+        if (booked.isEmpty() || booked.get().amount() == null) {
+            log.warn("Booked price not reconciled: getReservationDetail({}) carried no price. "
+                    + "Recording the verified amount {} {}.",
+                    externalReservationNumber, command.totalAmount(), command.currency());
+            return command;
+        }
+
+        BigDecimal charged = booked.get().amount();
+        String chargedCurrency = booked.get().currency() == null ? command.currency() : booked.get().currency();
+        if (command.totalAmount() != null && command.totalAmount().compareTo(charged) == 0) {
+            return command;
+        }
+
+        // The booking was committed at a price we had not seen. Record the truth and flag it loudly:
+        // the money moved, and only the provider's figure reconciles with what the customer is charged.
+        log.error("BOOKED PRICE DIFFERS — confirmed at {} {} but TourVisio booked {} {} "
+                        + "(externalReservationNumber={}). Recording TourVisio's amount.",
+                command.totalAmount(), command.currency(), charged, chargedCurrency, externalReservationNumber);
+        logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
+                "WARNING", "Booked price differs: confirmed " + command.totalAmount() + " " + command.currency()
+                        + ", TourVisio " + charged + " " + chargedCurrency
+                        + " (externalReservationNumber=" + externalReservationNumber + ")");
+
+        return command.withTotalAmount(charged, chargedCurrency);
     }
 
     /**

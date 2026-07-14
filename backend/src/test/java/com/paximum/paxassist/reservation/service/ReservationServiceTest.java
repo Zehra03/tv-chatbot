@@ -27,6 +27,7 @@ import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.Be
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.CommitTransactionRequest;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.SetReservationInfoRequest;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.CommitTransactionResponse;
+import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.RawTourVisioResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TourVisioResponseHeader;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.response.TransactionResponse;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.result.TourVisioCallResult;
@@ -375,6 +376,101 @@ class ReservationServiceTest {
 
         assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
         verify(bookingClient).commitTransaction(any());
+    }
+
+    // =============================================================================================
+    // Post-commit reconciliation: what we record must be what the booking was actually charged.
+    // commitTransaction echoes identifiers only, so the price is read back via getReservationDetail.
+    // =============================================================================================
+
+    /** Drives a successful confirm and returns the command the entity was actually built from. */
+    private PreviewReservationCommand confirmAndCaptureTheRecordedCommand(
+            PreviewReservationCommand command, TourVisioCallResult<RawTourVisioResponse> detail) {
+        givenClaimedPreviewWithBegin(command,
+                new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(requestMapper.toAddServicesRequest(command, "txn-id")).thenReturn(Optional.empty());
+        when(requestMapper.toSetReservationInfoRequest(command, "txn-id"))
+                .thenReturn(new SetReservationInfoRequest("txn-id", List.of(), null, null, null));
+        when(bookingClient.setReservationInfo(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
+        when(requestMapper.toCommitRequest(command, "txn-id"))
+                .thenReturn(new CommitTransactionRequest("txn-id", null));
+        when(bookingClient.commitTransaction(any())).thenReturn(new TourVisioCallResult.Success<>(
+                new CommitTransactionResponse(new TourVisioResponseHeader("req-1", true, List.of()),
+                        new CommitTransactionResponse.Body("TV-RES-1", "ENC-1", "txn-id"))));
+        when(bookingClient.getReservationDetail("TV-RES-1")).thenReturn(detail);
+
+        Reservation reservation = new Reservation();
+        reservation.setId(99L);
+        org.mockito.ArgumentCaptor<PreviewReservationCommand> captor =
+                org.mockito.ArgumentCaptor.forClass(PreviewReservationCommand.class);
+        when(entityMapper.toReservation(captor.capture(), anyString(), eq("TV-RES-1"))).thenReturn(reservation);
+        when(reservationRepository.save(reservation)).thenReturn(reservation);
+
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
+        return captor.getValue();
+    }
+
+    /** A getReservationDetail body carrying the finalized price, in the confirmed reservationInfo shape. */
+    private TourVisioCallResult<RawTourVisioResponse> reservationDetailPricedAt(String amount) {
+        try {
+            com.fasterxml.jackson.databind.JsonNode body = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readTree("""
+                            {"reservationInfo": {"priceToPay": {"amount": %s, "currency": "EUR"}}}
+                            """.formatted(amount));
+            return new TourVisioCallResult.Success<>(new RawTourVisioResponse(
+                    new TourVisioResponseHeader("req-1", true, List.of()), body));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    @Test
+    void confirmReservation_recordsThePriceTheBookingWasActuallyChargedAt() {
+        // The booking committed at 1550 even though the transaction was priced at 1500. The DB — and so
+        // "Rezervasyonlarım" — must show what the customer is actually charged, not what we asked for.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+
+        PreviewReservationCommand recorded =
+                confirmAndCaptureTheRecordedCommand(command, reservationDetailPricedAt("1550.00"));
+
+        assertThat(recorded.totalAmount()).isEqualByComparingTo(new BigDecimal("1550.00"));
+        verify(logModuleClient).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(),
+                eq("WARNING"), anyString());
+    }
+
+    @Test
+    void confirmReservation_matchingBookedPrice_recordsItUnchanged() {
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+
+        PreviewReservationCommand recorded =
+                confirmAndCaptureTheRecordedCommand(command, reservationDetailPricedAt("1500.00"));
+
+        assertThat(recorded.totalAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+    }
+
+    @Test
+    void confirmReservation_reconciliationLookupFails_stillConfirmsTheBooking() {
+        // The purchase already happened and cannot be rolled back: a failed price read-back must never
+        // turn a successful booking into an error. Fall back to the amount already verified pre-commit.
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+
+        PreviewReservationCommand recorded = confirmAndCaptureTheRecordedCommand(command,
+                new TourVisioCallResult.TechnicalFailure<RawTourVisioResponse>("read timed out", null));
+
+        assertThat(recorded.totalAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+    }
+
+    @Test
+    void confirmReservation_reconciliationBodyHasNoPrice_stillConfirmsTheBooking() {
+        PreviewReservationCommand command = bookingFor(new BigDecimal("1500.00"));
+
+        PreviewReservationCommand recorded = confirmAndCaptureTheRecordedCommand(command,
+                new TourVisioCallResult.Success<>(new RawTourVisioResponse(
+                        new TourVisioResponseHeader("req-1", true, List.of()), null)));
+
+        assertThat(recorded.totalAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
     }
 
     @Test
