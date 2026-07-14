@@ -5,7 +5,7 @@ import {
   type MouseEvent as ReactMouseEvent,
 } from 'react'
 import { type DateRange } from 'react-day-picker'
-import { format, isValid, parseISO } from 'date-fns'
+import { format, isValid, parseISO, startOfToday } from 'date-fns'
 import { Calendar, calendarPopoverClass } from '@/components/ui/calendar'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +31,8 @@ interface DateRangePickerProps {
   /** Native alanlara giydirilecek ek sınıf (ör. koyu yüzey cam görünümü). */
   fieldClassName?: string
   required?: boolean
+  /** true → bugünden önceki günler takvimde seçilemez (geçmiş tarih önleme). */
+  disablePast?: boolean
   /** true → aralık arası vurgulanmaz, yalnızca iki uç tarih işaretlenir. */
   endpointsOnly?: boolean
   /** Popover hizası — form sağ kenara yakınsa 'right' taşmayı önler. */
@@ -53,6 +55,7 @@ export function DateRangePicker({
   checkOutLabel = 'Çıkış',
   fieldClassName,
   required,
+  disablePast,
   endpointsOnly,
   align = 'left',
 }: DateRangePickerProps) {
@@ -78,6 +81,8 @@ export function DateRangePicker({
   const from = parseDay(checkIn)
   const to = parseDay(checkOut)
   const selected: DateRange | undefined = from ? { from, to } : undefined
+  // Geçmiş günleri takvim seviyesinde kapat (submit doğrulamasına ek önlem).
+  const disabledDays = disablePast ? { before: startOfToday() } : undefined
 
   // Native picker yerine bizim takvim: alan readOnly (native seçici hiç açılmaz),
   // mousedown'da preventDefault artık yalnızca segment odağını/parlamayı bastırır.
@@ -133,6 +138,7 @@ export function DateRangePicker({
             endpointsOnly={endpointsOnly}
             selected={selected}
             defaultMonth={from}
+            disabled={disabledDays}
             onSelect={(range) => {
               // rdp ilk tıklamada {from: X, to: X} döndürür — aynı gün "aralık
               // tamam" değildir (0 gecelik konaklama yok): çıkışı boş bırak, paneli açık tut.

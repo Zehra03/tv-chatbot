@@ -117,4 +117,48 @@ describe('FlightsPage (MSW ile)', () => {
       productId: 'flt-mock-002',
     })
   })
+
+  it('geçmiş gidiş tarihinde uyarı gösterir ve arama yapmaz', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Nereden'), 'İstanbul')
+    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2020-01-01' } })
+    await user.click(screen.getByRole('button', { name: 'Ara' }))
+
+    expect(await screen.findByText(/gidiş tarihi geçmişte olamaz/i)).toBeTruthy()
+    // Geçersiz kriterde arama tetiklenmez → "N sonuç" satırı görünmez.
+    expect(screen.queryByText(/\d+ sonuç/)).toBeNull()
+  })
+
+  it('kalkış ve varış aynıysa uyarı gösterir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Nereden'), 'Antalya')
+    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2026-08-01' } })
+    await user.click(screen.getByRole('button', { name: 'Ara' }))
+
+    expect(await screen.findByText(/aynı olamaz/i)).toBeTruthy()
+    expect(screen.queryByText(/\d+ sonuç/)).toBeNull()
+  })
+
+  it('gidiş-dönüşte dönüş tarihi gidişten önceyse uyarı gösterir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Nereden'), 'İstanbul')
+    await user.type(screen.getByLabelText('Nereye'), 'Antalya')
+    // Yön → Gidiş-dönüş (DropdownSelect listbox: tetikleyiciye tıkla, seçeneğe tıkla).
+    await user.click(screen.getByLabelText('Yön'))
+    await user.click(await screen.findByRole('option', { name: 'Gidiş-dönüş' }))
+    fireEvent.change(screen.getByLabelText('Gidiş tarihi'), { target: { value: '2026-08-10' } })
+    fireEvent.change(screen.getByLabelText('Dönüş tarihi'), { target: { value: '2026-08-05' } })
+    await user.click(screen.getByRole('button', { name: 'Ara' }))
+
+    expect(await screen.findByText(/dönüş tarihi gidiş tarihinden önce olamaz/i)).toBeTruthy()
+    expect(screen.queryByText(/\d+ sonuç/)).toBeNull()
+  })
 })
