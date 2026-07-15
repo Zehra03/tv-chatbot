@@ -48,6 +48,7 @@ function renderChat(chatState?: ChatState) {
           <Routes>
             <Route path="/chat" element={<ChatPage />} />
             <Route path="/reservation/new" element={<div>REZERVASYON FORMU STUB</div>} />
+            <Route path="/reservations" element={<div>REZERVASYONLARIM STUB</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -97,6 +98,40 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     expect(await screen.findByText('Giriş tarihi nedir? (örn. 2026-08-01)', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('Otel araması')).toBeTruthy() // kriter rozeti (kart butonu değil)
     expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
+  })
+
+  it('hızlı-eylem kartı ("Otel ara") doğal cümle balonu yazar ve otel akışını başlatır', async () => {
+    const user = userEvent.setup()
+    renderChat()
+
+    // Kart tıklanınca ham "/otel" değil doğal cümle kullanıcı balonunda görünür...
+    await user.click(screen.getByRole('button', { name: 'Otel ara' }))
+    expect(await screen.findByText('Otel aramak istiyorum')).toBeTruthy()
+    // ...ve doğru intent (otel) tetiklenir → slot-filling ilk soruyu sorar.
+    expect(
+      await screen.findByText('Hangi şehir veya bölgede otel arıyorsunuz?', {}, { timeout: 3000 }),
+    ).toBeTruthy()
+  })
+
+  it('"Rezervasyonlarım" kartı sohbete mesaj yazmadan /reservations sayfasına yönlendirir', async () => {
+    const user = userEvent.setup()
+    const { store } = renderChat()
+
+    await user.click(screen.getByRole('button', { name: 'Rezervasyonlarım' }))
+    expect(await screen.findByText('REZERVASYONLARIM STUB')).toBeTruthy()
+    // Sohbete kullanıcı balonu eklenmez (chatbot listeler/yönlendirir, mesaj yazmaz).
+    expect(store.getState().chat.messages).toHaveLength(0)
+  })
+
+  it('elle yazılan "/ucus" komutu backend\'e ham gitmez; doğal cümleye çevrilip uçuş akışına girer', async () => {
+    const user = userEvent.setup()
+    renderChat()
+
+    await send(user, '/ucus')
+    expect(await screen.findByText('Uçuş aramak istiyorum')).toBeTruthy()
+    expect(
+      await screen.findByText('Nereden kalkış yapacaksınız?', {}, { timeout: 3000 }),
+    ).toBeTruthy()
   })
 
   it('mesaj gönderilip yanıt gelince imleç sohbet input\'una geri döner (odak korunur)', async () => {
