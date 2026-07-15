@@ -132,9 +132,11 @@ public class IntentExtractionService {
           domain-specific statement without the literal word — e.g. a stay/accommodation fact
           ("orada kalacağım", "3 gece kalırım") signals HOTEL; a travel/departure fact
           ("oraya gideceğim", "kalkışım Ankara'dan") signals FLIGHT. A domain switch is NEVER
-          "answering a missing slot", even when the history was about the other domain. Extract
-          the new domain's fields: a city after a flight signal → origin/destination (NOT hotel
-          location); a city after a hotel signal → location (NOT origin/destination).
+          "answering a missing slot", even when the history was about the other domain.
+          CRITICAL: When a domain switch occurs, do NOT carry over, copy, or translate ANY information
+          (dates, cities, passenger counts, budgets) from the previous domain into the new domain.
+          Start completely fresh. ONLY extract fields that are explicitly stated in the CURRENT message.
+          If the current message is just "uçak lazım", the criteria must be completely empty.
         - "N gece" / "N gecelik" → nights=N; do not confuse with checkOut.
         - Convert relative dates (bugün, yarın, "bu cuma", "haftaya perşembe", "25 hazirana",
           "dün akşam") to YYYY-MM-DD using TODAY/WEEKDAY from <context>. Convert even if the
