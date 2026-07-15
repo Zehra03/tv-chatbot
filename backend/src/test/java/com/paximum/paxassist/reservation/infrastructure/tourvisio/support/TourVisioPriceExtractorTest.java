@@ -108,4 +108,34 @@ class TourVisioPriceExtractorTest {
                 {"reservationInfo": {"priceToPay": {"currency": "EUR"}}}
                 """)).isEmpty();
     }
+
+    @Test
+    void aZeroPriceToPay_fallsThroughToTheRealSalePrice() throws Exception {
+        // Post-commit getReservationDetail: priceToPay is 0 (nothing left to pay in the no-real-payment
+        // flow), but the sale price is still present. The extractor must read the real price, not the 0,
+        // so reconcileWithBookedPrice does not persist a €0 booking.
+        Optional<TourVisioPrice> price = extract("""
+                {"reservationInfo": {
+                   "priceToPay": {"amount": 0, "currency": "EUR"},
+                   "salePrice": {"amount": 20, "currency": "EUR"}
+                }}
+                """);
+        assertThat(price).isPresent();
+        assertThat(price.get().amount()).isEqualByComparingTo(new BigDecimal("20"));
+    }
+
+    @Test
+    void aReservationInfoWhereEveryPassengerFieldIsZero_isUnverifiableNotZero() throws Exception {
+        // If TourVisio echoes every passenger amount as 0, that is "could not verify", never a real €0
+        // price — the caller keeps the already-verified frozen amount instead of overwriting it with 0.
+        assertThat(extract("""
+                {"reservationInfo": {
+                   "priceToPay": {"amount": 0, "currency": "EUR"},
+                   "passengerPriceToPay": {"amount": 0, "currency": "EUR"},
+                   "passengerAmountToPay": {"amount": 0, "currency": "EUR"},
+                   "totalPrice": {"amount": 0, "currency": "EUR"},
+                   "salePrice": {"amount": 0, "currency": "EUR"}
+                }}
+                """)).isEmpty();
+    }
 }

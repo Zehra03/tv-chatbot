@@ -80,9 +80,19 @@ public final class TourVisioPriceExtractor {
         if (amount == null || !amount.isNumber()) {
             return Optional.empty();
         }
+        BigDecimal value = new BigDecimal(amount.asText());
+        // A zero/negative amount is not a credible passenger price. After commit, getReservationDetail
+        // reports the passenger-facing fields (notably priceToPay) as 0 — nothing is left to pay in the
+        // no-real-payment booking flow — while the true sale price lives in a sibling field (salePrice /
+        // totalPrice). Treating that 0 as "the price" made reconcileWithBookedPrice overwrite the verified
+        // frozen amount with 0 and persist a €0 booking. Skip it so the caller falls through to the next
+        // passenger field (or, if every field is 0, gets Optional.empty() = "could not verify").
+        if (value.signum() <= 0) {
+            return Optional.empty();
+        }
         JsonNode currency = node.get("currency");
         return Optional.of(new TourVisioPrice(
-                new BigDecimal(amount.asText()),
+                value,
                 currency != null && currency.isTextual() ? currency.asText() : null));
     }
 }
