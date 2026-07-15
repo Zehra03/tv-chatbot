@@ -2,6 +2,7 @@ package com.paximum.paxassist.chat.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -74,7 +75,10 @@ public class ChatSessionQueryService {
         List<ChatMessageDto> messages = entity.getMessages().stream()
                 .map(this::toMessageDto)
                 .toList();
-        PartialCriteriaDto criteria = viewMapper.toPartialCriteria(entity.getAccumulatedCriteria(), null);
+        // The recorded domain scopes the chips to the search the user was actually in. Null for rows
+        // written before active_domain existed; the mapper then falls back to guessing from the keys.
+        PartialCriteriaDto criteria =
+                viewMapper.toPartialCriteria(entity.getAccumulatedCriteria(), lower(entity.getActiveDomain()));
         // pendingQuestion is transient working state (never persisted) → null on a loaded session.
         return new ChatSessionDto(String.valueOf(entity.getId()), entity.getTitle(), messages, criteria, null);
     }
@@ -93,6 +97,11 @@ public class ChatSessionQueryService {
 
     private String iso(OffsetDateTime value) {
         return (value == null) ? null : value.toInstant().toString();
+    }
+
+    /** The session stores the domain as "HOTEL"/"FLIGHT"; the frontend contract uses lower case. */
+    private String lower(String value) {
+        return (value == null) ? null : value.toLowerCase(Locale.ROOT);
     }
 
     private Long tryParseId(String sessionId) {

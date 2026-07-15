@@ -9,9 +9,21 @@ import java.util.Map;
  * In-memory session state. Swapped for a JPA entity once the DB teammate
  * delivers the chat_sessions entity + repository (Zehra koordinasyonu).
  * Fields align to DB columns: accumulated_criteria (chat_sessions),
- * last_result_cards (chat_messages.result_cards).
+ * last_result_cards (chat_messages.result_cards), active_domain (chat_sessions).
+ *
+ * <p>Result cards are partitioned per domain rather than held in one shared list: a flight search
+ * must not overwrite the hotel cards the user may return to ("otele dönelim"). A domain switch
+ * therefore never deletes anything — the other domain's cards simply go passive until that domain
+ * is active again.
  */
 public class ChatSession {
+
+    /**
+     * Box key for cards recorded while no domain is known — legacy rows written before
+     * active_domain existed, and sessions restored without it. Keeps the pre-partition behaviour
+     * (one shared list) intact for those instead of silently dropping their cards.
+     */
+    private static final String UNSCOPED_DOMAIN = "";
 
     private final String id;
     // Owner (users.id). Sessions are scoped to the authenticated user so listing/loading/deleting
@@ -21,17 +33,18 @@ public class ChatSession {
     // set only when the owner is an anonymous guest. Null for user-owned/legacy sessions.
     private String guestToken;
     private Map<String, Object> accumulatedCriteria;
-    private List<Object> lastResultCards;
+    // Result cards keyed by domain ("HOTEL" | "FLIGHT" | UNSCOPED_DOMAIN). Reads/writes go through
+    // activeDomain, so each domain accumulates its own list and neither can clobber the other.
+    private final Map<String, List<Object>> resultCardsByDomain = new HashMap<>();
     private final List<ChatMessage> messages = new ArrayList<>();
-    // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
-    // which result list they are acting on. Kept as a String so this domain type does not
-    // depend on the ai module's IntentType enum.
+    // "HOTEL" | "FLIGHT" | null — the domain currently being worked on. It selects which result-card
+    // box FILTER/SELECT act on, so it is also the switch that makes the other domain's cards
+    // passive. Kept as a String so this domain type does not depend on the ai module's IntentType enum.
     private String activeDomain;
 
     public ChatSession(String id) {
         this.id = id;
         this.accumulatedCriteria = new HashMap<>();
-        this.lastResultCards = new ArrayList<>();
     }
 
     public String getId() { return id; }
@@ -47,8 +60,28 @@ public class ChatSession {
         this.accumulatedCriteria = accumulatedCriteria;
     }
 
-    public List<Object> getLastResultCards() { return lastResultCards; }
-    public void setLastResultCards(List<Object> lastResultCards) { this.lastResultCards = lastResultCards; }
+    /**
+     * The ACTIVE domain's cards — what FILTER/SELECT operate on. Never null: a domain with no search
+     * yet yields an empty list, so callers keep their existing "empty means nothing to filter" check.
+     */
+    public List<Object> getLastResultCards() { return getResultCards(activeDomain); }
+
+    /** Records cards for the ACTIVE domain, leaving every other domain's cards untouched. */
+    public void setLastResultCards(List<Object> lastResultCards) {
+        setResultCards(activeDomain, lastResultCards);
+    }
+
+    /** Cards of a specific domain regardless of which one is active. Never null. */
+    public List<Object> getResultCards(String domain) {
+        List<Object> cards = resultCardsByDomain.get(boxKey(domain));
+        return (cards != null) ? cards : List.of();
+    }
+
+    /** Replaces a specific domain's cards, leaving every other domain's cards untouched. */
+    public void setResultCards(String domain, List<Object> cards) {
+        resultCardsByDomain.put(boxKey(domain),
+                (cards != null) ? new ArrayList<>(cards) : new ArrayList<>());
+    }
 
     /** Append-only transcript; feeds conversation history to intent extraction and aligns
      * with the future chat_messages table. */
@@ -57,4 +90,8 @@ public class ChatSession {
 
     public String getActiveDomain() { return activeDomain; }
     public void setActiveDomain(String activeDomain) { this.activeDomain = activeDomain; }
+
+    private static String boxKey(String domain) {
+        return (domain != null) ? domain : UNSCOPED_DOMAIN;
+    }
 }

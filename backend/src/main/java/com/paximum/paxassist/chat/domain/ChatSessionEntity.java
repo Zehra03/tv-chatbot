@@ -50,6 +50,12 @@ public class ChatSessionEntity {
     @Column(name = "accumulated_criteria", nullable = false)
     private Map<String, Object> accumulatedCriteria = new HashMap<>();
 
+    // "HOTEL" | "FLIGHT" | null — the domain the session is working in. Durable because it selects
+    // which result-card box FILTER/SELECT read from: without it a restored session cannot tell
+    // whether its cards are hotels or flights.
+    @Column(name = "active_domain", length = 16)
+    private String activeDomain;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -108,6 +114,14 @@ public class ChatSessionEntity {
 
     public void setAccumulatedCriteria(Map<String, Object> accumulatedCriteria) {
         this.accumulatedCriteria = (accumulatedCriteria != null) ? accumulatedCriteria : new HashMap<>();
+    }
+
+    public String getActiveDomain() {
+        return activeDomain;
+    }
+
+    public void setActiveDomain(String activeDomain) {
+        this.activeDomain = activeDomain;
     }
 
     public List<ChatMessageEntity> getMessages() {

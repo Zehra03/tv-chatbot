@@ -152,6 +152,7 @@ public class JpaChatSessionStore implements ChatSessionStore {
             return;
         }
         entity.setAccumulatedCriteria(new HashMap<>(session.getAccumulatedCriteria()));
+        entity.setActiveDomain(session.getActiveDomain());
         if (entity.getTitle() == null) {
             entity.setTitle(deriveTitle(session.getMessages()));
         }
@@ -177,6 +178,10 @@ public class JpaChatSessionStore implements ChatSessionStore {
         session.setUserId(entity.getUserId());
         session.setGuestToken(entity.getGuestToken());
         session.setAccumulatedCriteria(new HashMap<>(entity.getAccumulatedCriteria()));
+        // Set BEFORE the cards: setLastResultCards files them under the active domain, so restoring
+        // the pointer first is what puts them back in the box they came from. A legacy row with no
+        // active_domain files them unscoped — the pre-partition behaviour, not a loss.
+        session.setActiveDomain(entity.getActiveDomain());
         List<Object> lastCards = new ArrayList<>();
         for (ChatMessageEntity message : entity.getMessages()) {
             session.addMessage(message.getRole(), message.getContent());
