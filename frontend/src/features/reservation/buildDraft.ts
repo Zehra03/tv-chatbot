@@ -16,15 +16,35 @@ import type { FlightReservationDraft, HotelReservationDraft } from './reservatio
  */
 
 /**
+ * "YYYY-MM-DD" tarihine `days` gün ekler (UTC — yerel saat dilimi kaymasız). Geçersiz girişte
+ * undefined döner. checkOut'un checkIn + nights'tan türetilmesinde kullanılır.
+ */
+function addDays(isoDate: string, days: number): string | undefined {
+  const d = new Date(`${isoDate}T00:00:00Z`)
+  if (Number.isNaN(d.getTime())) return undefined
+  d.setUTCDate(d.getUTCDate() + days)
+  return d.toISOString().slice(0, 10)
+}
+
+/**
  * Otel taslağı; tahmin edilemeyen zorunlu alanlar (giriş/çıkış tarihi + yetişkin sayısı) kriterde
  * eksikse `null` → "Seç" kapatılır. `rooms` eksikse 1'e düşülür (backend: her oda ≥1 yetişkin, yani
  * rooms ≤ adults; 1 daima güvenli) — chat kriterinde oda sayısı taşınmayabilir.
+ *
+ * checkOut boşsa checkIn + `nights`'tan türetilir: chat niyet çıkarımı konaklamayı gün sayısıyla
+ * ("5 gece") yakaladığında backend aramayı `night` ile tamamlar ama accumulatedCriteria'da checkOut
+ * kalmaz (backend `HotelCriteriaMapper.computeNights` ile simetrik). Bu türetme olmasa "5 gece"
+ * araması otel kartını seçilemez bırakırdı (uçuşta böyle bir bağımlılık yok).
  */
 export function buildHotelDraft(
   product: HotelProduct,
   criteria: Partial<HotelSearchCriteria> | undefined,
 ): HotelReservationDraft | null {
-  if (!criteria?.checkIn || !criteria.checkOut || !criteria.adults) {
+  const checkIn = criteria?.checkIn
+  const checkOut =
+    criteria?.checkOut ??
+    (checkIn && criteria?.nights ? addDays(checkIn, criteria.nights) : undefined)
+  if (!checkIn || !checkOut || !criteria?.adults) {
     return null
   }
   return {
@@ -41,8 +61,8 @@ export function buildHotelDraft(
       region: product.region,
       stars: product.stars,
       boardType: product.boardType,
-      checkIn: criteria.checkIn,
-      checkOut: criteria.checkOut,
+      checkIn,
+      checkOut,
       rooms: criteria.rooms ?? 1,
       adults: criteria.adults,
       children: criteria.children ?? 0,

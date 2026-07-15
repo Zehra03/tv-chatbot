@@ -54,6 +54,28 @@ describe('buildHotelDraft', () => {
     expect(buildHotelDraft(hotel, {})).toBeNull()
     expect(buildHotelDraft(hotel, { checkIn: '2026-08-01', checkOut: '2026-08-05' })).toBeNull()
   })
+
+  it('checkOut yoksa checkIn + nights\'tan türetir (chat "5 gece" senaryosu)', () => {
+    // Chat kriteri konaklamayı gün sayısıyla verir; checkOut boş ama seçilebilir olmalı.
+    const draft = buildHotelDraft(hotel, { checkIn: '2026-08-01', nights: 4, adults: 2 })
+    expect(draft).not.toBeNull()
+    expect(draft?.hotel.checkIn).toBe('2026-08-01')
+    expect(draft?.hotel.checkOut).toBe('2026-08-05') // 01 + 4 gece
+  })
+
+  it('checkOut varken nights\'ı yok sayar (açık tarih önceliklidir)', () => {
+    const draft = buildHotelDraft(hotel, {
+      checkIn: '2026-08-01',
+      checkOut: '2026-08-03',
+      nights: 10,
+      adults: 2,
+    })
+    expect(draft?.hotel.checkOut).toBe('2026-08-03')
+  })
+
+  it('ne checkOut ne nights varsa null döner (booking süresi belirsiz)', () => {
+    expect(buildHotelDraft(hotel, { checkIn: '2026-08-01', adults: 2 })).toBeNull()
+  })
 })
 
 describe('buildFlightDraft — tripType her zaman dolu (backend @NotNull)', () => {
