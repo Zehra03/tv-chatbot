@@ -59,6 +59,13 @@ export interface HotelSearchCriteria {
   hotelName?: string
   checkIn: IsoDate // DB: check_in date
   checkOut: IsoDate // DB: check_out date
+  /**
+   * Konaklama süresi (gece). Chat niyet çıkarımı konaklamayı checkOut yerine gün sayısıyla
+   * yakalayabilir ("5 gece") — o durumda `checkOut` boş gelir ve buildHotelDraft'ta checkIn+nights'tan
+   * türetilir (backend `HotelCriteriaMapper.computeNights` ile simetrik). Formda kullanılmaz (orada
+   * checkOut hep seçilir); yalnız accumulatedCriteria yolunda yaşar.
+   */
+  nights?: number
   adults: number // DB: adults smallint (>=1)
   children: number // DB: children smallint (>=0)
   /** Frontend-only: yaşa bağlı fiyatlama; DB'de saklanmaz. Uzunluğu `children` ile tutarlı. */
