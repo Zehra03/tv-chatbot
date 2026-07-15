@@ -5,6 +5,8 @@ import java.time.format.TextStyle;
 import java.util.List;
 import java.util.Locale;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
@@ -13,6 +15,12 @@ import com.paximum.paxassist.chat.exception.AiClientException;
 
 @Service
 public class IntentExtractionService {
+
+    private static final Logger log = LoggerFactory.getLogger(IntentExtractionService.class);
+
+    /** Inclusive age bounds for a guest to count as a child; anything outside is not a child age. */
+    private static final int MIN_CHILD_AGE = 0;
+    private static final int MAX_CHILD_AGE = 17;
 
     private static final String EXTRACTION_SYSTEM_PROMPT = """
         <context>
@@ -346,7 +354,7 @@ public class IntentExtractionService {
                 throw new AiClientException(AiClientException.Code.UNKNOWN,
                         "Niyet analizi sonuç üretemedi");
             }
-            return result;
+            return normalize(result);
         } catch (AiClientException e) {
             throw e;
         } catch (RuntimeException e) {
@@ -361,6 +369,47 @@ public class IntentExtractionService {
             throw new AiClientException(AiClientException.Code.UNKNOWN,
                     "Niyet analizi sırasında hata oluştu", e);
         }
+    }
+
+    /**
+     * Cleans the model's raw output before it leaves this module, so no downstream consumer
+     * (slot merge, criteria mappers, TourVisio) ever sees a value the model made up.
+     */
+    private IntentExtractionResult normalize(IntentExtractionResult result) {
+        SlotCriteria criteria = result.criteria();
+        if (criteria == null || criteria.childAges() == null) {
+            return result;
+        }
+        List<Integer> normalized = normalizeChildAges(criteria.childAges());
+        return normalized.equals(criteria.childAges())
+                ? result
+                : new IntentExtractionResult(result.intent(), criteria.withChildAges(normalized));
+    }
+
+    /**
+     * Keeps only ages that actually belong to a child ({@value #MIN_CHILD_AGE}-{@value #MAX_CHILD_AGE},
+     * inclusive) and drops everything else — a null entry or an out-of-range age like 25 is a model
+     * hallucination, and passing it on would reach TourVisio as a child of that age. Dropping is
+     * silent by design: the user is not asked to clarify here.
+     *
+     * TODO: filtering can leave {@code children} disagreeing with {@code childAges.size()}
+     * (e.g. children=1 with an emptied age list). Reconciling that — by asking the user — belongs to
+     * the orchestrator's clarify flow, not to this module.
+     */
+    List<Integer> normalizeChildAges(List<Integer> ages) {
+        if (ages == null) {
+            return null;
+        }
+        List<Integer> kept = ages.stream().filter(this::isChildAge).toList();
+        if (kept.size() != ages.size()) {
+            List<Integer> dropped = ages.stream().filter(age -> !isChildAge(age)).toList();
+            log.warn("childAges içinde geçersiz değer(ler) elendi: {}", dropped);
+        }
+        return kept;
+    }
+
+    private boolean isChildAge(Integer age) {
+        return age != null && age >= MIN_CHILD_AGE && age <= MAX_CHILD_AGE;
     }
 
     /**

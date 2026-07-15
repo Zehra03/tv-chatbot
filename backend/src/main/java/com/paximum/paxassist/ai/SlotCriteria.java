@@ -68,4 +68,17 @@ public record SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null);
     }
+
+    /**
+     * A copy of this criteria with {@code childAges} replaced — used by the extractor to swap in the
+     * normalized age list without touching any other slot.
+     */
+    public SlotCriteria withChildAges(List<Integer> newChildAges) {
+        return new SlotCriteria(
+                location, checkIn, checkOut, nights, rooms, stars, boardType, features, hotelMaxPrice,
+                origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice, nonstop,
+                preferredAirline,
+                adults, children, newChildAges, nationality, currency,
+                sortBy, selectionReference);
+    }
 }
