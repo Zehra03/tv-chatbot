@@ -24,7 +24,7 @@ class SlotNormalizerTest {
         String checkOut = LocalDate.now().plusDays(5).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, checkIn, checkOut, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
@@ -41,7 +41,7 @@ class SlotNormalizerTest {
         String checkOut = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, checkIn, checkOut, null, null, null, null, null, null, null,
-                null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
@@ -58,7 +58,7 @@ class SlotNormalizerTest {
         String returnDate = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, depart, returnDate, null, null,
+                null, null, depart, returnDate, null, null, null,
                 null, null, null, null, null, null, null, null
         );
 
@@ -76,7 +76,7 @@ class SlotNormalizerTest {
 
         SlotCriteria criteria = new SlotCriteria(
                 null, pastCheckIn, pastCheckOut, null, null, null, null, null, null, null,
-                null, null, pastDepart, pastReturn, null, null,
+                null, null, pastDepart, pastReturn, null, null, null,
                 null, null, null, null, null, null, null, null
         );
 
@@ -92,7 +92,7 @@ class SlotNormalizerTest {
     void shouldClearInvalidNumericValues() {
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, 0, null, null, null, null, -100,
-                null, null, null, null, null, -50,
+                null, null, null, null, null, -50, null,
                 0, -1, java.util.List.of(5, -2, 8), null, null,
                 null, null, null
         );
