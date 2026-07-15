@@ -84,6 +84,7 @@ public class HotelSearchHandler implements IntentHandler {
         cards = ResultFilters.applyStars(cards, merged.stars(), merged.maxStars());
         List<Object> beforeFeatureFilter = cards;
         cards = ResultFilters.applyFeatures(cards, merged.features());
+        cards = ResultFilters.applySort(cards, merged.sortBy());
         cards = ResultFilters.applyLimit(cards, merged.limit());
 
         context.session().setActiveDomain("HOTEL");
