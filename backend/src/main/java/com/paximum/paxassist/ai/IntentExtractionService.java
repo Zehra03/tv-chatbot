@@ -235,6 +235,9 @@ public class IntentExtractionService {
         Mesaj: "4 yıldız ve üstünü listele"
         Çıktı: {"intent":"FILTER","criteria":{"stars":4}}
 
+        Mesaj: "3 yıldızlı otelleri göster"
+        Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":3}}
+
         Mesaj: "3 ve 4 yıldızlı olanları getir"
         Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":4}}
 

@@ -1,6 +1,7 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
@@ -101,6 +102,32 @@ final class ResultFilters {
             return cards;
         }
         return cards.stream().limit(limit).collect(Collectors.toList());
+    }
+
+    static List<Object> applySort(List<Object> cards, String sortBy) {
+        if (cards == null || cards.isEmpty()) {
+            return cards;
+        }
+        String effectiveSortBy = (sortBy != null && !sortBy.isBlank()) ? sortBy : "price_asc";
+        Comparator<Object> comparator = comparatorFor(effectiveSortBy);
+        if (comparator == null) {
+            return cards;
+        }
+        List<Object> sorted = new java.util.ArrayList<>(cards);
+        sorted.sort(comparator);
+        return sorted;
+    }
+
+    private static Comparator<Object> comparatorFor(String sortBy) {
+        return switch (sortBy) {
+            case "price_asc" ->
+                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.naturalOrder()));
+            case "price_desc" ->
+                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.reverseOrder()));
+            case "stars_desc" ->
+                    Comparator.comparing(ProductCards::starsOf, Comparator.nullsLast(Comparator.reverseOrder()));
+            default -> null;
+        };
     }
 
     /**
