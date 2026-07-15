@@ -15,7 +15,8 @@ export interface HotelProduct {
   /**
    * TourVisio teklif jetonu — rezervasyonu başlatan BeginTransaction API'sinin istediği opak token
    * (backend `hotel/HotelProduct.java` `offerId`). `id` (otel kimliği) ile KARIŞTIRILMAMALI:
-   * booking `offerId` ile yapılır. Uçuşta ayrı alan yoktur — orada `FlightProduct.id` zaten offer jetonu.
+   * booking `offerId` ile yapılır. Uçuşta da ayrı bir `offerId` vardır (bkz. `FlightProduct.offerId`) —
+   * uçuşun `id`'si düz UUID'dir, booking jetonu DEĞİLDİR.
    */
   offerId: string
   hotelName: string
@@ -36,6 +37,13 @@ export interface HotelProduct {
 
 export interface FlightProduct {
   id: string
+  /**
+   * TourVisio teklif jetonu (kodlanmış, opak) — BeginTransaction'ın istediği token. `id` (arama-satırı
+   * UUID'si) ile KARIŞTIRILMAMALI: booking `offerId` ile yapılır. Backend `flight/FlightProductApiDto`
+   * bu alanı zaten döner; `id` göndermek TourVisio'da `GeneralException` ("offer no longer bookable")
+   * verir.
+   */
+  offerId: string
   airline: string
   origin: string
   destination: string

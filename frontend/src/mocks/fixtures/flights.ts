@@ -8,6 +8,7 @@ import type { FlightLocation, FlightProduct } from '@/types'
 export const flightFixtures: FlightProduct[] = [
   {
     id: 'flt-mock-001',
+    offerId: 'offer-mock-001',
     airline: 'MockAir',
     origin: 'İstanbul',
     destination: 'Antalya',
@@ -23,6 +24,7 @@ export const flightFixtures: FlightProduct[] = [
   },
   {
     id: 'flt-mock-002',
+    offerId: 'offer-mock-002',
     airline: 'TestJet',
     origin: 'İstanbul',
     destination: 'Antalya',
@@ -38,6 +40,7 @@ export const flightFixtures: FlightProduct[] = [
   },
   {
     id: 'flt-mock-003',
+    offerId: 'offer-mock-003',
     airline: 'MockAir',
     origin: 'İstanbul',
     destination: 'Antalya',
@@ -53,6 +56,7 @@ export const flightFixtures: FlightProduct[] = [
   },
   {
     id: 'flt-mock-004',
+    offerId: 'offer-mock-004',
     airline: 'SampleWings',
     origin: 'Ankara',
     destination: 'İzmir',

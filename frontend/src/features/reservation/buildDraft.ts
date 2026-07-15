@@ -84,7 +84,9 @@ export function buildFlightDraft(
     criteria?.tripType ?? product.tripType ?? (product.returnDepartTime ? 'round_trip' : 'one_way')
   return {
     productType: 'flight',
-    offerId: product.id,
+    // Booking, arama-satırı UUID'si (`product.id`) ile değil, TourVisio teklif jetonu (`product.offerId`)
+    // ile yapılır — `id` göndermek BeginTransaction'da GeneralException ("offer no longer bookable") verir.
+    offerId: product.offerId,
     title: `${product.airline} ${product.origin} → ${product.destination}`,
     summary: `${formatDateTime(product.departTime)} · ${
       product.stops === 0 ? 'Direkt' : `${product.stops} aktarma`

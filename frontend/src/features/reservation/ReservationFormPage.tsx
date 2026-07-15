@@ -579,6 +579,57 @@ export function ReservationFormPage() {
                       </p>
                     )}
                   </div>
+                  {/* Uçuş biletlemesi TourVisio'da doğum tarihi + TC kimlik no ister (otelde gerekmez). */}
+                  {draft.productType === 'flight' && (
+                    <>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={`passenger-${index}-birthDate`}>Doğum tarihi</Label>
+                        <Input
+                          id={`passenger-${index}-birthDate`}
+                          type="date"
+                          aria-invalid={!!pErr?.birthDate}
+                          aria-describedby={
+                            pErr?.birthDate ? `passenger-${index}-birthDate-error` : undefined
+                          }
+                          className={darkFieldClass}
+                          {...register(`passengers.${index}.birthDate`)}
+                        />
+                        {pErr?.birthDate && (
+                          <p
+                            id={`passenger-${index}-birthDate-error`}
+                            className="text-xs text-red-400"
+                          >
+                            {pErr.birthDate.message}
+                          </p>
+                        )}
+                      </div>
+                      <div className="grid gap-1.5">
+                        <Label htmlFor={`passenger-${index}-identityNumber`}>TC kimlik no</Label>
+                        <Input
+                          id={`passenger-${index}-identityNumber`}
+                          inputMode="numeric"
+                          maxLength={11}
+                          placeholder="11 haneli"
+                          aria-invalid={!!pErr?.identityNumber}
+                          aria-describedby={
+                            pErr?.identityNumber
+                              ? `passenger-${index}-identityNumber-error`
+                              : undefined
+                          }
+                          className={darkFieldClass}
+                          {...register(`passengers.${index}.identityNumber`)}
+                        />
+                        {pErr?.identityNumber && (
+                          <p
+                            id={`passenger-${index}-identityNumber-error`}
+                            className="text-xs text-red-400"
+                          >
+                            {pErr.identityNumber.message}
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )
