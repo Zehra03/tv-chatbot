@@ -52,6 +52,12 @@ public class FlightSearchHandler implements IntentHandler {
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
+        if ("HOTEL".equals(context.session().getActiveDomain())) {
+            if (context.session().getAccumulatedCriteria() != null) {
+                context.session().getAccumulatedCriteria().clear();
+            }
+        }
+        
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
         // Deterministic guard over the newly extracted criteria to catch past dates and
