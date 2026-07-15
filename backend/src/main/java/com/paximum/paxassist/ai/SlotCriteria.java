@@ -41,6 +41,7 @@ public record SlotCriteria(
         String returnDate,        // YYYY-MM-DD — null means one-way
         String cabinClass,        // ECONOMY | BUSINESS | FIRST
         Integer flightMaxPrice,   // upper price limit for a FLIGHT search, e.g. "uçuşa 3000 tl max" → 3000
+        Boolean directFlight,     // true: direct/non-stop, false: layovers, null: any
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -65,6 +66,6 @@ public record SlotCriteria(
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null);
+                null, null, null, null, null);
     }
 }
