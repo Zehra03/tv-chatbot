@@ -137,7 +137,10 @@ public class ReservationWebMapper {
         if (d == null) {
             return null;
         }
-        return new ReservationDetailResponse.PriceDetail(d.totalSalePrice(), d.penalty(), d.mainServiceFee());
+        return new ReservationDetailResponse.PriceDetail(
+                d.totalSalePrice() == null ? null : d.totalSalePrice().amount(),
+                d.penalty() == null ? null : d.penalty().amount(),
+                d.mainServiceFee() == null ? null : d.mainServiceFee().amount());
     }
 
     private ReservationDetailResponse.Money toMoney(TourVisioPrice p) {

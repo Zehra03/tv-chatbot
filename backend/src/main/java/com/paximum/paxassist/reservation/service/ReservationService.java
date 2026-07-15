@@ -388,14 +388,23 @@ public class ReservationService {
         if (external == null || external.isBlank()) {
             return List.of();
         }
-        TourVisioCallResult<CancellationPenaltyResponse> result = bookingClient.getCancellationPenalty(external);
-        if (result instanceof Success<CancellationPenaltyResponse> success
-                && success.body() != null && success.body().body() != null
-                && success.body().body().cancelPenalties() != null) {
-            return success.body().body().cancelPenalties();
+        // The penalty lookup is a best-effort enrichment of the detail view — it must never sink the
+        // whole response. A deserialization mismatch (or any other failure) inside the client is thrown,
+        // not returned as a TourVisioCallResult, so guard the call and degrade to empty options per the
+        // contract ("empty when the penalty lookup failed") rather than 500'ing getReservationDetail.
+        try {
+            TourVisioCallResult<CancellationPenaltyResponse> result = bookingClient.getCancellationPenalty(external);
+            if (result instanceof Success<CancellationPenaltyResponse> success
+                    && success.body() != null && success.body().body() != null
+                    && success.body().body().cancelPenalties() != null) {
+                return success.body().body().cancelPenalties();
+            }
+            log.warn("Cancellation options unavailable for reservationId={} (external={}): {}",
+                    reservation.getId(), external, result.getClass().getSimpleName());
+        } catch (RuntimeException ex) {
+            log.warn("Cancellation-penalty lookup failed for reservationId={} (external={}); returning empty options.",
+                    reservation.getId(), external, ex);
         }
-        log.warn("Cancellation options unavailable for reservationId={} (external={}): {}",
-                reservation.getId(), external, result.getClass().getSimpleName());
         return List.of();
     }
 
