@@ -3,6 +3,7 @@ package com.paximum.paxassist.chat.service;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -25,9 +26,13 @@ import com.paximum.paxassist.chat.repository.ChatSessionRepository;
  *
  * <p>Session ids are the DB-generated {@code bigint} rendered as a String — the server already
  * minted opaque ids before, so the client contract is unchanged. On a cache miss (e.g. after a
- * restart) the session is rebuilt from the DB: transcript and accumulated criteria are restored;
- * typed result cards are not (they are transient by design), so FILTER/SELECT stay degraded until
- * the next search.
+ * restart) the session is rebuilt from the DB: transcript, accumulated criteria and the result-card
+ * boxes are all restored.
+ *
+ * <p><b>Restored cards come back untyped.</b> {@code result_cards} is jsonb, so a rebuilt session
+ * holds generic maps rather than {@code HotelProduct}/{@code FlightProduct}. Readers must handle
+ * both shapes — {@link ResultCardDomain} does, which is why the cards can still be sorted back into
+ * their domain boxes here.
  */
 @Primary
 @Component
@@ -178,19 +183,45 @@ public class JpaChatSessionStore implements ChatSessionStore {
         session.setUserId(entity.getUserId());
         session.setGuestToken(entity.getGuestToken());
         session.setAccumulatedCriteria(new HashMap<>(entity.getAccumulatedCriteria()));
-        // Set BEFORE the cards: setLastResultCards files them under the active domain, so restoring
-        // the pointer first is what puts them back in the box they came from. A legacy row with no
-        // active_domain files them unscoped — the pre-partition behaviour, not a loss.
-        session.setActiveDomain(entity.getActiveDomain());
-        List<Object> lastCards = new ArrayList<>();
+        String activeDomain = entity.getActiveDomain();
+        session.setActiveDomain(activeDomain);
+        restoreCards(session, entity, activeDomain);
+        return session;
+    }
+
+    /**
+     * Replays the transcript and files each recorded card list back into the box it came from, so a
+     * session that searched both domains comes back with BOTH — restoring only the newest list would
+     * make the partition an in-memory-only guarantee and lose the passive domain's cards on the first
+     * restart. The domain is read off the cards themselves ({@link ResultCardDomain}); the message
+     * rows carry no domain of their own.
+     *
+     * <p>A legacy row with no {@code active_domain} keeps the pre-partition behaviour: one unscoped
+     * list holding the newest cards, which is what {@code getLastResultCards()} reads back when the
+     * active domain is null.
+     */
+    private void restoreCards(ChatSession session, ChatSessionEntity entity, String activeDomain) {
+        Map<String, List<Object>> byDomain = new HashMap<>();
+        List<Object> unscoped = null;
         for (ChatMessageEntity message : entity.getMessages()) {
             session.addMessage(message.getRole(), message.getContent());
-            if (message.getResultCards() != null && !message.getResultCards().isEmpty()) {
-                lastCards = new ArrayList<>(message.getResultCards());
+            List<Object> cards = message.getResultCards();
+            if (cards == null || cards.isEmpty()) {
+                continue;
             }
+            if (activeDomain == null) {
+                unscoped = cards;
+                continue;
+            }
+            // An untypable list still belongs to whatever was active — same fallback as before.
+            String domain = ResultCardDomain.domainOf(cards);
+            byDomain.put((domain != null) ? domain : activeDomain, cards);
         }
-        session.setLastResultCards(lastCards);
-        return session;
+        if (activeDomain == null) {
+            session.setLastResultCards((unscoped != null) ? unscoped : List.of());
+            return;
+        }
+        byDomain.forEach(session::setResultCards);
     }
 
     /** Session label for the history panel: the first user message, trimmed to a short line. */

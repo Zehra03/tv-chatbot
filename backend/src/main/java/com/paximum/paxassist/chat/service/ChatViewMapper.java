@@ -11,8 +11,6 @@ import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.chat.dto.PartialCriteriaDto;
 import com.paximum.paxassist.chat.dto.ResultCardDto;
-import com.paximum.paxassist.flight.domain.FlightProduct;
-import com.paximum.paxassist.hotel.HotelProduct;
 
 /**
  * Translates backend chat working state into the shapes the frontend expects
@@ -54,9 +52,9 @@ public class ChatViewMapper {
             "departureDate", "departDate");
 
     /**
-     * Types each product card by its runtime class — {@link HotelProduct} → {@code "hotel"},
-     * {@link FlightProduct} → {@code "flight"} — matching the frontend's {@code ResultCard} union.
-     * Cards of an unknown type are skipped rather than guessed.
+     * Types each product card ({@code "hotel"} / {@code "flight"}) to match the frontend's
+     * {@code ResultCard} union — see {@link ResultCardDomain} for how a card is identified in both
+     * its live and jsonb-restored shapes. Cards of an unknown type are skipped rather than guessed.
      */
     public List<ResultCardDto> toResultCards(List<Object> products) {
         if (products == null || products.isEmpty()) {
@@ -123,29 +121,8 @@ public class ChatViewMapper {
         return null;
     }
 
-    /**
-     * Types a card whether it is a live product (POST, this turn) or a jsonb-restored generic map
-     * (GET transcript). Hotel and flight field sets are disjoint, so key presence identifies the type.
-     */
     private String productType(Object product) {
-        if (product instanceof HotelProduct) {
-            return "hotel";
-        }
-        if (product instanceof FlightProduct) {
-            return "flight";
-        }
-        if (product instanceof Map<?, ?> map) {
-            if (map.containsKey("productType") && map.get("productType") != null) {
-                return map.get("productType").toString();
-            }
-            if (map.containsKey("hotelName") || map.containsKey("boardType") || map.containsKey("stars")) {
-                return "hotel";
-            }
-            if (map.containsKey("airline") || map.containsKey("flightNumber") || map.containsKey("departTime")) {
-                return "flight";
-            }
-        }
-        return null;
+        return ResultCardDomain.productType(product);
     }
 
     private boolean isFilled(Object value) {
