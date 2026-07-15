@@ -185,6 +185,26 @@
   .auth-panel-anim {
     animation: authPanelFade 0.5s cubic-bezier(0.2, 1, 0.3, 1);
   }
+
+  /* ——— Sonuç panelinde iç içe backdrop-filter kırpma ———
+     Kaydırılan sonuç paneli (glass-card) İÇİNDEki kart (glass-card), rozet
+     (backdrop-blur-sm) ve "Seç" düğmesi (.btn-liquid-refract → #pax-liquid-glass
+     SVG yer-değiştirme filtresi) da backdrop-filter taşır. Bir kaydırma kabının
+     içinde 3 seviye iç içe cam katmanı — hele biri SVG filtresi — Chromium'un
+     compositor'ında kaydırma/animasyon sırasında hatalı rasterize edilir: panelin
+     sol kenarında/composer'la dikişte "piksel bozulması" görünür. Panelin kendi
+     dış camı zaten frost veriyor; İÇteki katmanların backdrop-filter'ını kapat.
+     Görünüm korunur (kartların yarı-saydam bg-white/10 zemini + Seç düğmesinin
+     .btn-liquid-shadow kenar ışığı kalır); yalnız görünmez "cam üstüne cam" ve
+     bozan SVG kırılım katmanı düşer. !important: @apply'lı .glass-card ve
+     utilities katmanındaki backdrop-blur-*'ı kesin geçmek için. */
+  .results-scroll .glass-card,
+  .results-scroll .glass-chip,
+  .results-scroll .btn-liquid-refract,
+  .results-scroll [class*='backdrop-blur'] {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
 }
 
 @keyframes mercuryFloat {

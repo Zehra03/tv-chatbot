@@ -62,7 +62,9 @@ export function SessionSidebar() {
       return next
     })
 
-  const count = sessions.data?.length ?? 0
+  // Boş oturumları gizle — henüz mesaj yazılmamış sohbetler geçmişte görünmesin.
+  const visibleSessions = sessions.data?.filter((s) => s.messageCount > 0)
+  const count = visibleSessions?.length ?? 0
 
   return (
     <aside
@@ -135,13 +137,13 @@ export function SessionSidebar() {
             {sessions.isError && (
               <li className="px-2 py-1 text-sm text-brand-ice/60">Geçmiş yüklenemedi.</li>
             )}
-            {sessions.data?.length === 0 && (
+            {visibleSessions?.length === 0 && (
               <li className="flex flex-col items-center gap-1.5 px-2 py-6 text-center">
                 <MessageSquare className="h-5 w-5 text-brand-ice/30" aria-hidden />
                 <span className="text-sm text-brand-ice/55">Henüz sohbet yok.</span>
               </li>
             )}
-            {sessions.data?.map((session) => {
+            {visibleSessions?.map((session) => {
               const active = session.id === activeSessionId
               return (
                 <li key={session.id} className="group relative">

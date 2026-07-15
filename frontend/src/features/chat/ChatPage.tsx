@@ -6,6 +6,16 @@ import { CriteriaChips } from '@/features/chat/CriteriaChips'
 import { SessionSidebar } from '@/features/chat/SessionSidebar'
 import { ResultsDrawer, ResultsPanel } from '@/features/chat/ResultsPanel'
 import { useSendMessage } from '@/features/chat/useSendMessage'
+import { isSearchTurn } from '@/features/chat/isSearchTurn'
+import { useDelayedFlag } from '@/lib/useDelayedFlag'
+
+/**
+ * "Arıyorum…" yalnız gerçek bir arama BU KADAR (ms) sürünce açılır. İki koşul birlikte:
+ * (1) tur bir arama olmalı (isSearchTurn — kriterler tam ya da son eksik soruluyor);
+ * (2) istek bu eşiği aşacak kadar sürmeli. (2) hızlı cache-hit aramalarda göstergeyi
+ * gereksiz çaktırmaz; (1) normal sohbet/slot-filling'de hiç açılmamasını sağlar.
+ */
+const SEARCH_HINT_DELAY_MS = 700
 
 /**
  * /chat — Chatbot ana ekranı (docs/frontend-architecture.md §3, §8):
@@ -26,6 +36,13 @@ export function ChatPage() {
   // kartlara iletilir (otelde giriş/çıkış-oda/kişi, uçuşta yolcu sayısı ürün dışında burada yaşar).
   const criteria = useAppSelector((s) => s.chat.accumulatedCriteria)
   const isEmpty = messages.length === 0
+
+  // "Arıyorum…" göstergesi: yalnız uçuştaki istek gerçek bir arama (isSearchTurn) VE
+  // eşiği aşacak kadar uzunsa açılır — normal sohbet/slot-filling'de veya hızlı
+  // yanıtta gösterge sade kalır (PPMO K24). Aynı sinyal açık sonuç panelinde
+  // "Aranıyor…" spinner'ını sürer.
+  const slowEnough = useDelayedFlag(sendMessage.isPending, SEARCH_HINT_DELAY_MS)
+  const searching = isSearchTurn(criteria, pendingQuestion) && slowEnough
 
   // Kart taşıyan mesajlar = sonuç kümeleri. Panel varsayılan olarak EN SON
   // kümeyi gösterir; kullanıcı eski bir "Sonuçları göster"e basarsa o küme öne
@@ -61,6 +78,7 @@ export function ChatPage() {
           <>
             <MessageList
               pending={sendMessage.isPending}
+              searching={searching}
               error={sendMessage.error}
               onRetry={sendMessage.retry}
               onSelectOption={sendMessage.send}
@@ -82,6 +100,7 @@ export function ChatPage() {
         <ResultsPanel
           cards={activeCards}
           criteria={criteria}
+          loading={searching}
           className="hidden w-[360px] shrink-0 lg:flex xl:w-[400px]"
         />
       )}
@@ -92,6 +111,7 @@ export function ChatPage() {
         onClose={() => setDrawerOpen(false)}
         cards={activeCards}
         criteria={criteria}
+        loading={searching}
       />
     </div>
   )
