@@ -52,10 +52,11 @@ public class FlightSearchHandler implements IntentHandler {
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
-        if ("HOTEL".equals(context.session().getActiveDomain())) {
+        if (!"FLIGHT".equals(context.session().getActiveDomain())) {
             if (context.session().getAccumulatedCriteria() != null) {
                 context.session().getAccumulatedCriteria().clear();
             }
+            context.session().setActiveDomain("FLIGHT");
         }
         
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
