@@ -12,6 +12,7 @@ import { LoadingState } from '@/components/LoadingState'
 import { SearchHero } from '@/components/SearchHero'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { flightFiltersChanged } from '@/features/ui/uiSlice'
@@ -309,7 +310,7 @@ export function FlightsPage() {
       )}
 
       {query.isError && !query.isFetching && (
-        <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
+        <ErrorState message={apiErrorMessage(query.error)} onRetry={() => query.refetch()} />
       )}
 
       {query.data && (

@@ -8,6 +8,7 @@ import { TypingIndicator } from '@/features/chat/TypingIndicator'
 import { useAppSelector } from '@/app/hooks'
 import type { ApiError } from '@/api'
 import type { ChatMessage, ResultCard } from '@/types'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { cn } from '@/lib/utils'
 
 /**
@@ -18,6 +19,9 @@ import { cn } from '@/lib/utils'
  */
 interface MessageListProps {
   pending: boolean
+  /** İstek arama eşiğini aşacak kadar uzadıysa göstergeyi "Arıyorum…"a çevirir
+   * (ChatPage useDelayedFlag ile hesaplar). pending değilken yok sayılır. */
+  searching?: boolean
   error: ApiError | null
   onRetry?: () => void
   /** Belirsizlik kartındaki bir seçenek seçilince çağrılır (value yeni tur olarak gönderilir). */
@@ -94,6 +98,7 @@ function Bubble({ message }: { message: ChatMessage }) {
 
 export function MessageList({
   pending,
+  searching = false,
   error,
   onRetry,
   onSelectOption,
@@ -157,8 +162,8 @@ export function MessageList({
           </motion.div>
         ))}
       </motion.div>
-      {pending && <TypingIndicator />}
-      {error && !pending && <ErrorState message={error.message} onRetry={onRetry} />}
+      {pending && <TypingIndicator searching={searching} />}
+      {error && !pending && <ErrorState message={apiErrorMessage(error)} onRetry={onRetry} />}
       <div ref={bottomRef} />
     </div>
   )

@@ -9,7 +9,7 @@ import { webcrypto } from 'node:crypto'
 import { delay, http, HttpResponse } from 'msw'
 import { server } from '@/mocks/server'
 import authReducer from '@/features/auth/authSlice'
-import chatReducer from '@/features/chat/chatSlice'
+import chatReducer, { type ChatState } from '@/features/chat/chatSlice'
 import reservationDraftReducer from '@/features/reservation/reservationDraftSlice'
 import { ChatPage } from '@/features/chat/ChatPage'
 
@@ -33,9 +33,10 @@ afterEach(() => {
 })
 afterAll(() => server.close())
 
-function renderChat() {
+function renderChat(chatState?: ChatState) {
   const store = configureStore({
     reducer: { auth: authReducer, chat: chatReducer, reservationDraft: reservationDraftReducer },
+    ...(chatState ? { preloadedState: { chat: chatState } } : {}),
   })
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -158,5 +159,71 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
       title: 'MOCK Grand Antalya Resort',
       currency: 'EUR',
     })
+  })
+
+  // İsteği süresiz askıda tutan handler: gösterge, yanıt gelmeden pending kalır —
+  // böylece "Arıyorum…" eşiğini (700ms) sabit bir yanıt süresiyle yarıştırmadan,
+  // yalnız gerçek aramada mı çıkıyor / normal sohbette çıkmıyor mu sınayabiliriz.
+  const hangChat = () =>
+    server.use(
+      http.post('/api/v1/chat', async () => {
+        await delay('infinite')
+        return HttpResponse.json({})
+      }),
+    )
+
+  // TypingIndicator kökü role="status" taşır; metnini textContent'ten okuruz
+  // (varsayılan/"yazıyor" metni sr-only olduğundan findByText yerine bu sağlam).
+  const indicatorText = () =>
+    screen
+      .queryAllByRole('status')
+      .map((n) => n.textContent ?? '')
+      .join(' ')
+
+  // Ardışık iki tur yazmak yerine sohbet durumunu önceden yükleriz: tek gönderim,
+  // arama-turu çıkarımını (isSearchTurn) besleyen kriter/pendingQuestion sabit kalır.
+  const msgs = (): ChatState['messages'] => [
+    { id: 'm1', role: 'user', content: 'Antalya oteli', createdAt: '2026-07-15T10:00:00Z' },
+    { id: 'm2', role: 'assistant', content: 'Devam edelim.', createdAt: '2026-07-15T10:00:01Z' },
+  ]
+
+  it('yavaş bir slot-filling turunda "Arıyorum…" GÖSTERMEZ — yalnız normal yazıyor göstergesi', async () => {
+    const user = userEvent.setup()
+    // Kriter eksik (yalnız şehir) + asistan hâlâ soruyor → bu tur bir arama DEĞİL.
+    renderChat({
+      sessionId: 'sess-1',
+      epoch: 0,
+      messages: msgs(),
+      accumulatedCriteria: { intent: 'hotel', criteria: { destination: 'Antalya' } },
+      pendingQuestion: 'Giriş tarihi nedir?',
+    })
+
+    hangChat()
+    await send(user, 'henüz emin değilim')
+
+    // Eşik (700ms) geçtikten SONRA bile — istek hâlâ askıda — gösterge "Arıyorum…"a
+    // dönmez, çünkü kriterler eksik = arama değil (normal sohbet).
+    await new Promise((r) => setTimeout(r, 1100))
+    expect(indicatorText()).toContain('Asistan yazıyor')
+    expect(indicatorText()).not.toContain('Arıyorum')
+  })
+
+  it('yavaş bir GERÇEK aramada "Arıyorum…" gösterir', async () => {
+    const user = userEvent.setup()
+    // Kriterler tam (destination + tarihler + kişi) → bu tur bir (yeniden) arama.
+    renderChat({
+      sessionId: 'sess-2',
+      epoch: 0,
+      messages: msgs(),
+      accumulatedCriteria: {
+        intent: 'hotel',
+        criteria: { destination: 'Antalya', checkIn: '2026-08-01', checkOut: '2026-08-05', adults: 2 },
+      },
+    })
+
+    hangChat()
+    await send(user, 'sadece 5 yıldız olsun')
+    // Eşik geçilince gösterge "Arıyorum…"a döner (kriterler tam = arama).
+    expect(await screen.findByText('Arıyorum…', {}, { timeout: 2000 })).toBeTruthy()
   })
 })

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppSelector } from '@/app/hooks'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
@@ -246,7 +247,7 @@ export function HotelsPage() {
       )}
 
       {query.isError && !query.isFetching && (
-        <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
+        <ErrorState message={apiErrorMessage(query.error)} onRetry={() => query.refetch()} />
       )}
 
       {query.data && (

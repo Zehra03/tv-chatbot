@@ -3,14 +3,42 @@ import { createPortal } from 'react-dom'
 import { motion } from 'framer-motion'
 import { Hotel, Plane, X } from 'lucide-react'
 import { ResultCards } from '@/features/chat/ResultCards'
+import { LoadingState } from '@/components/LoadingState'
 import { cn } from '@/lib/utils'
 import type { PartialCriteria, ResultCard } from '@/types'
 
 // overflow-x-hidden ŞART: yalnız overflow-y-auto verilince CSS overflow-x'i de
 // auto'ya çeker; dar panelde bir kart taşarsa yatay kaydırma çubuğu belirir.
 // Yatay taşmayı kırparak paneli sadece dikey kaydırılır tutuyoruz.
+// results-scroll: index.css bu kap İÇİNDEki iç içe backdrop-filter'ları kapatır
+// (panelin kendi camı yeter) — yoksa kaydırırken Chromium dikişte piksel bozar.
 const scrollClass =
-  'flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]'
+  'results-scroll flex-1 overflow-y-auto overflow-x-hidden p-3 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]'
+
+/**
+ * Panel gövdesi — kaydırılabilir kart listesi. Yeni bir arama sürerken (`loading`)
+ * üstte "Aranıyor…" spinner'ı belirir ve mevcut kartlar soluklaşır: panel kaybolup
+ * yeniden gelmeden, sonuçların tazelendiği görünür (PPMO K24). İlk aramada panel
+ * henüz yoktur — o an geri bildirimi sohbetteki "Arıyorum…" göstergesi verir.
+ */
+function ResultsBody({
+  cards,
+  criteria,
+  loading,
+}: {
+  cards: ResultCard[]
+  criteria?: PartialCriteria
+  loading?: boolean
+}) {
+  return (
+    <div className={scrollClass}>
+      {loading && <LoadingState label="Aranıyor…" className="mb-3 text-brand-ice/70" />}
+      <div className={cn('transition-opacity duration-200', loading && 'opacity-50')}>
+        <ResultCards cards={cards} criteria={criteria} />
+      </div>
+    </div>
+  )
+}
 
 /** Panel başlığı — sonuç türü (otel/uçuş) + adet; mobil drawer'da kapat düğmesi. */
 function ResultsHeader({ cards, onClose }: { cards: ResultCard[]; onClose?: () => void }) {
@@ -49,10 +77,13 @@ export function ResultsPanel({
   cards,
   criteria,
   className,
+  loading,
 }: {
   cards: ResultCard[]
   criteria?: PartialCriteria
   className?: string
+  /** Görünen panel üzerinde yeni bir arama sürüyor — üstte spinner, kartlar solar. */
+  loading?: boolean
 }) {
   return (
     <motion.aside
@@ -63,9 +94,7 @@ export function ResultsPanel({
       transition={{ duration: 0.3, ease: 'easeOut' }}
     >
       <ResultsHeader cards={cards} />
-      <div className={scrollClass}>
-        <ResultCards cards={cards} criteria={criteria} />
-      </div>
+      <ResultsBody cards={cards} criteria={criteria} loading={loading} />
     </motion.aside>
   )
 }
@@ -81,11 +110,14 @@ export function ResultsDrawer({
   onClose,
   cards,
   criteria,
+  loading,
 }: {
   open: boolean
   onClose: () => void
   cards: ResultCard[]
   criteria?: PartialCriteria
+  /** Açık drawer üzerinde yeni bir arama sürüyor — üstte spinner, kartlar solar. */
+  loading?: boolean
 }) {
   useEffect(() => {
     if (!open) return
@@ -111,9 +143,7 @@ export function ResultsDrawer({
         transition={{ duration: 0.28, ease: 'easeOut' }}
       >
         <ResultsHeader cards={cards} onClose={onClose} />
-        <div className={scrollClass}>
-          <ResultCards cards={cards} criteria={criteria} />
-        </div>
+        <ResultsBody cards={cards} criteria={criteria} loading={loading} />
       </motion.aside>
     </div>,
     document.body,
