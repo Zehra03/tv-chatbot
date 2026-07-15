@@ -19,8 +19,10 @@ import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
 /**
- * Handles FLIGHT intent — the mirror of {@link HotelSearchHandler} for the flight module.
- * Completeness is decided by {@link FlightSearchService} ({@code FlightSearchOutcome.complete()}).
+ * Handles FLIGHT intent — the mirror of {@link HotelSearchHandler} for the
+ * flight module.
+ * Completeness is decided by {@link FlightSearchService}
+ * ({@code FlightSearchOutcome.complete()}).
  */
 @Component
 public class FlightSearchHandler implements IntentHandler {
@@ -32,10 +34,10 @@ public class FlightSearchHandler implements IntentHandler {
     private final SlotGuard slotGuard;
 
     public FlightSearchHandler(SlotFillingService slotFilling,
-                               FlightCriteriaMapper mapper,
-                               FlightSearchService flightSearchService,
-                               ClarificationCatalog clarifications,
-                               SlotGuard slotGuard) {
+            FlightCriteriaMapper mapper,
+            FlightSearchService flightSearchService,
+            ClarificationCatalog clarifications,
+            SlotGuard slotGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.flightSearchService = flightSearchService;
@@ -50,9 +52,17 @@ public class FlightSearchHandler implements IntentHandler {
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
+        if (!"FLIGHT".equals(context.session().getActiveDomain())) {
+            if (context.session().getAccumulatedCriteria() != null) {
+                context.session().getAccumulatedCriteria().clear();
+            }
+            context.session().setActiveDomain("FLIGHT");
+        }
+        
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
-        // Deterministic guard over the newly extracted criteria to catch past dates and invalid 
+        // Deterministic guard over the newly extracted criteria to catch past dates and
+        // invalid
         // numeric values before they are lost to normalizer logic.
         Optional<String> invalidSlot = slotGuard.checkInvalidSlots(context.criteria());
         if (invalidSlot.isPresent()) {
@@ -66,9 +76,12 @@ public class FlightSearchHandler implements IntentHandler {
             return OrchestrationResult.clarify(clarifications.questionForFlight(outcome.missingFields()), "flight");
         }
 
-        // Post-search budget filter over REAL results (board type does not apply to flights).
+        // Post-search budget filter over REAL results (board type does not apply to
+        // flights).
         List<Object> rawCards = new ArrayList<>(outcome.results());
         List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.flightMaxPrice());
+        cards = ResultFilters.applyDirectFlight(cards, merged.directFlight());
+        cards = ResultFilters.applySort(cards, merged.sortBy());
 
         context.session().setActiveDomain("FLIGHT");
         context.session().setLastApiResultCards(rawCards);

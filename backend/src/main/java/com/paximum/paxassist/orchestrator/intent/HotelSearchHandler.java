@@ -55,6 +55,13 @@ public class HotelSearchHandler implements IntentHandler {
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
+        if (!"HOTEL".equals(context.session().getActiveDomain())) {
+            if (context.session().getAccumulatedCriteria() != null) {
+                context.session().getAccumulatedCriteria().clear();
+            }
+            context.session().setActiveDomain("HOTEL");
+        }
+        
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
         // Deterministic guard over the newly extracted criteria to catch past dates and invalid 
@@ -84,6 +91,7 @@ public class HotelSearchHandler implements IntentHandler {
         cards = ResultFilters.applyStars(cards, merged.stars(), merged.maxStars());
         List<Object> beforeFeatureFilter = cards;
         cards = ResultFilters.applyFeatures(cards, merged.features());
+        cards = ResultFilters.applySort(cards, merged.sortBy());
         cards = ResultFilters.applyLimit(cards, merged.limit());
 
         context.session().setActiveDomain("HOTEL");

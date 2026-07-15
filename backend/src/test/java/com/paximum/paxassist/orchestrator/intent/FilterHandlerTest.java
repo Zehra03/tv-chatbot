@@ -76,7 +76,7 @@ class FilterHandlerTest {
         SlotCriteria criteria = objectMapper.convertValue(Map.of("limit", 2), SlotCriteria.class);
         OrchestrationResult result = handler.handle(new OrchestrationContext(session, "msg", IntentType.FILTER, criteria));
         
-        assertThat(result.cards()).containsExactly(MID_5STAR, PRICEY_4STAR);
+        assertThat(result.cards()).containsExactly(CHEAP_3STAR, MID_5STAR);
     }
 
     @Test

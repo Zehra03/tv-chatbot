@@ -12,6 +12,7 @@ import { LoadingState } from '@/components/LoadingState'
 import { SearchHero } from '@/components/SearchHero'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { flightFiltersChanged } from '@/features/ui/uiSlice'
@@ -38,9 +39,11 @@ export function FlightsPage() {
   const [origin, setOrigin] = useState(prefill?.origin ?? '')
   const [destination, setDestination] = useState(prefill?.destination ?? '')
   // Autocomplete'ten seçilen TourVisio konum id'si (ör. "AYT"). Serbest metin
-  // yazılınca temizlenir; aramada varsa kod, yoksa yazılan metin gönderilir.
-  const [originCode, setOriginCode] = useState<string | null>(null)
-  const [destinationCode, setDestinationCode] = useState<string | null>(null)
+  // yazılınca temizlenir; yalnızca listeden seçilen konum aramaya gider (kullanıcı
+  // kafasına göre metin yazıp arayamaz). Chat'ten ön-dolan kriter zaten çözülmüş
+  // bir konumdur — kodu ön-değerle başlatırız ki handoff aramayı bozmasın.
+  const [originCode, setOriginCode] = useState<string | null>(prefill?.origin ?? null)
+  const [destinationCode, setDestinationCode] = useState<string | null>(prefill?.destination ?? null)
   const [departDate, setDepartDate] = useState(prefill?.departDate ?? '')
   const [returnDate, setReturnDate] = useState(prefill?.returnDate ?? '')
   const [passengers, setPassengers] = useState(prefill?.passengers ?? 1)
@@ -80,6 +83,16 @@ export function FlightsPage() {
 
     if (!origin.trim() || !destination.trim()) {
       setFormError('Lütfen kalkış ve varış yerlerini girin.')
+      return
+    }
+    // Destinasyon yalnızca dropdown önerisinden seçilebilir: seçilmemiş serbest
+    // metin (kod yok) aramaya gitmez; kullanıcı listeden bir konum seçmeli.
+    if (!originCode) {
+      setFormError('Lütfen kalkış yerini listeden seçin.')
+      return
+    }
+    if (!destinationCode) {
+      setFormError('Lütfen varış yerini listeden seçin.')
       return
     }
     if (from.toLowerCase() === to.toLowerCase()) {
@@ -297,14 +310,14 @@ export function FlightsPage() {
       )}
 
       {query.isError && !query.isFetching && (
-        <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
+        <ErrorState message={apiErrorMessage(query.error)} onRetry={() => query.refetch()} />
       )}
 
       {query.data && (
         <>
           <FlightFilters airlines={airlines} />
           <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
-          <FlightList products={visible} />
+          <FlightList products={visible} criteria={criteria ?? undefined} />
         </>
       )}
     </div>

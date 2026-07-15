@@ -48,15 +48,31 @@ public class TourVisioBookingClientConfig {
         requestFactory.setReadTimeout(Duration.ofMillis(readTimeoutMs));
 
         return RestClient.builder()
-                .baseUrl(normalizeBaseUrl(baseUrl))
+                .baseUrl(bookingApiBaseUrl(baseUrl))
                 .requestFactory(requestFactory)
                 .defaultHeader("Accept", "application/json")
                 .build();
     }
 
     /**
+     * Booking calls live under the TourVisio {@code /api} segment — same as the Feign hotel/flight
+     * clients, which set {@code path="/api"} on top of {@code tourvisio.url}. Since {@code tourvisio.url}
+     * is the host+version base (e.g. {@code .../v2}, no {@code /api}), we append {@code /api} here so the
+     * endpoint path constants (which assume a base ending in {@code /v2/api}) resolve correctly, e.g.
+     * {@code https://.../v2/api/bookingservice/begintransaction}. Idempotent if the env value already
+     * includes {@code /api}.
+     */
+    private static String bookingApiBaseUrl(String baseUrl) {
+        String trimmed = normalizeBaseUrl(baseUrl);
+        if (trimmed == null || trimmed.endsWith("/api")) {
+            return trimmed;
+        }
+        return trimmed + "/api";
+    }
+
+    /**
      * Trims a trailing slash so leading-slash endpoint paths concatenate predictably
-     * (the env value may end with {@code /v2/api/} or {@code /v2/api}).
+     * (the env value may end with {@code /v2/} or {@code /v2}).
      */
     private static String normalizeBaseUrl(String baseUrl) {
         if (baseUrl != null && baseUrl.endsWith("/")) {

@@ -9,6 +9,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppSelector } from '@/app/hooks'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
@@ -31,6 +32,10 @@ export function HotelsPage() {
   const prefill = chatCriteria?.intent === 'hotel' ? chatCriteria.criteria : undefined
 
   const [destination, setDestination] = useState(prefill?.destination ?? '')
+  // Destinasyon yalnızca dropdown önerisinden seçilebilir: bu bayrak seçimi izler.
+  // Chat'ten ön-dolan kriter zaten çözülmüş bir konumdur → seçilmiş sayılır;
+  // kullanıcı serbest metin yazınca temizlenir (aşağıda onTextChange).
+  const [destinationSelected, setDestinationSelected] = useState(Boolean(prefill?.destination))
   const [checkIn, setCheckIn] = useState(prefill?.checkIn ?? '')
   const [checkOut, setCheckOut] = useState(prefill?.checkOut ?? '')
   const [adults, setAdults] = useState(prefill?.adults ?? 2)
@@ -38,6 +43,8 @@ export function HotelsPage() {
   const [childAges, setChildAges] = useState<number[]>(prefill?.childAges ?? [])
   const [rooms, setRooms] = useState(prefill?.rooms ?? 1)
   const [criteria, setCriteria] = useState<HotelSearchCriteria | null>(null)
+  // Sınırda (submit) doğrulama mesajı — geçersiz kriterde arama tetiklenmez.
+  const [formError, setFormError] = useState<string | null>(null)
 
   // childAges uzunluğu her zaman childCount ile tutarlı tutulur (types/search.ts
   // invariantı); yeni eklenen çocuk için varsayılan yaş 7, popover'da değiştirilir.
@@ -79,7 +86,20 @@ export function HotelsPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
-    if (!destination.trim() || !checkIn || !checkOut) return
+    if (!destination.trim()) {
+      setFormError('Lütfen varış yerini girin.')
+      return
+    }
+    // Serbest metin engellenir: destinasyon yalnızca dropdown önerisinden seçilebilir.
+    if (!destinationSelected) {
+      setFormError('Lütfen varış yerini listeden seçin.')
+      return
+    }
+    if (!checkIn || !checkOut) {
+      setFormError('Lütfen giriş ve çıkış tarihlerini seçin.')
+      return
+    }
+    setFormError(null)
     setCriteria({
       destination: destination.trim(),
       checkIn,
@@ -114,8 +134,14 @@ export function HotelsPage() {
               fetchSuggestions={(q) => hotelApi.locations(q)}
               queryKeyBase="hotel-locations"
               value={destination}
-              onTextChange={setDestination}
-              onSelect={(loc) => setDestination(loc.name)}
+              onTextChange={(text) => {
+                setDestination(text)
+                setDestinationSelected(false)
+              }}
+              onSelect={(loc) => {
+                setDestination(loc.name)
+                setDestinationSelected(true)
+              }}
               placeholder="Şehir, bölge veya otel adı"
               required
               fieldClassName={heroFieldClass}
@@ -134,6 +160,8 @@ export function HotelsPage() {
             checkOutId="hotel-checkout"
             fieldClassName={heroFieldClass}
             required
+            // Geçmiş günler takvimde seçilemez (giriş de çıkış da).
+            disablePast
           />
           {/* Skyscanner'ın "Misafir ve oda sayısı" alanı: sayaçlar + çocuk yaşları. */}
           <PeoplePicker
@@ -186,6 +214,17 @@ export function HotelsPage() {
           <Button type="submit" className="h-12">
             Ara
           </Button>
+
+          {/* Doğrulama mesajı — role="alert" ile ekran okuyucuya anons edilir.
+              w-full: flex-wrap satırında kendi satırına iner. */}
+          {formError && (
+            <p
+              role="alert"
+              className="w-full rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm font-medium text-red-100"
+            >
+              {formError}
+            </p>
+          )}
         </form>
       </SearchHero>
 
@@ -208,14 +247,14 @@ export function HotelsPage() {
       )}
 
       {query.isError && !query.isFetching && (
-        <ErrorState message={query.error.message} onRetry={() => query.refetch()} />
+        <ErrorState message={apiErrorMessage(query.error)} onRetry={() => query.refetch()} />
       )}
 
       {query.data && (
         <>
           <HotelFilters boardTypes={boardTypes} />
           <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
-          <HotelList products={visible} />
+          <HotelList products={visible} criteria={criteria ?? undefined} />
         </>
       )}
     </div>

@@ -16,12 +16,17 @@ import com.paximum.paxassist.auth.dto.AuthUserDto;
 import com.paximum.paxassist.auth.dto.LoginRequestDto;
 import com.paximum.paxassist.auth.dto.RefreshRequestDto;
 import com.paximum.paxassist.auth.dto.RegisterRequestDto;
+import com.paximum.paxassist.auth.dto.ResetPasswordRequestDto;
+import com.paximum.paxassist.auth.dto.UpdateEmailRequestDto;
 import com.paximum.paxassist.auth.exception.EmailAlreadyExistsException;
+import com.paximum.paxassist.auth.exception.EmailNotFoundException;
 import com.paximum.paxassist.auth.exception.InvalidRefreshTokenException;
 import com.paximum.paxassist.auth.service.AuthService;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -153,5 +158,51 @@ class AuthControllerTest {
     void logout_returns204() throws Exception {
         mockMvc.perform(post("/api/v1/auth/logout"))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void resetPassword_returns200WithMessage() throws Exception {
+        ResetPasswordRequestDto request = new ResetPasswordRequestDto("user@example.com", "new-password123");
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void resetPassword_returns400WhenPasswordTooShort() throws Exception {
+        ResetPasswordRequestDto request = new ResetPasswordRequestDto("user@example.com", "short");
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void resetPassword_returns404WhenEmailNotRegistered() throws Exception {
+        ResetPasswordRequestDto request = new ResetPasswordRequestDto("ghost@example.com", "new-password123");
+        doThrow(new EmailNotFoundException("ghost@example.com"))
+                .when(authService).resetPassword(any(), any());
+
+        mockMvc.perform(post("/api/v1/auth/reset-password")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("EMAIL_NOT_FOUND"));
+    }
+
+    @Test
+    void updateEmail_returns400WhenEmailInvalid() throws Exception {
+        // Validation fails before the handler body runs, so a null principal (standalone MockMvc)
+        // never reached — this exercises the @Valid boundary on PATCH /me.
+        UpdateEmailRequestDto request = new UpdateEmailRequestDto("not-an-email");
+
+        mockMvc.perform(patch("/api/v1/auth/me")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

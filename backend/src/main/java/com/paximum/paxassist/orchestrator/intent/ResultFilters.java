@@ -1,11 +1,13 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.hotel.HotelProduct;
 
 /**
@@ -72,11 +74,60 @@ final class ResultFilters {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * Keep flight cards that match the direct/layover preference.
+     * Hotels are unaffected.
+     */
+    static List<Object> applyDirectFlight(List<Object> cards, Boolean directFlight) {
+        if (directFlight == null || cards == null || cards.isEmpty()) {
+            return cards;
+        }
+
+        return cards.stream()
+                .filter(c -> {
+                    if (!(c instanceof FlightProduct f)) {
+                        return true; // only filter flights
+                    }
+                    if (directFlight) {
+                        return f.getStops() == 0;
+                    } else {
+                        return f.getStops() > 0;
+                    }
+                })
+                .collect(Collectors.toList());
+    }
+
     static List<Object> applyLimit(List<Object> cards, Integer limit) {
         if (cards == null || cards.isEmpty() || limit == null || limit <= 0) {
             return cards;
         }
         return cards.stream().limit(limit).collect(Collectors.toList());
+    }
+
+    static List<Object> applySort(List<Object> cards, String sortBy) {
+        if (cards == null || cards.isEmpty()) {
+            return cards;
+        }
+        String effectiveSortBy = (sortBy != null && !sortBy.isBlank()) ? sortBy : "price_asc";
+        Comparator<Object> comparator = comparatorFor(effectiveSortBy);
+        if (comparator == null) {
+            return cards;
+        }
+        List<Object> sorted = new java.util.ArrayList<>(cards);
+        sorted.sort(comparator);
+        return sorted;
+    }
+
+    private static Comparator<Object> comparatorFor(String sortBy) {
+        return switch (sortBy) {
+            case "price_asc" ->
+                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.naturalOrder()));
+            case "price_desc" ->
+                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.reverseOrder()));
+            case "stars_desc" ->
+                    Comparator.comparing(ProductCards::starsOf, Comparator.nullsLast(Comparator.reverseOrder()));
+            default -> null;
+        };
     }
 
     /**

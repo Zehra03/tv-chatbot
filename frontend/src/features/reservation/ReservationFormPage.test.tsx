@@ -22,14 +22,33 @@ afterEach(() => {
 })
 afterAll(() => server.close())
 
-const hotelDraft: ReservationDraft = {
+const hotelSnapshot = {
+  hotelName: 'MOCK Grand Antalya Resort',
+  region: 'Antalya',
+  stars: 5,
+  boardType: 'AI',
+  checkIn: '2026-08-01',
+  checkOut: '2026-08-05',
+  rooms: 1,
+  adults: 1,
+  children: 0,
+  nationality: 'TR',
+  price: 1200,
+  currency: 'EUR',
+}
+
+const makeHotelDraft = (offerId = 'off-htl-mock-001'): ReservationDraft => ({
   productType: 'hotel',
-  productId: 'htl-mock-001',
+  offerId,
   title: 'MOCK Grand Antalya Resort',
   summary: 'Antalya · 5★ · AI',
   price: 1200,
   currency: 'EUR',
-}
+  childAges: [],
+  hotel: hotelSnapshot,
+})
+
+const hotelDraft: ReservationDraft = makeHotelDraft()
 
 function renderPage(draft: ReservationDraft | null = hotelDraft) {
   const store = configureStore({
@@ -87,7 +106,10 @@ describe('ReservationFormPage', () => {
     renderPage()
 
     await user.type(screen.getByLabelText('Yaş (opsiyonel)'), '200')
-    await user.type(screen.getByLabelText('Uyruk (opsiyonel)'), '1')
+    // Uyruk aramadan 'TR' önden dolar; geçersiz test için temizleyip 1 harf gir.
+    const nat = screen.getByLabelText('Uyruk')
+    await user.clear(nat)
+    await user.type(nat, '1')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
     expect(await screen.findByText('Geçerli bir yaş girin (0–120)')).toBeTruthy()
     expect(screen.getByText('İki harfli ülke kodu girin (ör. TR)')).toBeTruthy()
@@ -108,10 +130,10 @@ describe('ReservationFormPage', () => {
     await user.type(screen.getByLabelText('Telefon'), '+905551112233')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
 
-    // Önizleme: backend'in hesapladığı toplam + misafir listesi.
+    // Önizleme: dondurulan toplam + misafir adı listesi (passengerNames).
     expect(await screen.findByText(/Toplam:/, {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText(/1\.200/)).toBeTruthy()
-    expect(screen.getByText(/Zehra Yılmaz — Yetişkin/)).toBeTruthy()
+    expect(screen.getByText('Zehra Yılmaz')).toBeTruthy()
 
     // Açık onay: checkbox işaretlenmeden buton devre dışı.
     const submit = screen.getByRole('button', { name: 'Rezervasyonu onayla' })
@@ -167,5 +189,54 @@ describe('ReservationFormPage', () => {
     expect(await screen.findByText('Rezervasyon oluşturulamadı', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByRole('alert').textContent).toContain('Kontenjan kalmadı')
     expect(screen.getByRole('button', { name: 'Önizlemeye dön' })).toBeTruthy()
+  })
+
+  it('uyarı (çift rezervasyon) gelince ikinci onay istenir; "Yine de onayla" başarıya götürür', async () => {
+    const user = userEvent.setup()
+    // offerId 'OFFER-DUP' → mock 200 NeedsConfirmationResponse döndürür (uyarı dalı).
+    renderPage(makeHotelDraft('OFFER-DUP'))
+
+    await fillAndPreview(user)
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Rezervasyonu onayla' }))
+
+    // Uyarı ekranı: sağlayıcı uyarısı + ikinci açık onay butonu.
+    expect(await screen.findByText('Onayınız gerekiyor', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText(/DuplicateReservationFound/)).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: 'Yine de onayla' }))
+    expect(await screen.findByText('Rezervasyonunuz alındı', {}, { timeout: 3000 })).toBeTruthy()
+  })
+
+  it('geçersiz snapshot (oda > yetişkin) istemcide uyarır, önizleme isteği gönderilmez', async () => {
+    const requests: string[] = []
+    server.events.on('request:start', ({ request }) => {
+      requests.push(`${request.method} ${new URL(request.url).pathname}`)
+    })
+    const badDraft: ReservationDraft = {
+      productType: 'hotel',
+      offerId: 'off-htl-mock-001',
+      title: 'MOCK Grand Antalya Resort',
+      summary: 'Antalya · 5★ · AI',
+      price: 1200,
+      currency: 'EUR',
+      childAges: [],
+      hotel: { ...hotelSnapshot, rooms: 2, adults: 1 },
+    }
+    const user = userEvent.setup()
+    renderPage(badDraft)
+
+    await user.type(screen.getByLabelText('Ad'), 'Zehra')
+    await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
+    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+
+    // Uyarı görünür ve backend'e hiç önizleme isteği çıkmaz (ham 400'den önce yakalanır).
+    expect(
+      await screen.findByText(/Oda sayısı yetişkin sayısından fazla olamaz/),
+    ).toBeTruthy()
+    expect(requests).not.toContain('POST /api/v1/reservations/preview')
+    server.events.removeAllListeners()
   })
 })

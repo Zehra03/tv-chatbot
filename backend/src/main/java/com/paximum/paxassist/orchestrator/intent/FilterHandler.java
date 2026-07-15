@@ -1,7 +1,6 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -41,6 +40,7 @@ public class FilterHandler implements IntentHandler {
             context.session().getAccumulatedCriteria().remove("sortBy");
             context.session().getAccumulatedCriteria().remove("hotelMaxPrice");
             context.session().getAccumulatedCriteria().remove("flightMaxPrice");
+            context.session().getAccumulatedCriteria().remove("directFlight");
             
             context.session().setLastResultCards(new ArrayList<>(current));
             return OrchestrationResult.cards("Filtreler temizlendi. Tüm sonuçlar listeleniyor:", current);
@@ -61,35 +61,18 @@ public class FilterHandler implements IntentHandler {
         filtered = ResultFilters.applyBoardType(filtered, context.criteria().boardType());
         filtered = ResultFilters.applyFeatures(filtered, context.criteria().features());
         filtered = ResultFilters.applyStars(filtered, context.criteria().stars(), context.criteria().maxStars());
+        filtered = ResultFilters.applyDirectFlight(filtered, context.criteria().directFlight());
 
         if (filtered.isEmpty()) {
             return OrchestrationResult.message("Mevcut sonuçlar arasında bu kriterlere uygun sonuç bulamadım.");
         }
 
         String sortBy = context.criteria().sortBy();
-        Comparator<Object> comparator = comparatorFor(sortBy);
-        if (comparator != null) {
-            filtered.sort(comparator);
-        }
+        filtered = ResultFilters.applySort(filtered, sortBy);
 
         filtered = ResultFilters.applyLimit(filtered, context.criteria().limit());
 
         context.session().setLastResultCards(filtered);
         return OrchestrationResult.cards("İşte filtrelenmiş sonuçlar:", filtered);
-    }
-
-    private Comparator<Object> comparatorFor(String sortBy) {
-        if (sortBy == null) {
-            return null;
-        }
-        return switch (sortBy) {
-            case "price_asc" ->
-                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.naturalOrder()));
-            case "price_desc" ->
-                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.reverseOrder()));
-            case "stars_desc" ->
-                    Comparator.comparing(ProductCards::starsOf, Comparator.nullsLast(Comparator.reverseOrder()));
-            default -> null;
-        };
     }
 }

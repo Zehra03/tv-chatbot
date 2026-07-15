@@ -89,6 +89,7 @@ public class IntentExtractionService {
           returnDate    : return date YYYY-MM-DD — null if one-way (string)
           cabinClass    : ECONOMY | BUSINESS | FIRST (string)
           flightMaxPrice: upper price limit for a FLIGHT search, "uçuşa 3000 tl max" → 3000 (integer)
+          directFlight  : true for direct/non-stop flights (aktarmasız/direkt), false for flights with layovers (aktarmalı) (boolean)
 
         Shared fields (hotel + flight):
           adults        : number of adults (integer)
@@ -101,6 +102,7 @@ public class IntentExtractionService {
           sortBy        : price_asc | price_desc | stars_desc (string)
           stars         : minimum star filter (integer)
           boardType     : board-type filter (string)
+          directFlight  : direct/layover filter (boolean)
 
         Select field (SELECT intent):
           selectionReference : the user's raw selection text — "1", "ilk", "en ucuz olan" (string)
@@ -130,9 +132,11 @@ public class IntentExtractionService {
           domain-specific statement without the literal word — e.g. a stay/accommodation fact
           ("orada kalacağım", "3 gece kalırım") signals HOTEL; a travel/departure fact
           ("oraya gideceğim", "kalkışım Ankara'dan") signals FLIGHT. A domain switch is NEVER
-          "answering a missing slot", even when the history was about the other domain. Extract
-          the new domain's fields: a city after a flight signal → origin/destination (NOT hotel
-          location); a city after a hotel signal → location (NOT origin/destination).
+          "answering a missing slot", even when the history was about the other domain.
+          CRITICAL: When a domain switch occurs, do NOT carry over, copy, or translate ANY information
+          (dates, cities, passenger counts, budgets) from the previous domain into the new domain.
+          Start completely fresh. ONLY extract fields that are explicitly stated in the CURRENT message.
+          If the current message is just "uçak lazım", the criteria must be completely empty.
         - "N gece" / "N gecelik" → nights=N; do not confuse with checkOut.
         - Convert relative dates (bugün, yarın, "bu cuma", "haftaya perşembe", "25 hazirana",
           "dün akşam") to YYYY-MM-DD using TODAY/WEEKDAY from <context>. Convert even if the
@@ -154,7 +158,9 @@ public class IntentExtractionService {
         - Map typos to the nearest real city/phrase ("iştanbuıl" → İstanbul, "sanalya" → Antalya).
         - When the user asks for a specific number of items to list (e.g. "ilk 3", "en ucuz 5 otel", "5 tanesini listele"), put this number in the "limit" field.
         - When the user specifies a star rating range (e.g. "3-4 yıldızlı", "3 ve 4 yıldız arası"), specify both "stars" (minimum) and "maxStars" (maximum). E.g., "stars": 3, "maxStars": 4.
+        - When the user asks for an EXACT star rating without a range (e.g. "3 yıldızlı oteller", "5 yıldızlı"), specify BOTH "stars" and "maxStars" to that same number to enforce an exact match. E.g., "stars": 3, "maxStars": 3. If they say "en az 3 yıldız" or "3 yıldız ve üstü", only set "stars": 3.
         - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
+        - When the user asks for a direct flight ("aktarmasız", "direkt"), set "directFlight": true. If they ask for flights with layovers ("aktarmalı"), set "directFlight": false.
         </rules>
 
         <output_format>
@@ -231,6 +237,9 @@ public class IntentExtractionService {
         Mesaj: "4 yıldız ve üstünü listele"
         Çıktı: {"intent":"FILTER","criteria":{"stars":4}}
 
+        Mesaj: "3 yıldızlı otelleri göster"
+        Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":3}}
+
         Mesaj: "3 ve 4 yıldızlı olanları getir"
         Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":4}}
 
@@ -271,6 +280,12 @@ public class IntentExtractionService {
 
         Mesaj: "İstanbul'dan İzmir'e 3000 tl altında uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","flightMaxPrice":3000}}
+
+        Mesaj: "Ankara'dan aktarmasız uçuş"
+        Çıktı: {"intent":"FLIGHT","criteria":{"origin":"Ankara","directFlight":true}}
+
+        Mesaj: "sadece aktarmalıları listele"
+        Çıktı: {"intent":"FILTER","criteria":{"directFlight":false}}
 
         Mesaj: "Antalya'da -2 yetişkin ve -1 childlu otel"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":-2,"children":-1}}

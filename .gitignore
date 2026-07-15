@@ -35,6 +35,9 @@ frontend/.vite/
 /*.jpg
 /*.png
 
+# Kok dizindeki ham API cevap dokumleri (TourVisio pricesearch vb. debug artiklari, commitlenmez)
+/ps.json
+
 # Test outputs
 coverage/
 

@@ -41,6 +41,11 @@ public class FlightCriteriaMapper {
                     .build();
         }
 
+        String currency = c.currency();
+        if (currency == null || currency.isBlank()) {
+            currency = "TRY";
+        }
+
         return FlightSearchCriteria.builder()
                 .origin(c.origin())
                 .destination(c.destination())
@@ -48,7 +53,7 @@ public class FlightCriteriaMapper {
                 .returnDate(returnDate)
                 .tripType(tripType)
                 .passengers(passengers)
-                .currency(c.currency())
+                .currency(currency)
                 .nonstop(null)
                 .preferredAirline(null)
                 .build();

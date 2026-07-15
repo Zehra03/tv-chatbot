@@ -235,8 +235,11 @@ export function Layout() {
       >
         <div
           className={cn(
-            'mx-auto flex w-full min-h-0 max-w-7xl flex-1 flex-col px-4 sm:px-8',
-            isChat ? 'py-4' : 'py-8',
+            // Chat = "uygulama" görünümü: tam genişlik (3 sütun tüm sayfaya
+            // yayılır, yanlarda boşluk kalmaz). Diğer sayfalar okunur genişlikte
+            // ortalı kalır (max-w-7xl). Yan oluk header ile hizalı (px-4/sm:px-8).
+            'mx-auto flex w-full min-h-0 flex-1 flex-col px-4 sm:px-8',
+            isChat ? 'max-w-none py-4' : 'max-w-7xl py-8',
           )}
         >
           {/* Rota geçişi: mode="wait" + pathname key — AnimatedOutlet ayrılan

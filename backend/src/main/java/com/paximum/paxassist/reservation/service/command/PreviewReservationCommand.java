@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.paximum.paxassist.reservation.domain.PassengerType;
 import com.paximum.paxassist.reservation.domain.TripType;
 
@@ -56,6 +57,7 @@ public record PreviewReservationCommand(
     private static final int INFANT_MAX_AGE = 2;
 
     /** Cross-field rule: a reservation must include at least a hotel or a flight (product type is derived, never trusted). */
+    @JsonIgnore
     @AssertTrue(message = "A reservation must include at least a hotel or a flight")
     public boolean isAtLeastOneProductPresent() {
         return hotel != null || flight != null;
@@ -285,6 +287,7 @@ public record PreviewReservationCommand(
          * (mirrors the frontend search-form guard). Null cases are left to {@code @NotNull} on the
          * fields so this check does not raise a second, misleading violation.
          */
+        @JsonIgnore
         @AssertTrue(message = "Rooms cannot exceed the number of adults (each room needs at least one adult)")
         public boolean isRoomsWithinAdults() {
             return rooms == null || adults == null || rooms <= adults;

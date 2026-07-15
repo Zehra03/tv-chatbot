@@ -1,4 +1,4 @@
-import type { ReservationStatus } from '@/types'
+import type { ReservationProductType, ReservationStatus } from '@/types'
 import type { BadgeProps } from '@/components/ui/badge'
 
 /** Rezervasyon durumunun Türkçe etiketi ve rozet varyantı — form sonucu,
@@ -8,6 +8,13 @@ export const RESERVATION_STATUS_LABELS: Record<ReservationStatus, string> = {
   confirmed: 'Onaylandı',
   cancelled: 'İptal edildi',
   failed: 'Başarısız',
+}
+
+/** Ürün tipinin Türkçe etiketi — liste ve detay paylaşır; `combined` = paket (otel + uçuş). */
+export const RESERVATION_PRODUCT_TYPE_LABELS: Record<ReservationProductType, string> = {
+  hotel: 'Otel',
+  flight: 'Uçuş',
+  combined: 'Otel + Uçuş',
 }
 
 export function reservationStatusVariant(status: ReservationStatus): BadgeProps['variant'] {

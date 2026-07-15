@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.junit.jupiter.api.Test;
 
+import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.hotel.HotelProduct;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -145,5 +146,34 @@ class ResultFiltersTest {
         assertThat(ResultFilters.describeFeatures(List.of("SEAFRONT", "POOL"))).isEqualTo("denize sıfır, havuzlu");
         assertThat(ResultFilters.describeFeatures(List.of("HELIPAD"))).isEmpty();
         assertThat(ResultFilters.describeFeatures(List.of())).isEmpty();
+    }
+
+    // ── applyDirectFlight ────────────────────────────────────────────────────
+
+    @Test
+    void directFlightNull_returnsListUnchanged() {
+        FlightProduct f = FlightProduct.builder().stops(1).build();
+        List<Object> cards = List.of(f);
+        assertThat(ResultFilters.applyDirectFlight(cards, null)).isSameAs(cards);
+    }
+
+    @Test
+    void directFlightTrue_keepsOnlyDirectFlights() {
+        FlightProduct direct = FlightProduct.builder().stops(0).build();
+        FlightProduct layover = FlightProduct.builder().stops(1).build();
+        HotelProduct hotel = hotel("H1", "100", "AI");
+        
+        List<Object> result = ResultFilters.applyDirectFlight(List.of(direct, layover, hotel), true);
+        assertThat(result).containsExactly(direct, hotel);
+    }
+
+    @Test
+    void directFlightFalse_keepsOnlyLayoverFlights() {
+        FlightProduct direct = FlightProduct.builder().stops(0).build();
+        FlightProduct layover = FlightProduct.builder().stops(1).build();
+        HotelProduct hotel = hotel("H1", "100", "AI");
+        
+        List<Object> result = ResultFilters.applyDirectFlight(List.of(direct, layover, hotel), false);
+        assertThat(result).containsExactly(layover, hotel);
     }
 }
