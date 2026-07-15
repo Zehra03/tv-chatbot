@@ -1,7 +1,6 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 import org.springframework.stereotype.Component;
@@ -67,29 +66,11 @@ public class FilterHandler implements IntentHandler {
         }
 
         String sortBy = context.criteria().sortBy();
-        Comparator<Object> comparator = comparatorFor(sortBy);
-        if (comparator != null) {
-            filtered.sort(comparator);
-        }
+        filtered = ResultFilters.applySort(filtered, sortBy);
 
         filtered = ResultFilters.applyLimit(filtered, context.criteria().limit());
 
         context.session().setLastResultCards(filtered);
         return OrchestrationResult.cards("İşte filtrelenmiş sonuçlar:", filtered);
-    }
-
-    private Comparator<Object> comparatorFor(String sortBy) {
-        if (sortBy == null) {
-            return null;
-        }
-        return switch (sortBy) {
-            case "price_asc" ->
-                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.naturalOrder()));
-            case "price_desc" ->
-                    Comparator.comparing(ProductCards::priceOf, Comparator.nullsLast(Comparator.reverseOrder()));
-            case "stars_desc" ->
-                    Comparator.comparing(ProductCards::starsOf, Comparator.nullsLast(Comparator.reverseOrder()));
-            default -> null;
-        };
     }
 }
