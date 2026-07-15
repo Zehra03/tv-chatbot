@@ -186,7 +186,7 @@ class ReservationControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").value(7))
                 .andExpect(jsonPath("$.reservationNumber").value("PAX-20260714-A1B2C3"))
-                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.status").value("confirmed"))
                 .andExpect(jsonPath("$.totalAmount").value(1500.00));
     }
 
