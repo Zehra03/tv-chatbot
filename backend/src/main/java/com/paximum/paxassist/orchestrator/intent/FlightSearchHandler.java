@@ -69,6 +69,7 @@ public class FlightSearchHandler implements IntentHandler {
         // Post-search budget filter over REAL results (board type does not apply to flights).
         List<Object> rawCards = new ArrayList<>(outcome.results());
         List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.flightMaxPrice());
+        cards = ResultFilters.applyDirectFlight(cards, merged.directFlight());
 
         context.session().setActiveDomain("FLIGHT");
         context.session().setLastApiResultCards(rawCards);
