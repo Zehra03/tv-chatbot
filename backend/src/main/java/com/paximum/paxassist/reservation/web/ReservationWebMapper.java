@@ -31,7 +31,25 @@ public class ReservationWebMapper {
                 preview.leadGuestName(),
                 preview.passengerNames(),
                 preview.hasHotel(),
-                preview.hasFlight());
+                preview.hasFlight(),
+                preview.priceChanged(),
+                preview.previousAmount(),
+                preview.available(),
+                toPreviewHotel(preview.hotel()),
+                toPreviewFlight(preview.flight()));
+    }
+
+    private PreviewResponse.Hotel toPreviewHotel(ReservationPreview.Hotel hotel) {
+        return hotel == null ? null : new PreviewResponse.Hotel(
+                hotel.hotelName(), hotel.region(), hotel.stars(), hotel.boardType(),
+                hotel.checkIn(), hotel.checkOut(), hotel.nights(),
+                hotel.rooms(), hotel.adults(), hotel.children());
+    }
+
+    private PreviewResponse.Flight toPreviewFlight(ReservationPreview.Flight flight) {
+        return flight == null ? null : new PreviewResponse.Flight(
+                flight.origin(), flight.destination(), flight.airline(), flight.tripType(),
+                flight.departTime(), flight.returnDepartTime(), flight.passengerCount());
     }
 
     public ReservationSummaryResponse toSummary(Reservation r) {
@@ -119,7 +137,10 @@ public class ReservationWebMapper {
         if (d == null) {
             return null;
         }
-        return new ReservationDetailResponse.PriceDetail(d.totalSalePrice(), d.penalty(), d.mainServiceFee());
+        return new ReservationDetailResponse.PriceDetail(
+                d.totalSalePrice() == null ? null : d.totalSalePrice().amount(),
+                d.penalty() == null ? null : d.penalty().amount(),
+                d.mainServiceFee() == null ? null : d.mainServiceFee().amount());
     }
 
     private ReservationDetailResponse.Money toMoney(TourVisioPrice p) {

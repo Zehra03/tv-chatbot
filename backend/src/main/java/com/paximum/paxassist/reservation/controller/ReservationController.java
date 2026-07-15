@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.paximum.paxassist.auth.security.UserPrincipal;
 import com.paximum.paxassist.reservation.service.CancelResult;
 import com.paximum.paxassist.reservation.service.ConfirmationResult;
-import com.paximum.paxassist.reservation.service.ReservationPreview;
+import com.paximum.paxassist.reservation.service.PreviewResult;
 import com.paximum.paxassist.reservation.service.ReservationService;
 import com.paximum.paxassist.reservation.service.command.PreviewReservationCommand;
 import com.paximum.paxassist.reservation.web.ReservationWebMapper;
@@ -49,13 +49,28 @@ public class ReservationController {
         this.mapper = mapper;
     }
 
-    /** POST /api/v1/reservations/preview — freeze a summary (no TourVisio, no DB write). */
+    /**
+     * POST /api/v1/reservations/preview — re-price and re-check availability against TourVisio, then
+     * freeze the summary. Still no purchase and no DB write.
+     */
     @PostMapping("/preview")
-    public ResponseEntity<PreviewResponse> preview(
+    public ResponseEntity<?> preview(
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody PreviewReservationCommand command) {
-        ReservationPreview preview = reservationService.previewReservation(command.withUserId(principal.getId()));
-        return ResponseEntity.ok(mapper.toPreviewResponse(preview));
+        PreviewResult result = reservationService.previewReservation(command.withUserId(principal.getId()));
+        return switch (result) {
+            case PreviewResult.Priced p -> ResponseEntity.ok(mapper.toPreviewResponse(p.preview()));
+            // The offer is gone (sold out / expired). The flow stops here with a plain explanation
+            // instead of failing later, mid-transaction, on an opaque provider error.
+            case PreviewResult.Unavailable ignored -> ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(new OutcomeResponse("PRODUCT_UNAVAILABLE",
+                            "Seçtiğiniz ürün artık müsait değil. Lütfen aramanızı yenileyip tekrar seçin."));
+            // Availability could NOT be verified, so nothing was frozen — better than freezing a price
+            // we never checked.
+            case PreviewResult.ProviderUnavailable ignored -> ResponseEntity.status(HttpStatus.BAD_GATEWAY)
+                    .body(new OutcomeResponse("PROVIDER_UNAVAILABLE",
+                            "Rezervasyon sistemine şu anda ulaşılamıyor. Lütfen birazdan tekrar deneyin."));
+        };
     }
 
     /**
@@ -103,46 +118,76 @@ public class ReservationController {
         return toCancelResponse(id, result);
     }
 
-    // --- Result -> HTTP mapping (plain plumbing) -----------------------------------------------------
+    // --- Result -> HTTP mapping ---------------------------------------------------------------------
+    //
+    // Every message below is a fixed, user-facing sentence. The provider's own text and our internal
+    // descriptions ("read timed out", host/port, exception detail) stay in the logs: they mean nothing
+    // to a traveller and they expose how the system is wired. The outcome CODE is what the frontend
+    // branches on; the message is what the user reads.
 
     private ResponseEntity<?> toConfirmResponse(ConfirmationResult result) {
         return switch (result) {
             case ConfirmationResult.Confirmed c -> reservationService.getReservation(c.reservationId())
                     .<ResponseEntity<?>>map(r -> ResponseEntity.status(HttpStatus.CREATED).body(mapper.toSummary(r)))
                     .orElseGet(() -> ResponseEntity.status(HttpStatus.CREATED)
-                            .body(new OutcomeResponse("CONFIRMED", "Reservation " + c.reservationNumber() + " created")));
+                            .body(new OutcomeResponse("CONFIRMED",
+                                    "Rezervasyonunuz alındı. Rezervasyon numaranız: " + c.reservationNumber())));
             case ConfirmationResult.NeedsUserConfirmation n ->
                     ResponseEntity.ok(new NeedsConfirmationResponse(n.confirmationToken(), n.warnings()));
             case ConfirmationResult.PreviewExpired ignored ->
-                    ResponseEntity.status(HttpStatus.GONE).body(new OutcomeResponse("PREVIEW_EXPIRED", "Preview expired, please start again."));
+                    ResponseEntity.status(HttpStatus.GONE).body(new OutcomeResponse("PREVIEW_EXPIRED",
+                            "Önizlemenizin süresi doldu. Lütfen rezervasyonu yeniden başlatın."));
             case ConfirmationResult.OwnershipMismatch ignored ->
-                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(new OutcomeResponse("OWNERSHIP_MISMATCH", "This preview belongs to another user."));
+                    ResponseEntity.status(HttpStatus.FORBIDDEN).body(new OutcomeResponse("OWNERSHIP_MISMATCH",
+                            "Bu önizleme size ait değil."));
             case ConfirmationResult.DuplicateInProgress ignored ->
-                    ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("DUPLICATE_IN_PROGRESS", "This reservation is already being confirmed."));
-            case ConfirmationResult.TourVisioRejected r ->
-                    ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new OutcomeResponse("TOURVISIO_REJECTED", r.message()));
-            case ConfirmationResult.TourVisioUnavailable u ->
-                    ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new OutcomeResponse("TOURVISIO_UNAVAILABLE", u.description()));
-            case ConfirmationResult.CommitOutcomeUnknown u ->
-                    ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("COMMIT_OUTCOME_UNKNOWN", u.description()));
-            case ConfirmationResult.OrphanedBooking o ->
-                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new OutcomeResponse("ORPHANED_BOOKING", o.description()));
+                    ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("DUPLICATE_IN_PROGRESS",
+                            "Bu rezervasyon zaten onaylanıyor. Lütfen tekrar göndermeyin."));
+            case ConfirmationResult.TourVisioRejected ignored ->
+                    ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new OutcomeResponse("TOURVISIO_REJECTED",
+                            "Rezervasyonunuz tamamlanamadı. Rezervasyon yapılmadı; lütfen aramanızı yenileyip tekrar deneyin."));
+            case ConfirmationResult.TourVisioUnavailable ignored ->
+                    ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new OutcomeResponse("TOURVISIO_UNAVAILABLE",
+                            "Rezervasyon sistemine şu anda ulaşılamıyor. Rezervasyon yapılmadı; lütfen birazdan tekrar deneyin."));
+            // 202, not an error: the purchase MAY have gone through. Never tell the user it failed —
+            // that invites a retry and a double booking.
+            case ConfirmationResult.CommitOutcomeUnknown ignored ->
+                    ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("COMMIT_OUTCOME_UNKNOWN",
+                            "Rezervasyonunuz işleniyor ancak sonucu henüz doğrulayamadık. "
+                                    + "Lütfen tekrar göndermeyin; birkaç dakika içinde \"Rezervasyonlarım\" sayfasından kontrol edin."));
+            case ConfirmationResult.OrphanedBooking ignored ->
+                    ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(new OutcomeResponse("ORPHANED_BOOKING",
+                            "Rezervasyonunuz sağlayıcıda oluşturuldu ancak kaydımıza işlenemedi. "
+                                    + "Ekibimiz durumu inceliyor; lütfen tekrar göndermeyin."));
+            // 409: the price moved between preview and confirm. Nothing was purchased — both amounts go
+            // back so the UI can show old vs new and send the user to preview again.
+            case ConfirmationResult.PriceMismatch p ->
+                    ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("PRICE_MISMATCH",
+                            "Ürünün fiyatı değişti (onayladığınız: " + p.declaredAmount() + " " + p.currency()
+                                    + ", güncel: " + p.actualAmount() + " " + p.currency()
+                                    + "). Rezervasyon yapılmadı; lütfen yeniden önizleyin."));
         };
     }
 
     private ResponseEntity<?> toCancelResponse(Long id, CancelResult result) {
         return switch (result) {
-            case CancelResult.Cancelled c ->
-                    ResponseEntity.ok(new OutcomeResponse("CANCELLED", "Reservation " + id + " is now " + c.newStatus()));
+            case CancelResult.Cancelled ignored ->
+                    ResponseEntity.ok(new OutcomeResponse("CANCELLED", "Rezervasyonunuz iptal edildi."));
             case CancelResult.NotFound ignored -> ResponseEntity.notFound().build();
-            case CancelResult.NotCancellable n ->
-                    ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("NOT_CANCELLABLE", n.reason()));
-            case CancelResult.TourVisioRejected r ->
-                    ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new OutcomeResponse("TOURVISIO_REJECTED", r.message()));
-            case CancelResult.TourVisioUnavailable u ->
-                    ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new OutcomeResponse("TOURVISIO_UNAVAILABLE", u.description()));
-            case CancelResult.OutcomeUnknown u ->
-                    ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("CANCEL_OUTCOME_UNKNOWN", u.description()));
+            case CancelResult.NotCancellable ignored ->
+                    ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("NOT_CANCELLABLE",
+                            "Bu rezervasyon iptal edilemiyor."));
+            case CancelResult.TourVisioRejected ignored ->
+                    ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new OutcomeResponse("TOURVISIO_REJECTED",
+                            "İptal talebiniz sağlayıcı tarafından reddedildi. Rezervasyonunuz değişmedi."));
+            case CancelResult.TourVisioUnavailable ignored ->
+                    ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new OutcomeResponse("TOURVISIO_UNAVAILABLE",
+                            "Rezervasyon sistemine şu anda ulaşılamıyor. Rezervasyonunuz değişmedi; lütfen birazdan tekrar deneyin."));
+            // 202: the cancellation MAY have gone through — do not claim it failed.
+            case CancelResult.OutcomeUnknown ignored ->
+                    ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("CANCEL_OUTCOME_UNKNOWN",
+                            "İptal talebiniz alındı ancak sonucu henüz doğrulayamadık. "
+                                    + "Lütfen tekrar göndermeyin; birkaç dakika içinde rezervasyonunuzun durumunu kontrol edin."));
         };
     }
 }

@@ -1,5 +1,6 @@
 package com.paximum.paxassist.reservation.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -16,7 +17,8 @@ public sealed interface ConfirmationResult
                 ConfirmationResult.TourVisioRejected,
                 ConfirmationResult.TourVisioUnavailable,
                 ConfirmationResult.CommitOutcomeUnknown,
-                ConfirmationResult.OrphanedBooking {
+                ConfirmationResult.OrphanedBooking,
+                ConfirmationResult.PriceMismatch {
 
     /** Purchase committed AND persisted. Happy path. */
     record Confirmed(Long reservationId, String reservationNumber, String externalReservationNumber)
@@ -55,4 +57,16 @@ public sealed interface ConfirmationResult
      * TourVisio with no local record. Logged at highest severity + flagged for manual reconciliation.
      */
     record OrphanedBooking(String externalReservationNumber, String description) implements ConfirmationResult {}
+
+    /**
+     * The amount TourVisio priced the transaction at does not match the amount the client declared, so
+     * the flow was aborted <b>before</b> commit — no purchase happened and nothing was persisted.
+     *
+     * <p>Covers both causes with one outcome, because the client's declared amount is not evidence of
+     * either: a genuine price change between search and confirm, and a tampered {@code totalAmount}
+     * aimed at writing a fake price into the DB and "Rezervasyonlarım". Carrying both amounts lets the
+     * UI show old vs new and ask the user to preview again.
+     */
+    record PriceMismatch(BigDecimal declaredAmount, BigDecimal actualAmount, String currency)
+            implements ConfirmationResult {}
 }

@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalDate;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -59,37 +61,151 @@ class ReservationControllerValidationTest {
         verifyNoInteractions(reservationService);
     }
 
-    @Test
-    void preview_hotelRoomsExceedAdults_isRejectedBeforeService() throws Exception {
-        // Otherwise-valid booking, but 4 rooms for 1 adult violates the cross-field rule
-        // (@AssertTrue isRoomsWithinAdults on the Hotel snapshot) — reject before the service.
-        String body = """
+    /** Hotel checkIn carries @FutureOrPresent, so fixture dates are derived from today, never pinned. */
+    private static final LocalDate CHECK_IN = LocalDate.now().plusDays(30);
+
+    /** A hotel booking body: the traveller list and the snapshot's party size are the parts under test. */
+    private String hotelBooking(String travellersJson, int rooms, int adults, int children) {
+        return """
                 {
                   "currency": "EUR",
                   "totalAmount": 100,
                   "leadGuestName": "Ada Lovelace",
-                  "travellers": [
-                    {"firstName": "Ada", "lastName": "Lovelace", "passengerType": "ADULT"}
-                  ],
+                  "travellers": [%s],
                   "hotel": {
                     "hotelName": "Grand Antalya",
-                    "checkIn": "2026-08-01",
-                    "checkOut": "2026-08-05",
-                    "rooms": 4,
-                    "adults": 1,
-                    "children": 0,
+                    "checkIn": "%s",
+                    "checkOut": "%s",
+                    "rooms": %d,
+                    "adults": %d,
+                    "children": %d,
                     "price": 100,
                     "currency": "EUR"
                   }
                 }
-                """;
+                """.formatted(travellersJson, CHECK_IN, CHECK_IN.plusDays(4), rooms, adults, children);
+    }
+
+    private void expectRejectedBeforeService(String body) throws Exception {
         mockMvc.perform(post("/api/v1/reservations/preview")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"));
 
+        // The whole point: TourVisio is never reached, and no preview is burned.
         verifyNoInteractions(reservationService);
+    }
+
+    @Test
+    void preview_hotelRoomsExceedAdults_isRejectedBeforeService() throws Exception {
+        // Otherwise-valid booking, but 4 rooms for 1 adult violates the cross-field rule
+        // (@AssertTrue isRoomsWithinAdults on the Hotel snapshot) — reject before the service.
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Lovelace", "passengerType": "ADULT"}
+                """, 4, 1, 0));
+    }
+
+    @Test
+    void preview_childOnlyBooking_isRejectedBeforeService() throws Exception {
+        // K: "Tek çocukla preview isteği 400 + anlaşılır mesaj döner; TourVisio'ya hiç gidilmez."
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Max", "lastName": "Yılmaz", "passengerType": "CHILD", "age": 7}
+                """, 1, 0, 1));
+    }
+
+    @Test
+    void preview_childAsLeadGuest_isRejectedBeforeService() throws Exception {
+        // Contact details land on the first traveller, so a 7-year-old must not be the lead guest.
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Max", "lastName": "Yılmaz", "passengerType": "CHILD", "age": 7},
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34}
+                """, 1, 1, 1));
+    }
+
+    @Test
+    void preview_ageContradictingPassengerType_isRejectedBeforeService() throws Exception {
+        // A 45-year-old declared CHILD to claim child pricing.
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34},
+                {"firstName": "Max", "lastName": "Yılmaz", "passengerType": "CHILD", "age": 45}
+                """, 1, 1, 1));
+    }
+
+    @Test
+    void preview_moreTravellersThanTheProductWasPricedFor_isRejectedBeforeService() throws Exception {
+        // K: "API'den 5 yolcu gönderilirse 400" — the hotel here was priced for 2 people.
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "A", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34},
+                {"firstName": "B", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34},
+                {"firstName": "C", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34},
+                {"firstName": "D", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34},
+                {"firstName": "E", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34}
+                """, 1, 2, 0));
+    }
+
+    @Test
+    void preview_leadGuestWithoutContactDetails_isRejectedBeforeService() throws Exception {
+        // Required-field check: no e-mail / no phone on the lead guest -> the booking cannot proceed.
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34}
+                """, 1, 1, 0));
+    }
+
+    @Test
+    void preview_leadGuestWithoutAPhone_isRejectedBeforeService() throws Exception {
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34,
+                 "email": "ada@example.com"}
+                """, 1, 1, 0));
+    }
+
+    @Test
+    void preview_travellerWithoutAName_isRejectedBeforeService() throws Exception {
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "", "lastName": "", "passengerType": "ADULT", "age": 34,
+                 "email": "ada@example.com", "phone": "+905551112233"}
+                """, 1, 1, 0));
+    }
+
+    @Test
+    void preview_invalidTravellerEmail_isRejectedBeforeService() throws Exception {
+        expectRejectedBeforeService(hotelBooking(
+                """
+                {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34,
+                 "email": "not-an-email"}
+                """, 1, 1, 0));
+    }
+
+    @Test
+    void preview_pastCheckIn_isRejectedBeforeService() throws Exception {
+        String body = """
+                {
+                  "currency": "EUR",
+                  "totalAmount": 100,
+                  "leadGuestName": "Ada Lovelace",
+                  "travellers": [
+                    {"firstName": "Ada", "lastName": "Yılmaz", "passengerType": "ADULT", "age": 34}
+                  ],
+                  "hotel": {
+                    "hotelName": "Grand Antalya",
+                    "checkIn": "%s",
+                    "checkOut": "%s",
+                    "rooms": 1, "adults": 1, "children": 0,
+                    "price": 100, "currency": "EUR"
+                  }
+                }
+                """.formatted(LocalDate.now().minusDays(1), LocalDate.now().plusDays(3));
+
+        expectRejectedBeforeService(body);
     }
 
     @Test
