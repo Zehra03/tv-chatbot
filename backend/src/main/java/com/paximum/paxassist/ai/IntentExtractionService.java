@@ -154,6 +154,7 @@ public class IntentExtractionService {
         - Map typos to the nearest real city/phrase ("iştanbuıl" → İstanbul, "sanalya" → Antalya).
         - When the user asks for a specific number of items to list (e.g. "ilk 3", "en ucuz 5 otel", "5 tanesini listele"), put this number in the "limit" field.
         - When the user specifies a star rating range (e.g. "3-4 yıldızlı", "3 ve 4 yıldız arası"), specify both "stars" (minimum) and "maxStars" (maximum). E.g., "stars": 3, "maxStars": 4.
+        - When the user asks for an EXACT star rating without a range (e.g. "3 yıldızlı oteller", "5 yıldızlı"), specify BOTH "stars" and "maxStars" to that same number to enforce an exact match. E.g., "stars": 3, "maxStars": 3. If they say "en az 3 yıldız" or "3 yıldız ve üstü", only set "stars": 3.
         - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
         </rules>
 
@@ -230,6 +231,9 @@ public class IntentExtractionService {
 
         Mesaj: "4 yıldız ve üstünü listele"
         Çıktı: {"intent":"FILTER","criteria":{"stars":4}}
+
+        Mesaj: "3 yıldızlı otelleri göster"
+        Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":3}}
 
         Mesaj: "3 ve 4 yıldızlı olanları getir"
         Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":4}}
