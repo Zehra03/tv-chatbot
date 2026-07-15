@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
+import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.hotel.HotelProduct;
 
 /**
@@ -68,6 +69,29 @@ final class ResultFilters {
                     boolean minOk = minStars == null || stars >= minStars;
                     boolean maxOk = maxStars == null || stars <= maxStars;
                     return minOk && maxOk;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Keep flight cards that match the direct/layover preference.
+     * Hotels are unaffected.
+     */
+    static List<Object> applyDirectFlight(List<Object> cards, Boolean directFlight) {
+        if (directFlight == null || cards == null || cards.isEmpty()) {
+            return cards;
+        }
+
+        return cards.stream()
+                .filter(c -> {
+                    if (!(c instanceof FlightProduct f)) {
+                        return true; // only filter flights
+                    }
+                    if (directFlight) {
+                        return f.getStops() == 0;
+                    } else {
+                        return f.getStops() > 0;
+                    }
                 })
                 .collect(Collectors.toList());
     }
