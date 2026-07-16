@@ -1,9 +1,6 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.math.BigDecimal;
-import java.time.Clock;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -119,6 +116,37 @@ class HotelSearchHandlerTest {
         assertThat(result.cards()).isEmpty();
         assertThat(result.reply()).contains("geçmiş");
         org.mockito.Mockito.verifyNoInteractions(hotelSearchService);
+    }
+
+    @Test
+    void childrenWithoutAgesAsksForAgesBeforeSearch() {
+        // "2 yetişkin 1 çocuk" with no ages must NOT search (which would price as childless) —
+        // it must ask for the child ages instead. (P0 misleading-price bug.)
+        SlotCriteria merged = slots(Map.of(
+                "location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05",
+                "adults", 2, "children", 1));
+        OrchestrationContext context = contextWith(merged);
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        assertThat(result.reply()).contains("yaş");
+        org.mockito.Mockito.verifyNoInteractions(hotelSearchService);
+    }
+
+    @Test
+    void childrenWithAgesProceedsToSearch() {
+        SlotCriteria merged = slots(Map.of(
+                "location", "Antalya", "checkIn", "2026-08-01", "checkOut", "2026-08-05",
+                "adults", 2, "children", 1, "childAges", List.of(5)));
+        OrchestrationContext context = contextWith(merged);
+        HotelProduct h1 = new HotelProduct("H1", "Rixos", "Antalya", 5, new BigDecimal("1500"), "EUR", "AI", true);
+        when(hotelSearchService.searchHotels(any()))
+                .thenReturn(HotelSearchResponse.success(List.of(h1)));
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).containsExactly(h1);
     }
 
     @Test

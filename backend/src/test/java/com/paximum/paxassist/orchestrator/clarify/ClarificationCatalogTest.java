@@ -23,6 +23,12 @@ class ClarificationCatalogTest {
     }
 
     @Test
+    void asksForChildAgesWhenMissing() {
+        String question = catalog.questionForHotel(List.of("childAges"));
+        assertThat(question).contains("yaş");
+    }
+
+    @Test
     void fallsBackWhenNoMissingFields() {
         assertThat(catalog.questionForHotel(List.of())).isNotBlank();
         assertThat(catalog.questionForFlight(null)).isNotBlank();
