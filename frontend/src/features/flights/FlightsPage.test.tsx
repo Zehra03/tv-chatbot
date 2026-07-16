@@ -124,9 +124,11 @@ describe('FlightsPage (MSW ile)', () => {
     await user.click(await screen.findByRole('option', { name: 'Fiyat (artan)' }))
     await user.click(screen.getAllByRole('button', { name: /seç/i })[0])
     expect(await screen.findByText('REZERVASYON FORMU STUB')).toBeTruthy()
+    // Taslak, arama-satırı id'sini (flt-mock-002) değil TourVisio teklif jetonunu taşımalı —
+    // booking `id` ile yapılırsa "offer no longer bookable" hatası verir (bkz. buildFlightDraft).
     expect(store.getState().reservationDraft.draft).toMatchObject({
       productType: 'flight',
-      offerId: 'flt-mock-002',
+      offerId: 'offer-mock-002',
     })
   })
 

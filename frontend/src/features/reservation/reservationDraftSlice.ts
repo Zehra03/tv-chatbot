@@ -12,7 +12,8 @@ export type { ProductType }
  * Bu alanlar üründe DEĞİL arama kriterinde yaşadığından "Seç" anında kriterden doldurulur
  * (docs/frontend-architecture.md §9). Sayfalar arası devir sözleşmesidir.
  *
- * `offerId` = TourVisio teklif jetonu (otel: HotelProduct.offerId; uçuş: FlightProduct.id).
+ * `offerId` = TourVisio teklif jetonu (otel: HotelProduct.offerId; uçuş: FlightProduct.offerId —
+ * arama-satırı id'si DEĞİL; `id` ile booking "offer no longer bookable" verir, bkz. buildFlightDraft).
  * `title`/`summary`/`price`/`currency` yalnız ekran gösterimi içindir.
  */
 export interface HotelReservationDraft {
