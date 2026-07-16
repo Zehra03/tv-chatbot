@@ -13,6 +13,8 @@ import org.springframework.data.redis.core.ValueOperations;
 
 import com.paximum.paxassist.guard.config.GuardProperties;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -35,12 +37,19 @@ class OutOfScopeGuardTest {
     @Mock
     private ValueOperations<String, String> valueOps;
 
+    private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+
     private static GuardProperties props(boolean enabled, boolean failOpen) {
         return new GuardProperties(new GuardProperties.OutOfScope(enabled, 5, 1800, 900, failOpen), null);
     }
 
     private OutOfScopeGuard guard(boolean enabled, boolean failOpen) {
-        return new OutOfScopeGuard(redis, props(enabled, failOpen));
+        return new OutOfScopeGuard(redis, props(enabled, failOpen), meterRegistry);
+    }
+
+    private double failOpenCount() {
+        return meterRegistry.find("guard.fail_open").counters().stream()
+                .mapToDouble(c -> c.count()).sum();
     }
 
     @Test
@@ -113,15 +122,19 @@ class OutOfScopeGuardTest {
         // Fails open: neither throws nor blocks the user.
         assertThatCode(() -> guard.registerOutOfScope(USER, true)).doesNotThrowAnyException();
         verify(valueOps, never()).set(any(), any(), any());
+        // ...and the unenforced turn is counted, so the outage is visible beyond the log.
+        assertThat(failOpenCount()).isEqualTo(1.0);
     }
 
     @Test
-    void redisOutage_propagates_whenFailOpenFalse() {
+    void redisOutage_propagates_whenFailOpenFalse_andCountsNothing() {
         OutOfScopeGuard guard = guard(true, false);
         when(redis.hasKey(BLOCK_KEY)).thenThrow(new RedisConnectionFailureException("down"));
 
         assertThatThrownBy(() -> guard.assertNotBlocked(USER))
                 .isInstanceOf(RedisConnectionFailureException.class);
+        // Nothing was let through, so nothing to count.
+        assertThat(failOpenCount()).isZero();
     }
 
     @Test
