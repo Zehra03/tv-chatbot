@@ -41,6 +41,9 @@ public class FilterHandler implements IntentHandler {
             context.session().getAccumulatedCriteria().remove("hotelMaxPrice");
             context.session().getAccumulatedCriteria().remove("flightMaxPrice");
             context.session().getAccumulatedCriteria().remove("directFlight");
+            context.session().getAccumulatedCriteria().remove("airline");
+            context.session().getAccumulatedCriteria().remove("minDepartureTime");
+            context.session().getAccumulatedCriteria().remove("maxDepartureTime");
             
             context.session().setLastResultCards(new ArrayList<>(current));
             return OrchestrationResult.cards("Filtreler temizlendi. Tüm sonuçlar listeleniyor:", current);
@@ -62,6 +65,8 @@ public class FilterHandler implements IntentHandler {
         filtered = ResultFilters.applyFeatures(filtered, context.criteria().features());
         filtered = ResultFilters.applyStars(filtered, context.criteria().stars(), context.criteria().maxStars());
         filtered = ResultFilters.applyDirectFlight(filtered, context.criteria().directFlight());
+        filtered = ResultFilters.applyAirline(filtered, context.criteria().airline());
+        filtered = ResultFilters.applyDepartureTime(filtered, context.criteria().minDepartureTime(), context.criteria().maxDepartureTime());
 
         if (filtered.isEmpty()) {
             return OrchestrationResult.message("Mevcut sonuçlar arasında bu kriterlere uygun sonuç bulamadım.");
