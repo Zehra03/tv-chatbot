@@ -23,6 +23,13 @@ type Intent = 'hotel' | 'flight'
 
 interface SessionState {
   id: string
+  /**
+   * Oturumu sahiplendiren kimlik — gerçek backend'in ChatCaller modelinin karşılığı
+   * ("user:<id>" | "guest:<id>" | "anon"). Liste/yükle/sil YALNIZCA bu sahiple eşleşen
+   * çağrana açıktır: bir hesabın geçmişi, çıkış yapıp misafir/başka hesap olan çağrana
+   * ASLA sızmaz (backend V5 user_id XOR guest_token kapsaması paritesi).
+   */
+  owner: string
   title?: string
   messages: ChatMessage[]
   intent?: Intent
@@ -34,6 +41,13 @@ interface SessionState {
 }
 
 const sessions = new Map<string, SessionState>()
+
+/**
+ * Tohum oturumlarının başlangıç sahibi — hiçbir çalışma-zamanı kimliğiyle eşleşmez, bu yüzden
+ * hiç kimseye görünmez. Bir ÜYE giriş yapınca claimSeedSessions ile o üyeye devredilir
+ * (demo geçmişi); misafir asla görmez → "üyenin geçmişi misafire sızıyor" hatası tekrar etmez.
+ */
+const SEED_OWNER = 'seed'
 
 /** Türkçe'yi ASCII'ye indirger (İ/ı/ş/ğ/ü/ö/ç) — eşleştirmeyi sağlamlaştırır. */
 export function norm(s: string): string {
@@ -198,11 +212,16 @@ function makeMessage(role: ChatRole, content: string, cards?: ResultCard[]): Cha
 export function processMessage(
   sessionId: string | undefined,
   message: string,
+  owner: string,
 ): SendMessageResponse {
   let s = sessionId ? sessions.get(sessionId) : undefined
+  // Başka bir kimliğin oturumu id ile verilse bile DEVRALINMAZ — yeni oturum açılır
+  // (gerçek backend getOrCreate ownership kontrolü paritesi).
+  if (s && s.owner !== owner) s = undefined
   if (!s) {
     s = {
       id: crypto.randomUUID(),
+      owner,
       messages: [],
       hotel: {},
       flight: {},
@@ -267,9 +286,10 @@ export function processMessage(
   return { sessionId: s.id, reply, accumulatedCriteria: criteria }
 }
 
-export function getSessionState(sessionId: string): ChatSession | undefined {
+export function getSessionState(sessionId: string, owner: string): ChatSession | undefined {
   const s = sessions.get(sessionId)
-  if (!s) return undefined
+  // Sahip eşleşmezse "bulunamadı" gibi davran — başka kimliğin oturumu okunamaz (IDOR yok).
+  if (!s || s.owner !== owner) return undefined
   return {
     id: s.id,
     title: s.title,
@@ -279,13 +299,16 @@ export function getSessionState(sessionId: string): ChatSession | undefined {
   }
 }
 
-export function deleteSessionState(sessionId: string): boolean {
+export function deleteSessionState(sessionId: string, owner: string): boolean {
+  const s = sessions.get(sessionId)
+  if (!s || s.owner !== owner) return false
   return sessions.delete(sessionId)
 }
 
-/** Geçmiş paneli için oturum özetleri — en son güncellenen üstte. */
-export function listSessionStates(): ChatSessionSummary[] {
+/** Geçmiş paneli için oturum özetleri — YALNIZCA çağranın sahip olduğu oturumlar, en son güncellenen üstte. */
+export function listSessionStates(owner: string): ChatSessionSummary[] {
   return [...sessions.values()]
+    .filter((s) => s.owner === owner)
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
     .map((s) => ({
       id: s.id,
@@ -293,6 +316,17 @@ export function listSessionStates(): ChatSessionSummary[] {
       updatedAt: s.updatedAt,
       messageCount: s.messages.length,
     }))
+}
+
+/**
+ * Tohum (demo) oturumlarını giriş yapan üyeye devreder — üye demo geçmişini görür,
+ * misafir görmez. Login/register handler'ından çağrılır (gerçek backend'de üye giriş
+ * yapınca kendi user_id'li oturumlarını görmesinin mock karşılığı).
+ */
+export function claimSeedSessions(owner: string): void {
+  for (const s of sessions.values()) {
+    if (s.owner === SEED_OWNER) s.owner = owner
+  }
 }
 
 /**
@@ -306,6 +340,7 @@ function seedSession(state: SessionState): void {
 
 seedSession({
   id: 'seed-session-hotel',
+  owner: SEED_OWNER,
   title: 'Kapadokya balayı oteli',
   intent: 'hotel',
   hotel: { destination: 'Kapadokya', checkIn: '2026-07-10', checkOut: '2026-07-14', adults: 2 },
@@ -332,6 +367,7 @@ seedSession({
 
 seedSession({
   id: 'seed-session-flight',
+  owner: SEED_OWNER,
   title: 'İstanbul - Roma uçuşu',
   intent: 'flight',
   hotel: {},

@@ -178,8 +178,14 @@
     overflow: hidden;
     pointer-events: none;
     border-radius: inherit;
-    -webkit-backdrop-filter: url(#pax-liquid-glass);
-    backdrop-filter: url(#pax-liquid-glass);
+    /* SVG yer-değiştirme filtresi (#pax-liquid-glass) backdrop-filter olarak
+       Chromium'da özellikle çok örnekli/kaydırmalı bağlamlarda bozuk piksel
+       (garbage rasterize) bırakıyordu — sonuç panelindeki Seç düğmeleri gibi.
+       Panel-içi düzeltme dikişi çözdü; artefakt uygulama genelinde de riskli
+       olduğundan sıvı-cam bükümünü tamamen kapattık. Düğmeler cam görünümünü
+       KORUR: kenar ışığı/kalınlık .btn-liquid-shadow'dan gelir, yalnız bozan
+       kırılım katmanı düşer (CSS'in zaten öngördüğü "bükümsüz düz cam" düşüşü).
+       Geri istenirse iki satırı geri açmak yeterli. */
   }
 
   .auth-panel-anim {

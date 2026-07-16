@@ -1,6 +1,7 @@
-import { createSlice, type PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import type { FlightSnapshotInput, HotelSnapshotInput } from '@/api'
 import type { ProductType } from '@/types'
+import { guestSessionStarted, logout, sessionStarted } from '@/features/auth/authSlice'
 
 export type { ProductType }
 
@@ -55,6 +56,11 @@ const reservationDraftSlice = createSlice({
     clearDraft(state) {
       state.draft = null
     },
+  },
+  /** Kimlik sınırında taslağı düşür: bir hesabın seçtiği ürün, çıkış/misafir/giriş
+   * sonrası bir sonraki kimliğe taşınmasın (chatSlice ile aynı gerekçe). */
+  extraReducers: (builder) => {
+    builder.addMatcher(isAnyOf(logout, sessionStarted, guestSessionStarted), () => initialState)
   },
 })
 
