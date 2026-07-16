@@ -28,7 +28,7 @@ public class FilterHandler implements IntentHandler {
         List<Object> current = context.session().getLastApiResultCards();
         if (current == null || current.isEmpty()) {
             return OrchestrationResult.message(
-                    "Önce bir otel veya uçuş araması yapmalıyız. Ne aramak istersiniz?");
+                    "Önce bir otel veya uçuş araması yapmalıyız. Ne aramak istersin?");
         }
 
         if (context.intent() == IntentType.CLEAR_FILTER) {
@@ -43,6 +43,9 @@ public class FilterHandler implements IntentHandler {
             context.session().getAccumulatedCriteria().remove("directFlight");
             context.session().getAccumulatedCriteria().remove("departTimeRange");
 
+            // The unfiltered list is the outbound choices, so showing it again also means the user is
+            // back to choosing an outbound rather than a return.
+            context.session().setPendingOutboundLegId(null);
             context.session().setLastResultCards(new ArrayList<>(current));
             return OrchestrationResult.cards("Filtreler temizlendi. Tüm sonuçlar listeleniyor:", current);
         }

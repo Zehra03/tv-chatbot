@@ -55,11 +55,9 @@ public class HotelSearchHandler implements IntentHandler {
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
-        if (!"HOTEL".equals(context.session().getActiveDomain())) {
-            if (context.session().getAccumulatedCriteria() != null) {
-                context.session().getAccumulatedCriteria().clear();
-            }
-            context.session().setActiveDomain("HOTEL");
+        boolean switchedDomain = !"HOTEL".equals(context.session().getActiveDomain());
+        if (switchedDomain) {
+            context.session().switchDomain("HOTEL");
         }
         
         SlotCriteria unnormalizedMerged = slotFilling.peekMerge(context.session(), context.criteria());
@@ -72,6 +70,7 @@ public class HotelSearchHandler implements IntentHandler {
         }
 
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
+        String carriedOver = TravellerCarryOver.note(switchedDomain, context.criteria(), merged);
 
         // Child ages are mandatory once children are present: the hotel request models each child
         // by age (there is no separate child COUNT field), so a missing/short age list would be
@@ -79,19 +78,21 @@ public class HotelSearchHandler implements IntentHandler {
         // Spec §3.2 forbids, so ask for the ages here instead of running the search.
         if (merged.children() != null && merged.children() > 0
                 && (merged.childAges() == null || merged.childAges().size() < merged.children())) {
-            return OrchestrationResult.clarify(clarifications.questionForHotel(List.of("childAges")), "hotel");
+            return OrchestrationResult.clarify(
+                    clarifications.questionForHotel(List.of("childAges")) + carriedOver, "hotel");
         }
 
         HotelSearchRequest request = mapper.toRequest(merged);
         HotelSearchResponse response = hotelSearchService.searchHotels(request);
 
         if ("INCOMPLETE".equals(response.status())) {
-            return OrchestrationResult.clarify(clarifications.questionForHotel(response.missingParameters()), "hotel");
+            return OrchestrationResult.clarify(
+                    clarifications.questionForHotel(response.missingParameters()) + carriedOver, "hotel");
         }
         
         if ("INVALID_LOCATION".equals(response.status())) {
             context.session().getAccumulatedCriteria().remove("location");
-            return OrchestrationResult.clarify("Girdiğiniz şehir/bölge (" + response.results() + ") sistemimizde bulunamadı. Lütfen geçerli bir lokasyon giriniz.", "hotel");
+            return OrchestrationResult.clarify("Girdiğin şehir/bölge (" + response.results() + ") sistemimizde bulunamadı. Lütfen geçerli bir lokasyon gir.", "hotel");
         }
 
         // Post-search, in-memory filters over REAL results (no fabrication): budget, board type,
@@ -109,7 +110,8 @@ public class HotelSearchHandler implements IntentHandler {
         context.session().setLastApiResultCards(rawCards);
         context.session().setLastResultCards(cards);
 
-        return OrchestrationResult.cards(hotelReply(cards, rawCards, beforeFeatureFilter, merged), cards);
+        return OrchestrationResult.cards(
+                hotelReply(cards, rawCards, beforeFeatureFilter, merged) + carriedOver, cards);
     }
 
     private String hotelReply(List<Object> cards, List<Object> rawCards,
@@ -118,21 +120,21 @@ public class HotelSearchHandler implements IntentHandler {
 
         if (!cards.isEmpty()) {
             String suffix = featureLabels.isBlank() ? "" : " (" + featureLabels + ")";
-            return "Aramanıza uygun " + cards.size() + " otel buldum" + suffix + ":";
+            return "Aramana uygun " + cards.size() + " otel buldum" + suffix + ":";
         }
         // The feature filter emptied a non-empty list → name the unmet feature honestly rather than
         // blaming the date/city. (Only when the list had hotels before feature filtering.)
         if (!featureLabels.isBlank() && !beforeFeatureFilter.isEmpty()) {
             return featureLabels + " olarak işaretli otel bulamadım. Bu özellik için uygun sonuç "
-                    + "çıkmadı; kriteri kaldırmayı ya da farklı bir bölge/tarih denemeyi ister misiniz?";
+                    + "çıkmadı; kriteri kaldırmayı ya da farklı bir bölge/tarih denemeyi ister misin?";
         }
         // Everything was filtered out by budget while the search itself had results → say so honestly.
         if (!rawCards.isEmpty() && merged.hotelMaxPrice() != null) {
             String currency = merged.currency() != null ? merged.currency() : "TL";
             return merged.hotelMaxPrice() + " " + currency
-                    + " altında uygun otel bulamadım. Bütçeyi biraz artırmayı deneyebilir misiniz?";
+                    + " altında uygun otel bulamadım. Bütçeyi biraz artırmayı deneyebilir misin?";
         }
-        return "Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?";
+        return "Aradığın kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misin?";
     }
 
     private List<Object> toCards(Object results) {

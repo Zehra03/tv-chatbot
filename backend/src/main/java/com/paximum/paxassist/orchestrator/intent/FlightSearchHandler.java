@@ -52,11 +52,9 @@ public class FlightSearchHandler implements IntentHandler {
 
     @Override
     public OrchestrationResult handle(OrchestrationContext context) {
-        if (!"FLIGHT".equals(context.session().getActiveDomain())) {
-            if (context.session().getAccumulatedCriteria() != null) {
-                context.session().getAccumulatedCriteria().clear();
-            }
-            context.session().setActiveDomain("FLIGHT");
+        boolean switchedDomain = !"FLIGHT".equals(context.session().getActiveDomain());
+        if (switchedDomain) {
+            context.session().switchDomain("FLIGHT");
         }
         
         SlotCriteria unnormalizedMerged = slotFilling.peekMerge(context.session(), context.criteria());
@@ -74,8 +72,11 @@ public class FlightSearchHandler implements IntentHandler {
         FlightSearchCriteria criteria = mapper.toCriteria(merged);
         FlightSearchOutcome outcome = flightSearchService.search(criteria);
 
+        String carriedOver = TravellerCarryOver.note(switchedDomain, context.criteria(), merged);
+
         if (!outcome.complete()) {
-            return OrchestrationResult.clarify(clarifications.questionForFlight(outcome.missingFields()), "flight");
+            return OrchestrationResult.clarify(
+                    clarifications.questionForFlight(outcome.missingFields()) + carriedOver, "flight");
         }
 
         // Post-search budget filter over REAL results (board type does not apply to
@@ -86,22 +87,40 @@ public class FlightSearchHandler implements IntentHandler {
         cards = ResultFilters.applyDepartTimeRange(cards, merged.departTimeRange());
         cards = ResultFilters.applySort(cards, merged.sortBy());
 
+        // A round-trip search yields every outbound+return combination the provider allows. Showing
+        // them all would list the same outbound once per return, so the user picks the outbound
+        // first and the returns for it are offered next (see SelectHandler).
+        boolean roundTrip = cards.stream().anyMatch(RoundTripOptions::isRoundTrip);
+        List<Object> combinations = roundTrip ? cards : List.of();
+        if (roundTrip) {
+            cards = RoundTripOptions.outboundChoices(cards);
+            rawCards = new ArrayList<>(cards);
+        }
+
         context.session().setActiveDomain("FLIGHT");
+        context.session().setRoundTripOptions(new ArrayList<>(combinations));
+        context.session().setPendingOutboundLegId(null);
         context.session().setLastApiResultCards(rawCards);
         context.session().setLastResultCards(cards);
 
-        return OrchestrationResult.cards(flightReply(cards, rawCards, merged), cards);
+        return OrchestrationResult.cards(flightReply(cards, rawCards, merged, roundTrip) + carriedOver, cards);
     }
 
-    private String flightReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged) {
+    private String flightReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged, boolean roundTrip) {
+        if (!cards.isEmpty() && roundTrip) {
+            // Say the price covers both legs: the same number next to a single outbound would
+            // otherwise read as the price of that flight alone.
+            return "Aramana uygun " + cards.size() + " gidiş uçuşu buldum (fiyatlar gidiş-dönüş "
+                    + "toplamı). Önce gidişini seç:";
+        }
         if (!cards.isEmpty()) {
-            return "Aramanıza uygun " + cards.size() + " uçuş buldum:";
+            return "Aramana uygun " + cards.size() + " uçuş buldum:";
         }
         if (!rawCards.isEmpty() && merged.flightMaxPrice() != null) {
             String currency = merged.currency() != null ? merged.currency() : "TL";
             return merged.flightMaxPrice() + " " + currency
-                    + " altında uygun uçuş bulamadım. Bütçeyi biraz artırmayı deneyebilir misiniz?";
+                    + " altında uygun uçuş bulamadım. Bütçeyi biraz artırmayı deneyebilir misin?";
         }
-        return "Aradığınız kriterlere uygun uçuş bulamadım. Farklı bir tarih veya güzergah deneyebilir misiniz?";
+        return "Aradığın kriterlere uygun uçuş bulamadım. Farklı bir tarih veya güzergah deneyebilir misin?";
     }
 }

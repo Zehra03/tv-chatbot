@@ -71,10 +71,14 @@ public class ChatOrchestrationService {
         // 2b. Track consecutive out-of-scope (OTHER) turns. Crossing the threshold blocks the user
         //     temporarily; this turn already returns the block message (later turns are stopped at
         //     step 1). A real search resets the streak.
-        try {
-            guard.registerOutOfScope(userId, extraction.intent() == IntentType.OTHER);
-        } catch (GuardBlockedException e) {
-            return blockedOutcome(session, userMessage, e);
+        //     A greeting is neither: it must not extend the streak, but it must not reset it either,
+        //     otherwise slipping a "merhaba" between out-of-scope messages would defeat the block.
+        if (extraction.intent() != IntentType.GREETING) {
+            try {
+                guard.registerOutOfScope(userId, extraction.intent() == IntentType.OTHER);
+            } catch (GuardBlockedException e) {
+                return blockedOutcome(session, userMessage, e);
+            }
         }
 
         // 3. Route to the intent-specific handler (Strategy).

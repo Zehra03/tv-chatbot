@@ -31,6 +31,8 @@ export interface HotelReservationDraft {
 export interface FlightReservationDraft {
   productType: 'flight'
   offerId: string
+  /** Gidiş-dönüşte dönüş bacağının jetonu; tek yönde null. Rezervasyon ikisini birden gönderir. */
+  returnOfferId?: string | null
   title: string
   summary: string
   price: number

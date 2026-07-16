@@ -39,10 +39,8 @@ public class HotelSearchServiceImpl implements HotelSearchService {
     @Override
     @Cacheable(
         value = "hotelSearch",
-        // Null-safe: @Cacheable evaluates the key BEFORE the method runs, so a null destination
-        // (user hasn't named a city yet) must not NPE here — otherwise the module's own
-        // missing-parameter check below can never run. INCOMPLETE results are not cached anyway.
-        key = "(#request.destination() != null ? #request.destination().toLowerCase() : 'null') + '_' + #request.checkIn() + '_' + #request.night() + '_' + #request.adult() + '_' + (#request.currency() != null ? #request.currency().toUpperCase() : 'null')",
+        // The key covers every field TourVisio prices on — see HotelSearchRequest#cacheKey().
+        key = "#request.cacheKey()",
         unless = "#result.status() == 'INCOMPLETE'"
     )
     public HotelSearchResponse searchHotels(HotelSearchRequest request) {

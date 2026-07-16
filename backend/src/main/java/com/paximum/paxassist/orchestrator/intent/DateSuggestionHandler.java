@@ -62,7 +62,7 @@ public class DateSuggestionHandler implements IntentHandler {
         // No destination yet → nothing to probe. Nudge instead of guessing (keeps us honest).
         if (merged.location() == null || merged.location().isBlank()) {
             return OrchestrationResult.message(
-                    "Hangi şehir için uygun tarih önereyim? Önce nereye gitmek istediğinizi söyleyin.");
+                    "Hangi şehir için uygun tarih önereyim? Önce nereye gitmek istediğini söyle.");
         }
 
         HotelSearchRequest base = mapper.toRequest(merged);
@@ -74,11 +74,11 @@ public class DateSuggestionHandler implements IntentHandler {
         if (dates.isEmpty()) {
             return OrchestrationResult.message(
                     merged.location() + " için yakın tarihlerde müsaitlik bulamadım. "
-                            + "Farklı bir şehir ya da daha ileri bir tarih deneyebilir misiniz?");
+                            + "Farklı bir şehir ya da daha ileri bir tarih deneyebilir misin?");
         }
 
         return OrchestrationResult.message(
                 "Şu giriş tarihlerinde müsaitlik var: " + String.join(", ", dates) + ". "
-                        + "İstediğiniz tarihi yazın, o tarih için otelleri getireyim.");
+                        + "İstediğin tarihi yaz, o tarih için otelleri getireyim.");
     }
 }

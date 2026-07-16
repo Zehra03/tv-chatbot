@@ -44,6 +44,12 @@ export interface FlightProduct {
    * verir.
    */
   offerId: string
+  /**
+   * round_trip iken dolu: dönüş bacağının TourVisio teklif jetonu. TourVisio gidiş ve dönüşü ayrı
+   * fiyatlar ve ayrı jetonlarla döner, bu yüzden gidiş-dönüş rezervasyonu İKİ jetonla yapılır —
+   * tek başına `offerId` göndermek tek yön bilet alır.
+   */
+  returnOfferId?: string | null
   airline: string
   origin: string
   destination: string
@@ -56,6 +62,9 @@ export interface FlightProduct {
   /** round_trip iken dolu; one_way'de null. */
   returnDepartTime?: IsoDateTime | null
   returnArriveTime?: IsoDateTime | null
+  /** Dönüş bacağının havayolu ve aktarma sayısı; one_way'de null/0. */
+  returnAirline?: string | null
+  returnStops?: number
   /** Aktarma sayısı (0 = direkt). DB: stops smallint. */
   stops: number
   /** DB: baggage varchar(50) — serbest metin (ör. "20kg"), boolean DEĞİL. */

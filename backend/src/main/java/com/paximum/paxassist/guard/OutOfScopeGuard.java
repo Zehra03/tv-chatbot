@@ -9,6 +9,8 @@ import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.guard.config.GuardProperties;
 
+import io.micrometer.core.instrument.MeterRegistry;
+
 /**
  * Stateful guard rule: temporarily blocks a user who sends too many <b>consecutive</b> out-of-scope
  * (OTHER intent) messages. Unlike {@link GuardRuleService} (stateless regex on a single message),
@@ -28,8 +30,10 @@ import com.paximum.paxassist.guard.config.GuardProperties;
  * </ul>
  *
  * <p><b>Fail-open</b>: mirrors the rate limiter — a Redis outage never blocks a legitimate user
- * (when {@code failOpen} is true it logs and lets the request through, counting nothing). A
- * {@link GuardBlockedException} is a real block decision, so it is always re-thrown, never swallowed.
+ * (when {@code failOpen} is true it logs and lets the request through, counting nothing) and
+ * increments the {@code guard.fail_open} counter, so an outage that leaves the guard unenforced is
+ * visible in metrics rather than only in the logs. A {@link GuardBlockedException} is a real block
+ * decision, so it is always re-thrown, never swallowed.
  */
 @Component
 public class OutOfScopeGuard {
@@ -40,15 +44,17 @@ public class OutOfScopeGuard {
     private static final String BLOCK_KEY_PREFIX = "guard:oos:block:";
 
     static final String BLOCK_MESSAGE =
-            "Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.";
+            "Çok fazla konu dışı istek gönderdin. Lütfen bir süre sonra tekrar dene.";
     private static final String BLOCK_REASON = "Out-of-scope abuse: user temporarily blocked";
 
     private final StringRedisTemplate redis;
     private final GuardProperties.OutOfScope config;
+    private final MeterRegistry meterRegistry;
 
-    public OutOfScopeGuard(StringRedisTemplate redis, GuardProperties properties) {
+    public OutOfScopeGuard(StringRedisTemplate redis, GuardProperties properties, MeterRegistry meterRegistry) {
         this.redis = redis;
         this.config = properties.outOfScope();
+        this.meterRegistry = meterRegistry;
     }
 
     /** Rejects a user currently under a temporary block, before any downstream (LLM) call is made. */
@@ -106,6 +112,8 @@ public class OutOfScopeGuard {
     private void failOpen(String op, RuntimeException e) {
         if (config.failOpen()) {
             log.warn("OutOfScopeGuard {} failed; failing open: {}", op, e.getMessage());
+            // Tag with the operation (a fixed set of two) so cardinality stays bounded.
+            meterRegistry.counter("guard.fail_open", "operation", op).increment();
             return;
         }
         throw e;

@@ -1,0 +1,2769 @@
+{
+  "body": {
+    "searchId": "2ad79664-f3aa-4cd1-902b-42a22597fb03",
+    "expiresOn": "2021-05-25T10:03:42.435462Z",
+    "flights": [
+      {
+        "provider": 13,
+        "id": "it:1:e:kp3nx9qg:flightuVrmQItCP5:cgw",
+        "items": [
+          {
+            "flightNo": "TK2408",
+            "pnlName": "TK2408",
+            "flightDate": "2021-08-20T06:45:00Z",
+            "airline": {
+              "internationalCode": "TK",
+              "thumbnail": "/images/other/3/1/0/3/2/TK/turkish_airlines.jpg",
+              "thumbnailFull": "https://media.dev.paximum.com/sanflight/airlinelogos/TK.gif",
+              "logo": "/images/other/3/1/0/3/1/TK/turkish_airlines.jpg",
+              "logoFull": "https://media.dev.paximum.com/sanflight/airlinelogos/small/TK.png",
+              "id": "TK",
+              "name": "Turkish Airlines"
+            },
+            "duration": 70,
+            "dayChange": 0,
+            "departure": {
+              "country": {
+                "name": "Turkey",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "TR"
+              },
+              "city": {
+                "name": "Istanbul",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "IST"
+              },
+              "airport": {
+                "geolocation": {
+                  "longitude": "28.705953",
+                  "latitude": "41.263852"
+                },
+                "name": "Istanbul International Airport",
+                "id": "IST",
+                "code": "IST"
+              },
+              "date": "2021-08-20T06:45:00Z",
+              "geoLocation": {
+                "longitude": "28.705953",
+                "latitude": "41.263852"
+              }
+            },
+            "arrival": {
+              "country": {
+                "name": "Turkey",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "TR"
+              },
+              "city": {
+                "name": "Antalya",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "AYT"
+              },
+              "airport": {
+                "geolocation": {
+                  "longitude": "30.8",
+                  "latitude": "36.89"
+                },
+                "name": "Antalya International Airport",
+                "id": "AYT",
+                "code": "AYT"
+              },
+              "date": "2021-08-20T07:55:00Z",
+              "geoLocation": {
+                "longitude": "30.8",
+                "latitude": "36.89"
+              }
+            },
+            "flightClass": {
+              "name": "Economy",
+              "id": "L",
+              "code": "L"
+            },
+            "route": 1,
+            "segments": [
+              {
+                "id": "F:IST|AYT|20210820064500|TK2408",
+                "flightNo": "TK2408",
+                "pnlName": "TK2408",
+                "flightClass": {
+                  "name": "Economy",
+                  "id": "L",
+                  "code": "L"
+                },
+                "airline": {
+                  "internationalCode": "TK",
+                  "thumbnail": "/images/other/3/1/0/3/2/TK/turkish_airlines.jpg",
+                  "thumbnailFull": "https://media.dev.paximum.com/sanflight/airlinelogos/TK.gif",
+                  "logo": "/images/other/3/1/0/3/1/TK/turkish_airlines.jpg",
+                  "logoFull": "https://media.dev.paximum.com/sanflight/airlinelogos/small/TK.png",
+                  "id": "TK",
+                  "name": "Turkish Airlines"
+                },
+                "departure": {
+                  "country": {
+                    "name": "Turkey",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "TR"
+                  },
+                  "city": {
+                    "name": "Istanbul",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "IST"
+                  },
+                  "airport": {
+                    "geolocation": {
+                      "longitude": "28.705953",
+                      "latitude": "41.263852"
+                    },
+                    "name": "Istanbul International Airport",
+                    "id": "IST",
+                    "code": "IST"
+                  },
+                  "date": "2021-08-20T06:45:00Z",
+                  "geoLocation": {
+                    "longitude": "28.705953",
+                    "latitude": "41.263852"
+                  }
+                },
+                "arrival": {
+                  "country": {
+                    "name": "Turkey",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "TR"
+                  },
+                  "city": {
+                    "name": "Antalya",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "AYT"
+                  },
+                  "airport": {
+                    "geolocation": {
+                      "longitude": "30.8",
+                      "latitude": "36.89"
+                    },
+                    "name": "Antalya International Airport",
+                    "id": "AYT",
+                    "code": "AYT"
+                  },
+                  "date": "2021-08-20T07:55:00Z",
+                  "geoLocation": {
+                    "longitude": "30.8",
+                    "latitude": "36.89"
+                  }
+                },
+                "duration": 70,
+                "baggageInformations": [
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 2,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 2,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 2,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                    "piece": 2,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  }
+                ],
+                "services": [
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_15_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Checked baggage allowance 15 kg",
+                    "name": "Checked baggage allowance 15 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Carry on baggage allowance 8 kg",
+                    "name": "Carry on baggage allowance 8 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                    "id": "Exchange",
+                    "name": "Exchange"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_20_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Checked baggage allowance 20 kg",
+                    "name": "Checked baggage allowance 20 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                    "id": "Seat selection",
+                    "name": "Seat selection"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/FrequentFlyer/250_miles_bonus",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/FrequentFlyer.svg",
+                    "id": "250 miles bonus",
+                    "name": "250 miles bonus"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_25_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Checked baggage allowance 25 kg",
+                    "name": "Checked baggage allowance 25 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/FrequentFlyer/500_miles_bonus",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/FrequentFlyer.svg",
+                    "id": "500 miles bonus",
+                    "name": "500 miles bonus"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_30_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Checked baggage allowance 30 kg",
+                    "name": "Checked baggage allowance 30 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:IST|AYT|20210820064500|TK2408"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Lounge/business_lounge",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Lounge.svg",
+                    "id": "Business Lounge",
+                    "name": "Business Lounge"
+                  }
+                ],
+                "aircraft": "UNKNOWN_PLANE"
+              }
+            ],
+            "stopCount": 0,
+            "baggageInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "passengers": [
+              {
+                "type": 1,
+                "count": 2
+              },
+              {
+                "type": 2,
+                "count": 1
+              },
+              {
+                "type": 3,
+                "count": 1
+              },
+              {
+                "type": 1,
+                "count": 1
+              }
+            ],
+            "flightType": 0
+          }
+        ],
+        "offers": [
+          {
+            "singleAdultPrice": {
+              "amount": 26.64,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "name": "Economy",
+                "id": "L",
+                "code": "L"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_15_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 15 kg",
+                "name": "Checked baggage allowance 15 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAXQAJGl0OjE6ZTprcDNueDlxZzpmbGlnaHR1VnJtUUl0Q1A1OmNnd3QAJW9mOjE6ZTprcDNueDlxbDpmbGlnaHRSRm1jNmVRbnBLOjE1dWx0AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.tk.ef.ecofly",
+              "name": "ECOFLY"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 107.78,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          },
+          {
+            "singleAdultPrice": {
+              "amount": 30.06,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "name": "Economy",
+                "id": "L",
+                "code": "L"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_20_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 20 kg",
+                "name": "Checked baggage allowance 20 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                "id": "Seat selection",
+                "name": "Seat selection"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/FrequentFlyer/250_miles_bonus",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/FrequentFlyer.svg",
+                "id": "250 miles bonus",
+                "name": "250 miles bonus"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAXQAJGl0OjE6ZTprcDNueDlxZzpmbGlnaHR1VnJtUUl0Q1A1OmNnd3QAJW9mOjE6ZTprcDNueDlxbDpmbGlnaHR6bW45T0xVcmRBOjE1dW50AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.tk.xf.extrafly",
+              "name": "EXTRAFLY"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 121.1,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          },
+          {
+            "singleAdultPrice": {
+              "amount": 35.43,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "name": "Economy",
+                "id": "L",
+                "code": "L"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_25_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 25 kg",
+                "name": "Checked baggage allowance 25 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                "id": "Seat selection",
+                "name": "Seat selection"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/FrequentFlyer/500_miles_bonus",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/FrequentFlyer.svg",
+                "id": "500 miles bonus",
+                "name": "500 miles bonus"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAXQAJGl0OjE6ZTprcDNueDlxZzpmbGlnaHR1VnJtUUl0Q1A1OmNnd3QAJW9mOjE6ZTprcDNueDlxbDpmbGlnaHRjZHc1dUZXMkJzOjE1dW90AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.tk.pf.primefly",
+              "name": "PRIMEFLY"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 142.04,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          },
+          {
+            "singleAdultPrice": {
+              "amount": 95.74,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "name": "Business",
+                "id": "C",
+                "code": "C"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 2,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 2,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 2,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:IST|AYT|20210820064500|TK2408",
+                "piece": 2,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_30_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 30 kg",
+                "name": "Checked baggage allowance 30 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                "id": "Seat selection",
+                "name": "Seat selection"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Lounge/business_lounge",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Lounge.svg",
+                "id": "Business Lounge",
+                "name": "Business Lounge"
+              },
+              {
+                "segments": [
+                  "F:IST|AYT|20210820064500|TK2408"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAXQAJGl0OjE6ZTprcDNueDlxZzpmbGlnaHR1VnJtUUl0Q1A1OmNnd3QAJW9mOjE6ZTprcDNueDlxbDpmbGlnaHRQaHBHM014MWR4OjE1dW10AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.tk.bu.business",
+              "name": "BUSINESS"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 373.73,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          }
+        ],
+        "groupKeys": [
+          "-"
+        ]
+      },
+      {
+        "provider": 13,
+        "id": "it:1:e:kp3nx9qi:flightEwTA0qefqn:cht",
+        "items": [
+          {
+            "flightNo": "TK7471",
+            "pnlName": "TK7471",
+            "flightDate": "2021-08-27T07:50:00Z",
+            "airline": {
+              "internationalCode": "TK",
+              "thumbnail": "/images/other/3/1/0/3/2/TK/turkish_airlines.jpg",
+              "thumbnailFull": "https://media.dev.paximum.com/sanflight/airlinelogos/TK.gif",
+              "logo": "/images/other/3/1/0/3/1/TK/turkish_airlines.jpg",
+              "logoFull": "https://media.dev.paximum.com/sanflight/airlinelogos/small/TK.png",
+              "id": "TK",
+              "name": "Turkish Airlines"
+            },
+            "duration": 70,
+            "dayChange": 0,
+            "departure": {
+              "country": {
+                "name": "Turkey",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "TR"
+              },
+              "city": {
+                "name": "Antalya",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "AYT"
+              },
+              "airport": {
+                "geolocation": {
+                  "longitude": "30.8",
+                  "latitude": "36.89"
+                },
+                "name": "Antalya International Airport",
+                "id": "AYT",
+                "code": "AYT"
+              },
+              "date": "2021-08-27T07:50:00Z",
+              "geoLocation": {
+                "longitude": "30.8",
+                "latitude": "36.89"
+              }
+            },
+            "arrival": {
+              "country": {
+                "name": "Turkey",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "TR"
+              },
+              "city": {
+                "name": "Istanbul",
+                "provider": 3,
+                "isTopRegion": false,
+                "id": "IST"
+              },
+              "airport": {
+                "geolocation": {
+                  "longitude": "29.309219",
+                  "latitude": "40.898553"
+                },
+                "name": "Sabiha Gokcen International Airport",
+                "id": "SAW",
+                "code": "SAW"
+              },
+              "date": "2021-08-27T09:00:00Z",
+              "geoLocation": {
+                "longitude": "29.309219",
+                "latitude": "40.898553"
+              }
+            },
+            "flightClass": {
+              "name": "Economy",
+              "id": "T",
+              "code": "T"
+            },
+            "route": 2,
+            "segments": [
+              {
+                "id": "F:AYT|SAW|20210827075000|TK7471",
+                "flightNo": "TK7471",
+                "pnlName": "TK7471",
+                "flightClass": {
+                  "name": "Economy",
+                  "id": "T",
+                  "code": "T"
+                },
+                "airline": {
+                  "internationalCode": "TK",
+                  "thumbnail": "/images/other/3/1/0/3/2/TK/turkish_airlines.jpg",
+                  "thumbnailFull": "https://media.dev.paximum.com/sanflight/airlinelogos/TK.gif",
+                  "logo": "/images/other/3/1/0/3/1/TK/turkish_airlines.jpg",
+                  "logoFull": "https://media.dev.paximum.com/sanflight/airlinelogos/small/TK.png",
+                  "id": "TK",
+                  "name": "Turkish Airlines"
+                },
+                "departure": {
+                  "country": {
+                    "name": "Turkey",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "TR"
+                  },
+                  "city": {
+                    "name": "Antalya",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "AYT"
+                  },
+                  "airport": {
+                    "geolocation": {
+                      "longitude": "30.8",
+                      "latitude": "36.89"
+                    },
+                    "name": "Antalya International Airport",
+                    "id": "AYT",
+                    "code": "AYT"
+                  },
+                  "date": "2021-08-27T07:50:00Z",
+                  "geoLocation": {
+                    "longitude": "30.8",
+                    "latitude": "36.89"
+                  }
+                },
+                "arrival": {
+                  "country": {
+                    "name": "Turkey",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "TR"
+                  },
+                  "city": {
+                    "name": "Istanbul",
+                    "provider": 3,
+                    "isTopRegion": false,
+                    "id": "IST"
+                  },
+                  "airport": {
+                    "geolocation": {
+                      "longitude": "29.309219",
+                      "latitude": "40.898553"
+                    },
+                    "name": "Sabiha Gokcen International Airport",
+                    "id": "SAW",
+                    "code": "SAW"
+                  },
+                  "date": "2021-08-27T09:00:00Z",
+                  "geoLocation": {
+                    "longitude": "29.309219",
+                    "latitude": "40.898553"
+                  }
+                },
+                "duration": 70,
+                "baggageInformations": [
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 2
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 3
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 1,
+                    "unitType": 2,
+                    "passengerType": 1
+                  },
+                  {
+                    "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                    "piece": 1,
+                    "baggageType": 2,
+                    "unitType": 2,
+                    "passengerType": 1
+                  }
+                ],
+                "services": [
+                  {
+                    "segments": [
+                      "F:AYT|SAW|20210827075000|TK7471"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_15_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Checked baggage allowance 15 kg",
+                    "name": "Checked baggage allowance 15 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:AYT|SAW|20210827075000|TK7471"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Carry on baggage allowance 8 kg",
+                    "name": "Carry on baggage allowance 8 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:AYT|SAW|20210827075000|TK7471"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                    "id": "Exchange",
+                    "name": "Exchange"
+                  },
+                  {
+                    "segments": [
+                      "F:AYT|SAW|20210827075000|TK7471"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_20_kg",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                    "id": "Checked baggage allowance 20 kg",
+                    "name": "Checked baggage allowance 20 kg"
+                  },
+                  {
+                    "segments": [
+                      "F:AYT|SAW|20210827075000|TK7471"
+                    ],
+                    "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                    "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                    "id": "Seat selection",
+                    "name": "Seat selection"
+                  }
+                ],
+                "aircraft": "BOEING 737-800"
+              }
+            ],
+            "stopCount": 0,
+            "baggageInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "passengers": [
+              {
+                "type": 1,
+                "count": 2
+              },
+              {
+                "type": 2,
+                "count": 1
+              },
+              {
+                "type": 3,
+                "count": 1
+              },
+              {
+                "type": 1,
+                "count": 1
+              }
+            ],
+            "flightType": 0
+          }
+        ],
+        "offers": [
+          {
+            "singleAdultPrice": {
+              "amount": 27.33,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "name": "Economy",
+                "id": "T",
+                "code": "T"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_15_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 15 kg",
+                "name": "Checked baggage allowance 15 kg"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAnQAJGl0OjE6ZTprcDNueDlxaTpmbGlnaHRFd1RBMHFlZnFuOmNodHQAJW9mOjE6ZTprcDNueDlxdzpmbGlnaHRsajJzVHBrR0ViOjE1eHd0AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.aj.ef.eco.fly",
+              "name": "ECO FLY"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 110.43,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          },
+          {
+            "singleAdultPrice": {
+              "amount": 30.25,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "name": "Economy",
+                "id": "T",
+                "code": "T"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_20_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 20 kg",
+                "name": "Checked baggage allowance 20 kg"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                "id": "Seat selection",
+                "name": "Seat selection"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAnQAJGl0OjE6ZTprcDNueDlxaTpmbGlnaHRFd1RBMHFlZnFuOmNodHQAJW9mOjE6ZTprcDNueDlxdzpmbGlnaHRzbDhLYlNENkcxOjE1eHZ0AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.aj.xf.extra.fly",
+              "name": "EXTRA FLY"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 121.85,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          },
+          {
+            "singleAdultPrice": {
+              "amount": 34.16,
+              "currency": "EUR"
+            },
+            "serviceFee": {
+              "amount": 0,
+              "currency": "EUR"
+            },
+            "seatInfo": {
+              "availableSeatCount": 9,
+              "availableSeatCountType": 0
+            },
+            "flightClassInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "name": "Economy",
+                "id": "T",
+                "code": "T"
+              }
+            ],
+            "baggageInformations": [
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 2
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 3
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 1,
+                "unitType": 2,
+                "passengerType": 1
+              },
+              {
+                "segmentId": "F:AYT|SAW|20210827075000|TK7471",
+                "piece": 1,
+                "baggageType": 2,
+                "unitType": 2,
+                "passengerType": 1
+              }
+            ],
+            "services": [
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/checked_baggage_allowance_20_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Checked baggage allowance 20 kg",
+                "name": "Checked baggage allowance 20 kg"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Baggage/carry_on_baggage_allowance_8_kg",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Baggage.svg",
+                "id": "Carry on baggage allowance 8 kg",
+                "name": "Carry on baggage allowance 8 kg"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/SeatAssignment/seat_selection",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/SeatAssignment.svg",
+                "id": "Seat selection",
+                "name": "Seat selection"
+              },
+              {
+                "segments": [
+                  "F:AYT|SAW|20210827075000|TK7471"
+                ],
+                "thumbnail": "/vectors/3/1/1/0/Exchange/exchange",
+                "thumbnailFull": "https://media.dev.paximum.com/sanflight/serviceicons/Exchange.svg",
+                "id": "Exchange",
+                "name": "Exchange"
+              }
+            ],
+            "reservableInfo": {
+              "reservable": true
+            },
+            "groupKeys": [
+              "-"
+            ],
+            "fees": {
+              "key": "PXMTK",
+              "oneWay": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              },
+              "roundTrip": {
+                "items": [
+                  {
+                    "passengerType": 1,
+                    "quantity": 2,
+                    "price": 10.0,
+                    "totalPrice": 20.0
+                  },
+                  {
+                    "passengerType": 2,
+                    "quantity": 1,
+                    "price": 10.0,
+                    "totalPrice": 10.0
+                  },
+                  {
+                    "passengerType": 3,
+                    "quantity": 1,
+                    "price": 0.0,
+                    "totalPrice": 0.0
+                  }
+                ],
+                "price": {
+                  "amount": 30.0,
+                  "currency": "EUR"
+                }
+              }
+            },
+            "offerIds": [
+              {
+                "groupKey": "-",
+                "offerId": "13$3$0~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~~ODYzMzhlNDctYTJmZi00Y2M4LWJlMjktZDMzNDgwMjMwNWQ0~rO0ABXNyADhjb20uc2FudHNnLmVuZ2luZS5mbGlnaHQubW9kZWwuaW5uZXIuRW5jb2RlZE9mZmVySWRNb2RlbF/kYZQ3KR+CAgAESQANc2VnbWVudE51bWJlckwAC2l0aW5lcmFyeUlkdAASTGphdmEvbGFuZy9TdHJpbmc7TAAHb2ZmZXJJZHEAfgABTAAIc2VhcmNoSWRxAH4AAXhwAAAAAnQAJGl0OjE6ZTprcDNueDlxaTpmbGlnaHRFd1RBMHFlZnFuOmNodHQAJW9mOjE6ZTprcDNueDlxdzpmbGlnaHRpSE81cVB6VjJOOjE1eHh0AChBQUFCZWFJNms0UUFBQUFBc1JiWFFsSWpfNGNWUGhfRVNudEEwdz09",
+                "provider": {
+                  "displayName": "THY",
+                  "id": "1",
+                  "name": "THY"
+                }
+              }
+            ],
+            "isPackageOffer": false,
+            "hasBrand": true,
+            "route": 0,
+            "flightBrandInfo": {
+              "id": "1.aj.pf.prime.fly",
+              "name": "PRIME FLY"
+            },
+            "expiresOn": "2021-05-25T10:03:42.435462Z",
+            "priceBreakDown": {
+              "items": [
+                {
+                  "passengerType": 7,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 22.37,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 1,
+                  "passengerCount": 3,
+                  "price": {
+                    "amount": 111.86,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 3,
+                  "passengerCount": 1,
+                  "price": {
+                    "amount": 3.41,
+                    "currency": "EUR"
+                  }
+                },
+                {
+                  "passengerType": 2,
+                  "passengerCount": 2,
+                  "price": {
+                    "amount": 44.74,
+                    "currency": "EUR"
+                  }
+                }
+              ]
+            },
+            "price": {
+              "amount": 137.07,
+              "currency": "EUR"
+            },
+            "provider": 13,
+            "flightProvider": {
+              "displayName": "THY",
+              "id": "1",
+              "name": "THY"
+            }
+          }
+        ],
+        "groupKeys": [
+          "-"
+        ]
+      }
+    ],
+    "details": {
+      "flightResponseListType": 3,
+      "enablePaging": false
+    }
+  },
+  "header": {
+    "requestId": "775b654b-f526-414a-9899-6b74d74c98b1",
+    "success": true,
+    "responseTime": "2021-05-25T06:33:45.0116019Z",
+    "messages": [
+      {
+        "id": 10000000,
+        "code": "OperationCompleted",
+        "messageType": 2,
+        "message": "Operation was completed successfully"
+      }
+    ]
+  }
+}

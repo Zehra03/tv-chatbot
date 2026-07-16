@@ -52,48 +52,48 @@ public class SlotGuard {
             LocalDate date = parse(raw);
             if (date != null && date.isBefore(today)) {
                 return Optional.of(
-                        "Girdiğiniz tarih (" + date + ") geçmişte kalıyor. İleri bir tarih verir misiniz?");
+                        "Girdiğin tarih (" + date + ") geçmişte kalıyor. İleri bir tarih verir misin?");
             }
         }
         
         LocalDate checkInDate = parse(criteria.checkIn());
         LocalDate checkOutDate = parse(criteria.checkOut());
         if (checkInDate != null && checkOutDate != null && !checkOutDate.isAfter(checkInDate)) {
-            return Optional.of("Çıkış tarihi giriş tarihinden önce veya aynı olamaz. Lütfen geçerli bir tarih giriniz.");
+            return Optional.of("Çıkış tarihi giriş tarihinden önce veya aynı olamaz. Lütfen geçerli bir tarih gir.");
         }
 
         LocalDate depDate = parse(criteria.departureDate());
         LocalDate retDate = parse(criteria.returnDate());
         if (depDate != null && retDate != null && retDate.isBefore(depDate)) {
-            return Optional.of("Dönüş tarihi gidiş tarihinden önce olamaz. Lütfen geçerli bir tarih giriniz.");
+            return Optional.of("Dönüş tarihi gidiş tarihinden önce olamaz. Lütfen geçerli bir tarih gir.");
         }
         
         if (criteria.adults() != null && criteria.adults() <= 0) {
-            return Optional.of("Yetişkin sayısı en az 1 olmalıdır. Lütfen geçerli bir kişi sayısı giriniz.");
+            return Optional.of("Yetişkin sayısı en az 1 olmalıdır. Lütfen geçerli bir kişi sayısı gir.");
         }
         if (criteria.children() != null && criteria.children() < 0) {
-            return Optional.of("Çocuk sayısı negatif olamaz. Lütfen geçerli bir çocuk sayısı giriniz.");
+            return Optional.of("Çocuk sayısı negatif olamaz. Lütfen geçerli bir çocuk sayısı gir.");
         }
         if (criteria.childAges() != null && criteria.childAges().stream().anyMatch(age -> age < 0)) {
-            return Optional.of("Çocuk yaşları negatif olamaz. Lütfen geçerli yaşlar giriniz.");
+            return Optional.of("Çocuk yaşları negatif olamaz. Lütfen geçerli yaşlar gir.");
         }
         // A "child" is 0-17; 18+ is an adult. Reject out-of-range ages the LLM may have extracted
         // ("çocuk 25 yaşında") instead of letting the value reach TourVisio and mis-price the booking.
         if (criteria.childAges() != null && criteria.childAges().stream().anyMatch(age -> age > 17)) {
             return Optional.of("Çocuk yaşı 0-17 arasında olmalıdır (18 ve üzeri yetişkin sayılır). "
-                    + "Lütfen geçerli bir çocuk yaşı giriniz.");
+                    + "Lütfen geçerli bir çocuk yaşı gir.");
         }
         if (criteria.rooms() != null && criteria.rooms() <= 0) {
-            return Optional.of("Oda sayısı en az 1 olmalıdır. Lütfen geçerli bir oda sayısı giriniz.");
+            return Optional.of("Oda sayısı en az 1 olmalıdır. Lütfen geçerli bir oda sayısı gir.");
         }
         if (criteria.hotelMaxPrice() != null && criteria.hotelMaxPrice() <= 0) {
-            return Optional.of("Bütçe 0'dan büyük olmalıdır. Lütfen geçerli bir bütçe giriniz.");
+            return Optional.of("Bütçe 0'dan büyük olmalıdır. Lütfen geçerli bir bütçe gir.");
         }
         if (criteria.flightMaxPrice() != null && criteria.flightMaxPrice() <= 0) {
-            return Optional.of("Bütçe 0'dan büyük olmalıdır. Lütfen geçerli bir bütçe giriniz.");
+            return Optional.of("Bütçe 0'dan büyük olmalıdır. Lütfen geçerli bir bütçe gir.");
         }
         if (criteria.nights() != null && criteria.nights() <= 0) {
-            return Optional.of("Gece sayısı en az 1 olmalıdır. Lütfen geçerli bir gece sayısı giriniz.");
+            return Optional.of("Gece sayısı en az 1 olmalıdır. Lütfen geçerli bir gece sayısı gir.");
         }
 
         return Optional.empty();

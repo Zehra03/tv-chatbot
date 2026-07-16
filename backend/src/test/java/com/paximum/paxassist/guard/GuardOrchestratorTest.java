@@ -51,7 +51,7 @@ class GuardOrchestratorTest {
                 () -> guardOrchestrator.processInput(maliciousInput));
 
         // Then
-        assertThat(exception.getMessage()).isEqualTo("İsteğiniz güvenlik politikalarımız gereği işleme alınamamıştır.");
+        assertThat(exception.getMessage()).isEqualTo("İsteğin güvenlik politikalarımız gereği işleme alınamadı.");
         assertThat(exception.getDetailedReason()).isEqualTo("Prompt Injection Detected");
     }
 
@@ -80,7 +80,7 @@ class GuardOrchestratorTest {
                 () -> guardOrchestrator.processInput(tooLong));
 
         assertThat(exception.getMessage())
-                .isEqualTo("Mesajınız çok uzun, lütfen daha kısa bir mesajla tekrar deneyin.");
+                .isEqualTo("Mesajın çok uzun, lütfen daha kısa bir mesajla tekrar dene.");
         // Rejected before the content rules run — an oversized body never reaches the regex pass,
         // and (further downstream) never reaches the LLM, so it costs no tokens.
         verify(guardRuleService, never()).evaluate(tooLong);

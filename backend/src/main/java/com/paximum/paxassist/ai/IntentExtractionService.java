@@ -195,19 +195,19 @@ public class IntentExtractionService {
         Mesaj: "Antalya'da 5 gece 2 yetişkin otel"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","nights":5,"adults":2}}
 
-        Sohbet Geçmişi: assistant: Kaç gece konaklamayı planlıyorsunuz? (ya da çıkış tarihinizi belirtin)
+        Sohbet Geçmişi: assistant: Kaç gece konaklamayı planlıyorsun? (ya da çıkış tarihini belirt)
         Mesaj: "5 gece"
         Çıktı: {"intent":"HOTEL","criteria":{"nights":5}}
 
-        Sohbet Geçmişi: assistant: Otele giriş tarihiniz nedir? (örn. 2026-08-01)
+        Sohbet Geçmişi: assistant: Otele giriş tarihin nedir? (örn. 2026-08-01)
         Mesaj: "2026-08-08"
         Çıktı: {"intent":"HOTEL","criteria":{"checkIn":"2026-08-08"}}
 
-        Sohbet Geçmişi: assistant: Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?
+        Sohbet Geçmişi: assistant: Aradığın kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misin?
         Mesaj: "farklı tarihte var mı"
         Çıktı: {"intent":"DATE_ALTERNATIVES","criteria":null}
 
-        Sohbet Geçmişi: assistant: Aradığınız kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misiniz?
+        Sohbet Geçmişi: assistant: Aradığın kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misin?
         Mesaj: "11 ağustos olsun"
         Çıktı: {"intent":"HOTEL","criteria":{"checkIn":"2026-08-11"}}
 
@@ -253,11 +253,11 @@ public class IntentExtractionService {
         Mesaj: "3 ve 4 yıldızlı olanları getir"
         Çıktı: {"intent":"FILTER","criteria":{"stars":3,"maxStars":4}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 8 otel buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 8 otel buldum:
         Mesaj: "herşey dahil olanları listele"
         Çıktı: {"intent":"FILTER","criteria":{"boardType":"AI"}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 8 otel buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 8 otel buldum:
         Mesaj: "all inclusive olan en ucuz 3 otel"
         Çıktı: {"intent":"FILTER","criteria":{"boardType":"AI","sortBy":"price_asc","limit":3}}
 
@@ -275,7 +275,7 @@ public class IntentExtractionService {
         Mesaj: "çocuksuz otel"
         Çıktı: {"intent":"HOTEL","criteria":{"children":0}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 8 otel buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 8 otel buldum:
         Mesaj: "havuzlu ve çocuk kulüplü olsun"
         Çıktı: {"intent":"HOTEL","criteria":{"features":["POOL","KIDS_CLUB"]}}
 
@@ -303,22 +303,22 @@ public class IntentExtractionService {
         Mesaj: "İstanbul'dan İzmir'e THY ile sabah kalkan aktarmasız uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","airline":"THY","departTimeRange":"morning","directFlight":true}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 6 uçuş buldum:
         Mesaj: "THY ile olanları göster"
         Çıktı: {"intent":"FILTER","criteria":{"airline":"THY"}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 6 uçuş buldum:
         Mesaj: "sabah kalkanlar"
         Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"morning"}}
 
         Mesaj: "İstanbul'dan İzmir'e saat 10 ile 14 arası uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","departTimeRange":"10:00-14:00"}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 6 uçuş buldum:
         Mesaj: "10'dan sonra kalkanlar"
         Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"10:00-"}}
 
-        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 6 uçuş buldum:
         Mesaj: "14:00'ten önce olsun"
         Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"-14:00"}}
 
@@ -340,21 +340,21 @@ public class IntentExtractionService {
         Mesaj: "Antalya"
         Çıktı: {"intent":"AMBIGUOUS","criteria":null}
 
-        Sohbet Geçmişi: assistant: Nereden kalkmak istersiniz?
+        Sohbet Geçmişi: assistant: Nereden kalkmak istersin?
         Mesaj: "Antalya"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"Antalya"}}
 
         # ── Domain switch: explicit signal ──
-        Sohbet Geçmişi: assistant: Aramanıza uygun 5 otel buldum:
+        Sohbet Geçmişi: assistant: Aramana uygun 5 otel buldum:
         Mesaj: "şimdi de İstanbul'a uçuş bak, uçuşa 3000 tl max"
         Çıktı: {"intent":"FLIGHT","criteria":{"destination":"İstanbul","flightMaxPrice":3000}}
 
-        Sohbet Geçmişi: assistant: Kaç gece konaklamayı planlıyorsunuz? (ya da çıkış tarihinizi belirtin)
+        Sohbet Geçmişi: assistant: Kaç gece konaklamayı planlıyorsun? (ya da çıkış tarihini belirt)
         Mesaj: "boşver oteli, Ankara'dan İzmir'e uçuş istiyorum"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"Ankara","destination":"İzmir"}}
 
         # ── Domain switch: implicit signal (no literal "otel"/"uçuş") ──
-        Sohbet Geçmişi: assistant: Nereden nereye uçmak istersiniz?
+        Sohbet Geçmişi: assistant: Nereden nereye uçmak istersin?
         Mesaj: "boşver, ben zaten Antalya'da kalacağım, sadece oda arasak yeter"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya"}}
 
@@ -367,17 +367,27 @@ public class IntentExtractionService {
         """;
 
     private final ChatClient chatClient;
+    private final GreetingDetector greetingDetector;
 
-    public IntentExtractionService(ChatClient chatClient) {
+    public IntentExtractionService(ChatClient chatClient, GreetingDetector greetingDetector) {
         this.chatClient = chatClient;
+        this.greetingDetector = greetingDetector;
     }
 
     /**
      * Analyzes the user's message combined with conversation history,
      * returns a structured IntentExtractionResult in JSON format.
+     *
+     * <p>A bare greeting is classified here without calling the model: its reply is a fixed sentence
+     * ({@code GreetingHandler}), so spending a model round-trip on classifying "merhaba" would only
+     * add latency and a chance of getting it wrong.
      */
     public IntentExtractionResult extract(@NonNull String userMessage,
                                           @NonNull List<ChatHistoryEntry> history) {
+        if (greetingDetector.isPureGreeting(userMessage)) {
+            return new IntentExtractionResult(IntentType.GREETING, null);
+        }
+
         String combinedPrompt = buildPrompt(userMessage, history);
 
         try {

@@ -87,6 +87,7 @@ export function buildFlightDraft(
     // Booking, arama-satırı UUID'si (`product.id`) ile değil, TourVisio teklif jetonu (`product.offerId`)
     // ile yapılır — `id` göndermek BeginTransaction'da GeneralException ("offer no longer bookable") verir.
     offerId: product.offerId,
+    returnOfferId: product.returnOfferId ?? null,
     title: `${product.airline} ${product.origin} → ${product.destination}`,
     summary: `${formatDateTime(product.departTime)} · ${
       product.stops === 0 ? 'Direkt' : `${product.stops} aktarma`
