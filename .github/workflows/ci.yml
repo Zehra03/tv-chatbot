@@ -54,7 +54,7 @@ jobs:
         run: mvn -B test
 
   frontend:
-    name: Frontend Build
+    name: Frontend Build & Test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -75,3 +75,9 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Vitest + RTL + MSW. Until now CI only built, so a red test suite could sit on develop
+      # unnoticed (it did — see c4b4c27). Runs after the build so a type error reports as a type
+      # error rather than as a pile of failing tests.
+      - name: Test
+        run: npm run test
