@@ -5,15 +5,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 /**
- * Guards the flight-filter slots on {@link SlotCriteria}: the canonical constructor must store
- * {@code airline} and {@code departTimeRange}, the backward-compatible 25-arg constructor must
- * default them to {@code null} while still carrying {@code directFlight}, and {@code empty()} must
- * leave them {@code null}.
+ * Guards the flight-filter slots on {@link SlotCriteria}: the constructor must store
+ * {@code airline} and {@code departTimeRange} (alongside the existing {@code directFlight}), and
+ * {@code empty()} must leave them {@code null}.
  */
 class SlotCriteriaTest {
 
     @Test
-    void canonicalConstructorStoresFlightFilterSlots() {
+    void constructorStoresFlightFilterSlots() {
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 "İstanbul", "İzmir", null, null, null, null, Boolean.TRUE,
@@ -23,18 +22,6 @@ class SlotCriteriaTest {
         assertThat(criteria.directFlight()).isTrue();
         assertThat(criteria.airline()).isEqualTo("THY");
         assertThat(criteria.departTimeRange()).isEqualTo("morning");
-    }
-
-    @Test
-    void legacyConstructorDefaultsNewSlotsToNull() {
-        SlotCriteria criteria = new SlotCriteria(
-                null, null, null, null, null, null, null, null, null, null,
-                "Ankara", null, null, null, null, null, Boolean.TRUE,
-                null, null, null, null, null, null, null, null);
-
-        assertThat(criteria.directFlight()).isTrue();
-        assertThat(criteria.airline()).isNull();
-        assertThat(criteria.departTimeRange()).isNull();
     }
 
     @Test
