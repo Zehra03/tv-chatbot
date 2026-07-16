@@ -74,10 +74,6 @@ final class ResultFilters {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Keep flight cards that match the direct/layover preference.
-     * Hotels are unaffected.
-     */
     static List<Object> applyDirectFlight(List<Object> cards, Boolean directFlight) {
         if (directFlight == null || cards == null || cards.isEmpty()) {
             return cards;
@@ -93,6 +89,66 @@ final class ResultFilters {
                     } else {
                         return f.getStops() > 0;
                     }
+                })
+                .collect(Collectors.toList());
+    }
+
+    static List<Object> applyAirline(List<Object> cards, String airline) {
+        if (airline == null || airline.isBlank() || cards == null || cards.isEmpty()) {
+            return cards;
+        }
+        return cards.stream()
+                .filter(c -> {
+                    if (!(c instanceof FlightProduct f)) {
+                        return true;
+                    }
+                    if (f.getAirline() == null) return false;
+                    return f.getAirline().toLowerCase(Locale.ROOT).contains(airline.toLowerCase(Locale.ROOT));
+                })
+                .collect(Collectors.toList());
+    }
+
+    static List<Object> applyDepartureTime(List<Object> cards, String minTimeStr, String maxTimeStr) {
+        if ((minTimeStr == null || minTimeStr.isBlank()) && (maxTimeStr == null || maxTimeStr.isBlank())) {
+            return cards;
+        }
+        if (cards == null || cards.isEmpty()) {
+            return cards;
+        }
+        
+        java.time.LocalTime minTime = null;
+        java.time.LocalTime maxTime = null;
+        try {
+            if (minTimeStr != null && !minTimeStr.isBlank()) {
+                minTime = java.time.LocalTime.parse(minTimeStr);
+            }
+            if (maxTimeStr != null && !maxTimeStr.isBlank()) {
+                maxTime = java.time.LocalTime.parse(maxTimeStr);
+            }
+        } catch (java.time.format.DateTimeParseException e) {
+            return cards;
+        }
+
+        final java.time.LocalTime finalMin = minTime;
+        final java.time.LocalTime finalMax = maxTime;
+
+        return cards.stream()
+                .filter(c -> {
+                    if (!(c instanceof FlightProduct f)) {
+                        return true;
+                    }
+                    if (f.getDepartTime() == null) {
+                        return true;
+                    }
+                    java.time.LocalTime flightTime = java.time.LocalTime.ofInstant(f.getDepartTime(), java.time.ZoneId.of("Europe/Istanbul"));
+                    
+                    if (finalMin != null && flightTime.isBefore(finalMin)) {
+                        return false;
+                    }
+                    if (finalMax != null && flightTime.isAfter(finalMax)) {
+                        return false;
+                    }
+                    return true;
                 })
                 .collect(Collectors.toList());
     }

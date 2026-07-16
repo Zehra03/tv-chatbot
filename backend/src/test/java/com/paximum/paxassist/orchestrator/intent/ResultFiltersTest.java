@@ -176,4 +176,64 @@ class ResultFiltersTest {
         List<Object> result = ResultFilters.applyDirectFlight(List.of(direct, layover, hotel), false);
         assertThat(result).containsExactly(layover, hotel);
     }
+
+    // ── applyAirline ─────────────────────────────────────────────────────────
+
+    @Test
+    void airlineNull_returnsListUnchanged() {
+        FlightProduct f = FlightProduct.builder().airline("THY").build();
+        List<Object> cards = List.of(f);
+        assertThat(ResultFilters.applyAirline(cards, null)).isSameAs(cards);
+    }
+
+    @Test
+    void airline_matchesCaseInsensitive() {
+        FlightProduct thy = FlightProduct.builder().airline("Turkish Airlines").build();
+        FlightProduct pegasus = FlightProduct.builder().airline("Pegasus").build();
+        HotelProduct hotel = hotel("H1", "100", "AI");
+        
+        List<Object> result = ResultFilters.applyAirline(List.of(thy, pegasus, hotel), "turkish");
+        assertThat(result).containsExactly(thy, hotel);
+        
+        List<Object> result2 = ResultFilters.applyAirline(List.of(thy, pegasus, hotel), "PEGASUS");
+        assertThat(result2).containsExactly(pegasus, hotel);
+    }
+
+    // ── applyDepartureTime ───────────────────────────────────────────────────
+
+    @Test
+    void departureTimeNull_returnsListUnchanged() {
+        FlightProduct f = FlightProduct.builder().departTime(java.time.Instant.now()).build();
+        List<Object> cards = List.of(f);
+        assertThat(ResultFilters.applyDepartureTime(cards, null, null)).isSameAs(cards);
+    }
+
+    @Test
+    void departureTime_filtersCorrectly() {
+        // 08:00 UTC = 11:00 TRT (Europe/Istanbul is UTC+3)
+        // 13:00 UTC = 16:00 TRT
+        // 18:00 UTC = 21:00 TRT
+        java.time.Instant morningUtc = java.time.Instant.parse("2026-07-16T08:00:00Z");
+        java.time.Instant afternoonUtc = java.time.Instant.parse("2026-07-16T13:00:00Z");
+        java.time.Instant eveningUtc = java.time.Instant.parse("2026-07-16T18:00:00Z");
+
+        FlightProduct morningFlight = FlightProduct.builder().departTime(morningUtc).build(); // 11:00 TRT
+        FlightProduct afternoonFlight = FlightProduct.builder().departTime(afternoonUtc).build(); // 16:00 TRT
+        FlightProduct eveningFlight = FlightProduct.builder().departTime(eveningUtc).build(); // 21:00 TRT
+        HotelProduct hotel = hotel("H1", "100", "AI");
+
+        List<Object> allCards = List.of(morningFlight, afternoonFlight, eveningFlight, hotel);
+
+        // Before 12:00 TRT
+        List<Object> result1 = ResultFilters.applyDepartureTime(allCards, null, "12:00");
+        assertThat(result1).containsExactly(morningFlight, hotel);
+
+        // Between 15:00 and 17:00 TRT
+        List<Object> result2 = ResultFilters.applyDepartureTime(allCards, "15:00", "17:00");
+        assertThat(result2).containsExactly(afternoonFlight, hotel);
+
+        // After 20:00 TRT
+        List<Object> result3 = ResultFilters.applyDepartureTime(allCards, "20:00", null);
+        assertThat(result3).containsExactly(eveningFlight, hotel);
+    }
 }
