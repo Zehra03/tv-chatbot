@@ -133,6 +133,22 @@ class SlotMergerTest {
         assertThat(merged.nights()).isEqualTo(10);
     }
     @Test
+    void flightFilterSlotsMergeAcrossTurns() {
+        // Turn 1 starts a flight search; turn 2 adds airline + time-of-day + nonstop. The new
+        // flight-filter slots must accumulate onto the ongoing search instead of being dropped.
+        SlotCriteria base = slots(Map.of("origin", "İstanbul", "destination", "İzmir"));
+        SlotCriteria update = slots(Map.of("airline", "THY", "departTimeRange", "morning", "directFlight", true));
+
+        SlotCriteria merged = merger.merge(base, update);
+
+        assertThat(merged.origin()).isEqualTo("İstanbul");   // kept from base
+        assertThat(merged.destination()).isEqualTo("İzmir"); // kept from base
+        assertThat(merged.airline()).isEqualTo("THY");       // added by update
+        assertThat(merged.departTimeRange()).isEqualTo("morning");
+        assertThat(merged.directFlight()).isTrue();
+    }
+
+    @Test
     void explicitCheckInUpdateDiscardsOldNights() {
         SlotCriteria base = slots(Map.of("checkIn", "2026-07-15", "checkOut", "2026-07-20", "nights", 5));
         SlotCriteria update = slots(Map.of("checkIn", "2026-07-12"));

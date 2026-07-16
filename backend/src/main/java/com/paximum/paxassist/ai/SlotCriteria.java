@@ -12,7 +12,8 @@ import java.util.List;
  *
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
  *                nationality, currency, rooms, stars, boardType, features, hotelMaxPrice, sortBy
- * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice
+ * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice,
+ *                directFlight, airline, departTimeRange
  * Shared        : adults, children, childAges, nationality, currency
  * SELECT intent : selectionReference
  *
@@ -42,6 +43,8 @@ public record SlotCriteria(
         String cabinClass,        // ECONOMY | BUSINESS | FIRST
         Integer flightMaxPrice,   // upper price limit for a FLIGHT search, e.g. "uçuşa 3000 tl max" → 3000
         Boolean directFlight,     // true: direct/non-stop, false: layovers, null: any
+        String airline,           // preferred airline as the user stated it, e.g. "THY", "Pegasus"
+        String departTimeRange,   // departure time-of-day bucket: morning | afternoon | evening | night
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -64,8 +67,12 @@ public record SlotCriteria(
      */
     public static SlotCriteria empty() {
         return new SlotCriteria(
+                // hotel (10)
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null);
+                // flight (9): origin, destination, departureDate, returnDate, cabinClass,
+                //             flightMaxPrice, directFlight, airline, departTimeRange
+                null, null, null, null, null, null, null, null, null,
+                // shared (5) + filter/sort (2) + select (1)
+                null, null, null, null, null, null, null, null);
     }
 }

@@ -5,6 +5,7 @@ import reducer, {
   sessionLoaded,
   userMessageSent,
 } from './chatSlice'
+import { guestSessionStarted, logout, sessionStarted } from '@/features/auth/authSlice'
 import type { SendMessageResponse } from '@/api'
 import type { ChatMessage, ChatSession } from '@/types'
 
@@ -93,5 +94,32 @@ describe('chatSlice', () => {
     state = reducer(state, sessionLoaded(session))
     expect(state.epoch).toBe(2)
     expect(state.sessionId).toBe('sess-2')
+  })
+
+  it('logout konuşma durumunu sıfırlar — önceki hesabın thread\'i misafire sızmaz', () => {
+    let state = reducer(undefined, userMessageSent('gizli sohbet'))
+    state = reducer(state, assistantReplied(reply()))
+    expect(state.messages).toHaveLength(2)
+    state = reducer(state, logout())
+    expect(state.messages).toEqual([])
+    expect(state.sessionId).toBeNull()
+    expect(state.epoch).toBe(1)
+  })
+
+  it('misafir başlangıcı ve yeni giriş de konuşma durumunu sıfırlar', () => {
+    let state = reducer(undefined, userMessageSent('merhaba'))
+    state = reducer(state, guestSessionStarted())
+    expect(state.messages).toEqual([])
+
+    state = reducer(state, userMessageSent('misafir mesajı'))
+    state = reducer(
+      state,
+      sessionStarted({
+        user: { id: 'u-1', email: 'a@b.co', name: 'Ada' },
+        token: 't',
+        refreshToken: 'r',
+      }),
+    )
+    expect(state.messages).toEqual([])
   })
 })

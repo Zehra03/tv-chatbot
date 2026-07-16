@@ -1,6 +1,7 @@
-import { createSlice, nanoid, type PayloadAction } from '@reduxjs/toolkit'
+import { createSlice, isAnyOf, nanoid, type PayloadAction } from '@reduxjs/toolkit'
 import type { ChatMessage, ChatSession, PartialCriteria } from '@/types'
 import type { SendMessageResponse } from '@/api'
+import { guestSessionStarted, logout, sessionStarted } from '@/features/auth/authSlice'
 
 /**
  * Sohbet UI state'i (docs/frontend-architecture.md §5): mesaj thread'i, aktif
@@ -72,6 +73,18 @@ const chatSlice = createSlice({
     chatReset(state) {
       return { ...initialState, epoch: state.epoch + 1 }
     },
+  },
+  /**
+   * Kimlik sınırında konuşma durumunu sıfırla: çıkış (logout), giriş (sessionStarted)
+   * ve misafir başlangıcı (guestSessionStarted). Aksi halde bir hesabın thread'i, çıkış
+   * yapıp misafir/başka hesap olarak devam eden kullanıcıya sızar. epoch artar → önceki
+   * kimliğin uçuştaki isteği yeni oturuma düşmez.
+   */
+  extraReducers: (builder) => {
+    builder.addMatcher(isAnyOf(logout, sessionStarted, guestSessionStarted), (state) => ({
+      ...initialState,
+      epoch: state.epoch + 1,
+    }))
   },
 })
 

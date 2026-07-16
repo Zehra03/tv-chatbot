@@ -90,6 +90,8 @@ public class IntentExtractionService {
           cabinClass    : ECONOMY | BUSINESS | FIRST (string)
           flightMaxPrice: upper price limit for a FLIGHT search, "uçuşa 3000 tl max" → 3000 (integer)
           directFlight  : true for direct/non-stop flights (aktarmasız/direkt), false for flights with layovers (aktarmalı) (boolean)
+          airline       : preferred airline as the user names it, "THY ile" → "THY", "Pegasus'la" → "Pegasus" (string)
+          departTimeRange: departure time-of-day bucket, ONLY one of morning | afternoon | evening | night (string)
 
         Shared fields (hotel + flight):
           adults        : number of adults (integer)
@@ -161,6 +163,8 @@ public class IntentExtractionService {
         - When the user asks for an EXACT star rating without a range (e.g. "3 yıldızlı oteller", "5 yıldızlı"), specify BOTH "stars" and "maxStars" to that same number to enforce an exact match. E.g., "stars": 3, "maxStars": 3. If they say "en az 3 yıldız" or "3 yıldız ve üstü", only set "stars": 3.
         - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
         - When the user asks for a direct flight ("aktarmasız", "direkt"), set "directFlight": true. If they ask for flights with layovers ("aktarmalı"), set "directFlight": false.
+        - When the user names a preferred airline ("THY ile", "Pegasus'la", "AJet olsun"), put it in "airline" exactly as stated ("THY", "Pegasus", "AJet"). Do NOT invent an airline the user did not mention.
+        - When the user restricts the departure time of day, map it to "departTimeRange" using ONLY these buckets: "sabah/sabahki" → morning, "öğlen/öğle" → afternoon, "akşam/akşamüstü" → evening, "gece/geceki" → night. This is the departure time bucket, NOT the departureDate; never fabricate a clock time.
         </rules>
 
         <output_format>
@@ -284,8 +288,22 @@ public class IntentExtractionService {
         Mesaj: "Ankara'dan aktarmasız uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"Ankara","directFlight":true}}
 
+        Mesaj: "sadece direkt"
+        Çıktı: {"intent":"FILTER","criteria":{"directFlight":true}}
+
         Mesaj: "sadece aktarmalıları listele"
         Çıktı: {"intent":"FILTER","criteria":{"directFlight":false}}
+
+        Mesaj: "İstanbul'dan İzmir'e THY ile sabah kalkan aktarmasız uçuş"
+        Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","airline":"THY","departTimeRange":"morning","directFlight":true}}
+
+        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Mesaj: "THY ile olanları göster"
+        Çıktı: {"intent":"FILTER","criteria":{"airline":"THY"}}
+
+        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Mesaj: "sabah kalkanlar"
+        Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"morning"}}
 
         Mesaj: "Antalya'da -2 yetişkin ve -1 childlu otel"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":-2,"children":-1}}

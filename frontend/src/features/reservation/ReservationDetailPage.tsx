@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Hotel, Plane } from 'lucide-react'
+import { Link, useLocation, useParams } from 'react-router-dom'
+import { ArrowLeft, CheckCircle2, Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -170,7 +170,12 @@ function CancelSection({ reservation }: { reservation: ReservationDetail }) {
  */
 export function ReservationDetailPage() {
   const { id } = useParams()
+  const location = useLocation()
   const { data, isError, isFetching, error, refetch } = useReservation(id)
+
+  // Kesin onaydan hemen sonra rezervasyon formu buraya `state.justBooked` ile yönlendirir;
+  // tek seferlik "alındı" bandını gösteririz (sayfa yenilenince navigasyon state'i düştüğünden kaybolur).
+  const justBooked = (location.state as { justBooked?: boolean } | null)?.justBooked === true
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -185,6 +190,22 @@ export function ReservationDetailPage() {
           Rezervasyonlarım
         </Link>
       </Button>
+
+      {justBooked && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/10 p-4 text-white"
+        >
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-teal" aria-hidden />
+          <div>
+            <p className="font-semibold">Rezervasyonunuz alındı</p>
+            <p className="text-sm text-brand-ice/70">
+              Rezervasyonunuz onaylandı. Detaylar aşağıda; dilediğinizde Rezervasyonlarım’dan tekrar
+              ulaşabilirsiniz.
+            </p>
+          </div>
+        </div>
+      )}
 
       {isFetching && !data && <LoadingState label="Yükleniyor…" />}
 
