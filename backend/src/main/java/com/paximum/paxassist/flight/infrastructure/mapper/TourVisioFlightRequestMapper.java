@@ -26,6 +26,12 @@ public class TourVisioFlightRequestMapper {
     private static final int PASSENGER_TYPE_INFANT = 3;
     private static final DateTimeFormatter CHECK_IN_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE;
 
+    /**
+     * Response shape 3: outbound and return come as separate results whose offers carry group keys
+     * and a booking token per key — the only shape that lets a return be paired with an outbound.
+     */
+    private static final List<Integer> GROUPED_RESPONSE_LIST_TYPE = List.of(3);
+
     private final TourVisioProperties tourVisioProperties;
 
     public TourVisioFlightRequestMapper(TourVisioProperties tourVisioProperties) {
@@ -54,6 +60,7 @@ public class TourVisioFlightRequestMapper {
                 List.of(new TourVisioLocationRequest(criteria.getOrigin(), LOCATION_TYPE_DEPARTURE)),
                 List.of(new TourVisioLocationRequest(criteria.getDestination(), LOCATION_TYPE_ARRIVAL)),
                 toPassengers(criteria.getPassengers()),
+                GROUPED_RESPONSE_LIST_TYPE,
                 tourVisioProperties.culture(),
                 criteria.getCurrency());
     }
