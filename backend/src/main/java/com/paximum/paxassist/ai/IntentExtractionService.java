@@ -91,7 +91,9 @@ public class IntentExtractionService {
           flightMaxPrice: upper price limit for a FLIGHT search, "uçuşa 3000 tl max" → 3000 (integer)
           directFlight  : true for direct/non-stop flights (aktarmasız/direkt), false for flights with layovers (aktarmalı) (boolean)
           airline       : preferred airline as the user names it, "THY ile" → "THY", "Pegasus'la" → "Pegasus" (string)
-          departTimeRange: departure time-of-day bucket, ONLY one of morning | afternoon | evening | night (string)
+          departTimeRange: departure-time filter — EITHER a time-of-day bucket (one of
+                           morning | afternoon | evening | night) OR an explicit 24h clock range
+                           "HH:mm-HH:mm"; open-ended "HH:mm-" = at/after, "-HH:mm" = at/before (string)
 
         Shared fields (hotel + flight):
           adults        : number of adults (integer)
@@ -164,7 +166,11 @@ public class IntentExtractionService {
         - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
         - When the user asks for a direct flight ("aktarmasız", "direkt"), set "directFlight": true. If they ask for flights with layovers ("aktarmalı"), set "directFlight": false.
         - When the user names a preferred airline ("THY ile", "Pegasus'la", "AJet olsun"), put it in "airline" exactly as stated ("THY", "Pegasus", "AJet"). Do NOT invent an airline the user did not mention.
-        - When the user restricts the departure time of day, map it to "departTimeRange" using ONLY these buckets: "sabah/sabahki" → morning, "öğlen/öğle" → afternoon, "akşam/akşamüstü" → evening, "gece/geceki" → night. This is the departure time bucket, NOT the departureDate; never fabricate a clock time.
+        - When the user restricts the departure time, set "departTimeRange":
+            - A bare TIME-OF-DAY WORD → a bucket: "sabah/sabahki" → morning, "öğlen/öğle" → afternoon, "akşam/akşamüstü" → evening, "gece/geceki" → night.
+            - EXPLICIT CLOCK HOURS → a 24h range "HH:mm-HH:mm" (zero-padded): "10-14 arası" → "10:00-14:00", "saat 8 ile 11 arası" → "08:00-11:00", "13:30-16:00 arası" → "13:30-16:00".
+            - OPEN-ENDED (single bound): "10'dan sonra" / "saat 10 sonrası" → "10:00-"; "14'ten önce" / "14 öncesi" → "-14:00".
+            - Prefer the explicit clock range whenever the user gives actual numbers; use a bucket only for a bare time-of-day word. This is the departure time filter, NOT the departureDate; never invent a time the user did not state.
         </rules>
 
         <output_format>
@@ -304,6 +310,17 @@ public class IntentExtractionService {
         Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
         Mesaj: "sabah kalkanlar"
         Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"morning"}}
+
+        Mesaj: "İstanbul'dan İzmir'e saat 10 ile 14 arası uçuş"
+        Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","departTimeRange":"10:00-14:00"}}
+
+        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Mesaj: "10'dan sonra kalkanlar"
+        Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"10:00-"}}
+
+        Sohbet Geçmişi: assistant: Aramanıza uygun 6 uçuş buldum:
+        Mesaj: "14:00'ten önce olsun"
+        Çıktı: {"intent":"FILTER","criteria":{"departTimeRange":"-14:00"}}
 
         Mesaj: "Antalya'da -2 yetişkin ve -1 childlu otel"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":-2,"children":-1}}

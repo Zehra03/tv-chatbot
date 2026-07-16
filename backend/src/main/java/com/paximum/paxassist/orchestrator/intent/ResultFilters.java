@@ -1,6 +1,8 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.math.BigDecimal;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -95,6 +97,102 @@ final class ResultFilters {
                     }
                 })
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Zone the flights' {@code departTime} instants are read in when bucketing by time of day. Fixed to
+     * the app's TourVisio default so "sabah/öğlen/akşam" means the local hour printed on the ticket
+     * rather than a UTC coincidence. (This is a Turkey-centric product; see {@code tourvisio.timezone}.)
+     */
+    private static final ZoneId FLIGHT_ZONE = ZoneId.of("Europe/Istanbul");
+
+    /**
+     * Keep flight cards whose departure time (local, {@link #FLIGHT_ZONE}) falls in the requested
+     * window. The spec is EITHER a time-of-day bucket ("morning"/"afternoon"/"evening"/"night", from
+     * "sabah/öğlen/akşam/gece") OR an explicit 24h clock range the user gave in numbers:
+     * {@code "HH:mm-HH:mm"}, or open-ended {@code "HH:mm-"} (at or after) / {@code "-HH:mm"} (at or
+     * before). Hotels and non-flight cards are unaffected; an unrecognised spec leaves the list
+     * untouched. A flight with no departure time is dropped while a window is requested — it cannot be
+     * shown as satisfying a filter it can't be evaluated against.
+     */
+    static List<Object> applyDepartTimeRange(List<Object> cards, String departTimeRange) {
+        if (departTimeRange == null || departTimeRange.isBlank() || cards == null || cards.isEmpty()) {
+            return cards;
+        }
+        DepartWindow window = parseWindow(departTimeRange.trim().toLowerCase(Locale.ROOT));
+        if (window == null) {
+            return cards; // unrecognised spec → no filtering
+        }
+        return cards.stream()
+                .filter(c -> {
+                    if (!(c instanceof FlightProduct f)) {
+                        return true; // only filter flights
+                    }
+                    if (f.getDepartTime() == null) {
+                        return false;
+                    }
+                    return window.matches(f.getDepartTime().atZone(FLIGHT_ZONE).toLocalTime());
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * A departure-time window. Bounds may be open ({@code null}). {@code upperExclusive} distinguishes a
+     * bucket's half-open hour range from an explicit inclusive range; {@code wraps} covers windows that
+     * cross midnight (night 21:00→06:00, or an explicit "22:00-02:00").
+     */
+    private record DepartWindow(LocalTime from, LocalTime to, boolean upperExclusive, boolean wraps) {
+        boolean matches(LocalTime t) {
+            boolean afterFrom = from == null || !t.isBefore(from);
+            boolean beforeTo = to == null || (upperExclusive ? t.isBefore(to) : !t.isAfter(to));
+            return wraps ? (afterFrom || beforeTo) : (afterFrom && beforeTo);
+        }
+    }
+
+    private static DepartWindow parseWindow(String spec) {
+        switch (spec) {
+            case "morning":   return new DepartWindow(LocalTime.of(6, 0), LocalTime.of(12, 0), true, false);
+            case "afternoon": return new DepartWindow(LocalTime.of(12, 0), LocalTime.of(17, 0), true, false);
+            case "evening":   return new DepartWindow(LocalTime.of(17, 0), LocalTime.of(21, 0), true, false);
+            case "night":     return new DepartWindow(LocalTime.of(21, 0), LocalTime.of(6, 0), true, true);
+            default:          break;
+        }
+        int dash = spec.indexOf('-');
+        if (dash < 0) {
+            return null; // neither a bucket nor a range
+        }
+        LocalTime from = parseClock(spec.substring(0, dash));
+        LocalTime to = parseClock(spec.substring(dash + 1));
+        if (from == null && to == null) {
+            return null;
+        }
+        boolean wraps = from != null && to != null && from.isAfter(to);
+        return new DepartWindow(from, to, false, wraps); // explicit bounds are inclusive
+    }
+
+    /** Parses "HH:mm", "H:mm" or a bare hour "HH"; null when blank or out of range. */
+    private static LocalTime parseClock(String raw) {
+        String s = raw.trim();
+        if (s.isEmpty()) {
+            return null;
+        }
+        try {
+            int hour;
+            int minute = 0;
+            int colon = s.indexOf(':');
+            if (colon >= 0) {
+                hour = Integer.parseInt(s.substring(0, colon).trim());
+                minute = Integer.parseInt(s.substring(colon + 1).trim());
+            } else {
+                hour = Integer.parseInt(s);
+            }
+            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
+                return null;
+            }
+            return LocalTime.of(hour, minute);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     static List<Object> applyLimit(List<Object> cards, Integer limit) {
