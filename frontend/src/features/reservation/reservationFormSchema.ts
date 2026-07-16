@@ -33,6 +33,16 @@ export const passengerSchema = z
       .refine((v) => !v || (/^\d{1,3}$/.test(v) && Number(v) <= 120), 'Geçerli bir yaş girin (0–120)'),
     // Uyruk zorunlu (TourVisio şartı); aramadan önden doldurulur.
     nationality: nationalitySchema,
+    // Doğum tarihi (yyyy-MM-dd) ve TC kimlik no — uçuş biletlemesi için ZORUNLU (uçuşa özel kontrol
+    // validatePreviewCommand'de). Otelde opsiyonel; format girildiyse doğrulanır.
+    birthDate: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v), 'Geçerli bir tarih girin'),
+    identityNumber: z
+      .string()
+      .optional()
+      .refine((v) => !v || /^\d{11}$/.test(v), 'TC kimlik no 11 haneli olmalı'),
   })
   .superRefine((p, ctx) => {
     if (p.passengerType === 'child' && !p.age) {
@@ -59,6 +69,8 @@ export const emptyPassenger: PassengerValues = {
   title: '1',
   age: '',
   nationality: '',
+  birthDate: '',
+  identityNumber: '',
 }
 
 /**
@@ -99,10 +111,31 @@ export function expectedTravellerCount(draft: ReservationDraft): number {
  * Form değerleri + ürün taslağını `/preview` komutuna çevirir. İlk yolcu lider'dir (iletişim ona
  * yazılır); ünvan sayıya (1/2), uyruk büyük harfe çevrilir. Ürün tipine göre yalnız ilgili blok doldurulur.
  */
+/**
+ * Tek parça telefonu TourVisio'nun istediği {ülke, alan, numara} üçlüsüne böler. Uçuş biletlemesi
+ * üçünü de NON-NULL ister. TR varsayımıyla: rakamları al, baştaki 90/0'ı ayıkla, kalan ~10 haneden
+ * ilk 3 alan kodu, geri kalanı numara. (Kaba ama "can not be null" için yeterli ve makul.)
+ */
+export function splitPhone(raw: string): { countryCode: string; areaCode: string; phoneNumber: string } {
+  const digits = (raw ?? '').replace(/\D/g, '')
+  let rest = digits
+  let countryCode = '90'
+  if (rest.startsWith('90') && rest.length > 10) {
+    rest = rest.slice(2)
+  } else if (rest.startsWith('0')) {
+    rest = rest.slice(1)
+  }
+  const areaCode = rest.slice(0, 3) || '000'
+  const phoneNumber = rest.slice(3) || rest || '0000000'
+  return { countryCode, areaCode, phoneNumber }
+}
+
 export function toPreviewCommand(
   draft: ReservationDraft,
   values: ReservationFormValues,
 ): PreviewReservationCommand {
+  const email = values.email.trim()
+  const contactPhone = splitPhone(values.phone)
   const travellers: TravellerInput[] = values.passengers.map((p, index) => ({
     firstName: p.firstName.trim(),
     lastName: p.lastName.trim(),
@@ -110,8 +143,15 @@ export function toPreviewCommand(
     title: Number(p.title),
     age: p.age ? Number(p.age) : null,
     nationalityCode: p.nationality.toUpperCase(),
+    // Uçuş biletlemesi için yolcu başına DOB + TCKN (backend mapper birebir gönderir; boşsa null).
+    birthDate: p.birthDate?.trim() ? p.birthDate.trim() : null,
+    identityNumber: p.identityNumber?.trim() ? p.identityNumber.trim() : null,
     leader: index === 0,
-    ...(index === 0 ? { email: values.email.trim(), phone: values.phone.trim() } : {}),
+    // Lider yolcu iletişimi: backend mapper e-postayı address.email'den, telefonu yapısal
+    // contactPhone'dan okur — düz email/phone'u da (uyumluluk için) taşıyoruz.
+    ...(index === 0
+      ? { email, phone: values.phone.trim(), contactPhone, address: { email } }
+      : {}),
   }))
   const lead = values.passengers[0]
   const base = {
@@ -179,6 +219,19 @@ export function validatePreviewCommand(cmd: PreviewReservationCommand): string[]
     if (cmd.travellers && cmd.travellers.length !== f.passengerCount) {
       errors.push(`Yolcu sayısı aramayla eşleşmeli (${f.passengerCount} kişi).`)
     }
+    // Uçuş biletlemesi TourVisio'da her yolcu için doğum tarihi + TC kimlik no, lider için de
+    // e-posta ve telefon ister (setReservationInfo: ParameterCanNotBeNull). Otelde gerekmez.
+    cmd.travellers?.forEach((t, i) => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(t.birthDate ?? '')) {
+        errors.push(`${i + 1}. yolcunun doğum tarihi gerekli (uçuş).`)
+      }
+      if (!/^\d{11}$/.test(t.identityNumber ?? '')) {
+        errors.push(`${i + 1}. yolcunun TC kimlik no'su gerekli (11 hane, uçuş).`)
+      }
+    })
+    const lead = cmd.travellers?.[0]
+    if (!lead?.address?.email?.trim()) errors.push('Lider yolcu için e-posta gerekli (uçuş).')
+    if (!lead?.contactPhone?.phoneNumber?.trim()) errors.push('Lider yolcu için telefon gerekli (uçuş).')
   }
 
   return errors

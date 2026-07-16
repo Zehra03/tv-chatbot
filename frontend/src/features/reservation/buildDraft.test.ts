@@ -16,6 +16,7 @@ const hotel: HotelProduct = {
 
 const flight: FlightProduct = {
   id: 'off-flt-1',
+  offerId: 'offer-flt-1',
   airline: 'VF',
   origin: 'SAW',
   destination: 'AYT',
@@ -83,7 +84,8 @@ describe('buildFlightDraft — tripType her zaman dolu (backend @NotNull)', () =
     const draft = buildFlightDraft(flight, { tripType: 'round_trip', passengers: 2 })
     expect(draft.flight.tripType).toBe('round_trip')
     expect(draft.flight.passengerCount).toBe(2)
-    expect(draft.offerId).toBe('off-flt-1')
+    // Booking, arama-satırı UUID'si (`id`) değil, TourVisio teklif jetonu (`offerId`) ile yapılmalı.
+    expect(draft.offerId).toBe('offer-flt-1')
   })
 
   it('kriter yoksa ürünün tripType\'ına düşer', () => {

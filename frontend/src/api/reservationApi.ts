@@ -33,8 +33,19 @@ export interface TravellerInput {
   age?: number | null
   /** ISO-3166 alpha-2 uyruk. TourVisio için ZORUNLU. */
   nationalityCode?: string | null
+  /** Doğum tarihi (yyyy-MM-dd). Uçuş biletlemesi için ZORUNLU (otelde opsiyonel). */
+  birthDate?: string | null
+  /** TC kimlik no (11 hane). Yurtiçi uçuş biletlemesi için ZORUNLU (otelde opsiyonel). */
+  identityNumber?: string | null
   email?: string | null
   phone?: string | null
+  /**
+   * TourVisio'nun setReservationInfo'da okuduğu YAPISAL telefon. Backend mapper düz `phone` yerine
+   * bunu (address.email ile birlikte) kullanır; uçuşta lider yolcuda ZORUNLU.
+   */
+  contactPhone?: { countryCode: string; areaCode: string; phoneNumber: string } | null
+  /** Yolcu adresi — backend mapper e-postayı buradan (address.email) okur. */
+  address?: { email?: string | null } | null
   /** İlk yolcu = lider (iletişim ona yazılır). */
   leader: boolean
 }
@@ -83,7 +94,7 @@ export interface PreviewReservationCommand {
   culture?: string
   leadGuestName: string
   reservationNote?: string
-  /** TourVisio teklif jetonları (BeginTransaction). Otel: HotelProduct.offerId; uçuş: FlightProduct.id. */
+  /** TourVisio teklif jetonları (BeginTransaction). Otel: HotelProduct.offerId; uçuş: FlightProduct.offerId. */
   offerIds: string[]
   travellers: TravellerInput[]
   hotel?: HotelSnapshotInput
