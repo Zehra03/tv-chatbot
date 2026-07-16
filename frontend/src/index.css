@@ -213,6 +213,31 @@
   }
 }
 
+/* ——— Yazdırma / "PDF olarak kaydet" (features/reservation/ReservationPrintPage) ———
+   Voucher rotası Layout'un dışında yaşadığı için kâğıtta yalnız kendi ağacı vardır;
+   burada kalan iş sayfa kutusunu ayarlamak ve ekrana özel kabuğu düşürmek. */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm;
+  }
+  /* Ekran kabuğu (geri/yazdır düğmeleri, yükleniyor/hata kutuları) kâğıda basılmaz. */
+  .print-hide {
+    display: none !important;
+  }
+  /* Tarayıcı varsayılanı arka plan dolgularını basmaz: durum rozeti ve başlık
+     çizgisi renksiz kalırdı. Voucher'ın renkleri bilgi taşıyor (durum!) — zorla. */
+  .print-sheet {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  /* Uzun misafir listelerinde satır/bölüm sayfa sınırında ikiye bölünmesin. */
+  .break-inside-avoid {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}
+
 @keyframes mercuryFloat {
   0% {
     transform: translate(0, 0) scale(1);
