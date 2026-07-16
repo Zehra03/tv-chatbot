@@ -90,6 +90,9 @@ public class IntentExtractionService {
           cabinClass    : ECONOMY | BUSINESS | FIRST (string)
           flightMaxPrice: upper price limit for a FLIGHT search, "uçuşa 3000 tl max" → 3000 (integer)
           directFlight  : true for direct/non-stop flights (aktarmasız/direkt), false for flights with layovers (aktarmalı) (boolean)
+          airline       : preferred airline, e.g. "THY", "Pegasus", "Turkish Airlines" (string)
+          minDepartureTime : minimum departure time in HH:mm format, e.g. "06:00" (string)
+          maxDepartureTime : maximum departure time in HH:mm format, e.g. "18:30" (string)
 
         Shared fields (hotel + flight):
           adults        : number of adults (integer)
@@ -103,6 +106,9 @@ public class IntentExtractionService {
           stars         : minimum star filter (integer)
           boardType     : board-type filter (string)
           directFlight  : direct/layover filter (boolean)
+          airline       : airline filter (string)
+          minDepartureTime : min departure time filter HH:mm (string)
+          maxDepartureTime : max departure time filter HH:mm (string)
 
         Select field (SELECT intent):
           selectionReference : the user's raw selection text — "1", "ilk", "en ucuz olan" (string)
@@ -161,6 +167,9 @@ public class IntentExtractionService {
         - When the user asks for an EXACT star rating without a range (e.g. "3 yıldızlı oteller", "5 yıldızlı"), specify BOTH "stars" and "maxStars" to that same number to enforce an exact match. E.g., "stars": 3, "maxStars": 3. If they say "en az 3 yıldız" or "3 yıldız ve üstü", only set "stars": 3.
         - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
         - When the user asks for a direct flight ("aktarmasız", "direkt"), set "directFlight": true. If they ask for flights with layovers ("aktarmalı"), set "directFlight": false.
+        - For flights, if the user specifies a specific time range (e.g. "18.30'dan önce", "9'dan sonra", "13 ile 14 arası", "saat 15'te"), set `minDepartureTime` and `maxDepartureTime` (HH:mm). Examples: "18.30'dan önce" → maxDepartureTime: "18:30". "9'dan sonra" → minDepartureTime: "09:00". "13 ile 14 arası" → minDepartureTime: "13:00", maxDepartureTime: "14:00". "saat 15'te" → minDepartureTime: "15:00", maxDepartureTime: "15:59".
+        - For flights, if the user uses general time terms, convert them to HH:mm ranges: Sabah → minDepartureTime:"06:00", maxDepartureTime:"11:59". Öğlen → minDepartureTime:"12:00", maxDepartureTime:"17:59". Akşam → minDepartureTime:"18:00", maxDepartureTime:"23:59". Gece → minDepartureTime:"00:00", maxDepartureTime:"05:59".
+        - For flights, if the user mentions an airline (e.g. "THY", "Pegasus", "Turkish Airlines"), extract it into the `airline` field.
         </rules>
 
         <output_format>
@@ -286,6 +295,18 @@ public class IntentExtractionService {
 
         Mesaj: "sadece aktarmalıları listele"
         Çıktı: {"intent":"FILTER","criteria":{"directFlight":false}}
+
+        Mesaj: "18.30'dan önceki THY uçuşları"
+        Çıktı: {"intent":"FLIGHT","criteria":{"airline":"THY","maxDepartureTime":"18:30"}}
+
+        Mesaj: "13 ile 14 arası İstanbul'a uçuş"
+        Çıktı: {"intent":"FLIGHT","criteria":{"destination":"İstanbul","minDepartureTime":"13:00","maxDepartureTime":"14:00"}}
+
+        Mesaj: "Yarın sabah Pegasus uçuşu"
+        Çıktı: {"intent":"FLIGHT","criteria":{"departureDate":"2026-07-14","airline":"Pegasus","minDepartureTime":"06:00","maxDepartureTime":"11:59"}}
+
+        Mesaj: "sadece sabah olanları göster"
+        Çıktı: {"intent":"FILTER","criteria":{"minDepartureTime":"06:00","maxDepartureTime":"11:59"}}
 
         Mesaj: "Antalya'da -2 yetişkin ve -1 childlu otel"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":-2,"children":-1}}

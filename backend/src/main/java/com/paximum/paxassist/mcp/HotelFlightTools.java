@@ -18,15 +18,23 @@ import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 
 /**
- * Model Context Protocol tools exposing the SEARCH use-cases. Each tool is a thin delegate over the
- * real {@link HotelSearchService} / {@link FlightSearchService}, so results come only from TourVisio —
- * nothing is fabricated. Missing required fields surface as the services' INCOMPLETE outcome, not an
+ * Model Context Protocol tools exposing the SEARCH use-cases. Each tool is a
+ * thin delegate over the
+ * real {@link HotelSearchService} / {@link FlightSearchService}, so results
+ * come only from TourVisio —
+ * nothing is fabricated. Missing required fields surface as the services'
+ * INCOMPLETE outcome, not an
  * error.
  *
- * <p><b>Security boundary (least privilege):</b> only search tools live here. There is deliberately
- * NO reservation/booking tool — the "chatbot never books" invariant holds on the MCP surface too.
- * The MCP endpoints inherit the app's JWT security (authenticated by default); do not permit them
- * publicly without an access control in front, since they bypass the chat guard.
+ * <p>
+ * <b>Security boundary (least privilege):</b> only search tools live here.
+ * There is deliberately
+ * NO reservation/booking tool — the "chatbot never books" invariant holds on
+ * the MCP surface too.
+ * The MCP endpoints inherit the app's JWT security (authenticated by default);
+ * do not permit them
+ * publicly without an access control in front, since they bypass the chat
+ * guard.
  */
 @Component
 public class HotelFlightTools {
@@ -70,11 +78,12 @@ public class HotelFlightTools {
 
         LocalDate depart = parse(departureDate);
         LocalDate ret = parse(returnDate);
-        PassengerCount passengers = (adults == null) ? null : PassengerCount.builder()
-                .adults(adults)
-                .children(children != null ? children : 0)
-                .infants(0)
-                .build();
+        PassengerCount passengers = (adults == null) ? null
+                : PassengerCount.builder()
+                        .adults(adults)
+                        .children(children != null ? children : 0)
+                        .infants(0)
+                        .build();
 
         FlightSearchCriteria criteria = FlightSearchCriteria.builder()
                 .origin(origin)

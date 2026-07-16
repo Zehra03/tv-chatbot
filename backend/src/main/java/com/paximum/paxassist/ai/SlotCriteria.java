@@ -42,6 +42,9 @@ public record SlotCriteria(
         String cabinClass,        // ECONOMY | BUSINESS | FIRST
         Integer flightMaxPrice,   // upper price limit for a FLIGHT search, e.g. "uçuşa 3000 tl max" → 3000
         Boolean directFlight,     // true: direct/non-stop, false: layovers, null: any
+        String airline,           // preferred airline, e.g. "THY", "Pegasus"
+        String minDepartureTime,  // HH:mm, e.g. "06:00"
+        String maxDepartureTime,  // HH:mm, e.g. "11:59"
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -66,6 +69,6 @@ public record SlotCriteria(
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null);
+                null, null, null, null, null, null, null, null);
     }
 }
