@@ -61,6 +61,30 @@ class SlotGuardTest {
     }
 
     @Test
+    void checkOutBeforeCheckIn_returnsMessage() {
+        Optional<String> msg = guard.checkInvalidSlots(
+                slots(Map.of("checkIn", "2026-08-05", "checkOut", "2026-08-01")));
+        assertThat(msg).isPresent();
+        assertThat(msg.get()).contains("önce veya aynı olamaz");
+    }
+
+    @Test
+    void checkOutSameAsCheckIn_returnsMessage() {
+        Optional<String> msg = guard.checkInvalidSlots(
+                slots(Map.of("checkIn", "2026-08-05", "checkOut", "2026-08-05")));
+        assertThat(msg).isPresent();
+        assertThat(msg.get()).contains("önce veya aynı olamaz");
+    }
+
+    @Test
+    void returnDateBeforeDepartureDate_returnsMessage() {
+        Optional<String> msg = guard.checkInvalidSlots(
+                slots(Map.of("departureDate", "2026-08-05", "returnDate", "2026-08-01")));
+        assertThat(msg).isPresent();
+        assertThat(msg.get()).contains("önce olamaz");
+    }
+
+    @Test
     void unparsableDate_isIgnored() {
         assertThat(guard.checkInvalidSlots(slots(Map.of("checkIn", "yarın")))).isEmpty();
     }

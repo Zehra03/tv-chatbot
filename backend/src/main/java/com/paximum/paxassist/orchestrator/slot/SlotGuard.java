@@ -56,6 +56,18 @@ public class SlotGuard {
             }
         }
         
+        LocalDate checkInDate = parse(criteria.checkIn());
+        LocalDate checkOutDate = parse(criteria.checkOut());
+        if (checkInDate != null && checkOutDate != null && !checkOutDate.isAfter(checkInDate)) {
+            return Optional.of("Çıkış tarihi giriş tarihinden önce veya aynı olamaz. Lütfen geçerli bir tarih giriniz.");
+        }
+
+        LocalDate depDate = parse(criteria.departureDate());
+        LocalDate retDate = parse(criteria.returnDate());
+        if (depDate != null && retDate != null && retDate.isBefore(depDate)) {
+            return Optional.of("Dönüş tarihi gidiş tarihinden önce olamaz. Lütfen geçerli bir tarih giriniz.");
+        }
+        
         if (criteria.adults() != null && criteria.adults() <= 0) {
             return Optional.of("Yetişkin sayısı en az 1 olmalıdır. Lütfen geçerli bir kişi sayısı giriniz.");
         }

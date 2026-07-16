@@ -36,7 +36,7 @@ class SlotNormalizerTest {
     }
 
     @Test
-    void shouldFixReverseCheckOut() {
+    void shouldClearReverseCheckOut() {
         String checkIn = LocalDate.now().plusDays(5).toString();
         String checkOut = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
@@ -48,12 +48,12 @@ class SlotNormalizerTest {
 
         SlotCriteria normalized = normalizer.normalize(criteria);
 
-        assertThat(normalized.checkOut()).isEqualTo(LocalDate.now().plusDays(6).toString());
-        assertThat(normalized.nights()).isEqualTo(1);
+        assertThat(normalized.checkOut()).isNull();
+        assertThat(normalized.nights()).isNull();
     }
 
     @Test
-    void shouldFixReverseReturnDate() {
+    void shouldClearReverseReturnDate() {
         String depart = LocalDate.now().plusDays(5).toString();
         String returnDate = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
@@ -64,7 +64,7 @@ class SlotNormalizerTest {
 
         SlotCriteria normalized = normalizer.normalize(criteria);
 
-        assertThat(normalized.returnDate()).isEqualTo(LocalDate.now().plusDays(6).toString());
+        assertThat(normalized.returnDate()).isNull();
     }
 
     @Test

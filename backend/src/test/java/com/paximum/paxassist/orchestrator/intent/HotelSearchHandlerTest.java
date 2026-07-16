@@ -52,7 +52,8 @@ class HotelSearchHandlerTest {
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
-        when(slotFilling.accumulate(any(), any())).thenReturn(merged);
+        org.mockito.Mockito.lenient().when(slotFilling.peekMerge(any(), any())).thenReturn(merged);
+        org.mockito.Mockito.lenient().when(slotFilling.accumulate(any(), any())).thenReturn(merged);
         return new OrchestrationContext(new ChatSession("s1"), "otel", IntentType.HOTEL, merged);
     }
 
