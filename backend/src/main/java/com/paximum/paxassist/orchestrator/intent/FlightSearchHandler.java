@@ -83,6 +83,7 @@ public class FlightSearchHandler implements IntentHandler {
         List<Object> rawCards = new ArrayList<>(outcome.results());
         List<Object> cards = ResultFilters.applyMaxPrice(rawCards, merged.flightMaxPrice());
         cards = ResultFilters.applyDirectFlight(cards, merged.directFlight());
+        cards = ResultFilters.applyDepartTimeRange(cards, merged.departTimeRange());
         cards = ResultFilters.applySort(cards, merged.sortBy());
 
         context.session().setActiveDomain("FLIGHT");
