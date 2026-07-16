@@ -4,12 +4,15 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.ai.IntentType;
+import com.paximum.paxassist.chat.domain.ChatSession;
+import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 
@@ -46,7 +49,34 @@ public class SelectHandler implements IntentHandler {
             return OrchestrationResult.message(
                     "Hangi sonucu seçtiğini anlayamadım. Örneğin \"1\", \"ilk\" ya da \"en ucuz olan\" diyebilirsin.");
         }
-        return OrchestrationResult.redirect("Seçimini rezervasyon adımına aktarıyorum.", selected);
+
+        Optional<OrchestrationResult> returnChoice = offerReturnChoice(context, selected);
+        return returnChoice.orElseGet(
+                () -> OrchestrationResult.redirect("Seçimini rezervasyon adımına aktarıyorum.", selected));
+    }
+
+    /**
+     * On a round trip the first pick is the outbound, so the alternatives that fly back with it are
+     * offered before the reservation — the return is a choice, not something decided for the user.
+     *
+     * <p>Empty when there is nothing to choose: a hotel or one-way selection, a return already being
+     * picked ({@code pendingOutboundLegId} set), or an outbound with a single possible return — a
+     * step that offered one option would be a click for nothing.
+     */
+    private Optional<OrchestrationResult> offerReturnChoice(OrchestrationContext context, Object selected) {
+        ChatSession session = context.session();
+        if (session.getPendingOutboundLegId() != null || !RoundTripOptions.isRoundTrip(selected)) {
+            return Optional.empty();
+        }
+        String outboundLegId = ((FlightProduct) selected).getOutboundLegId();
+        List<Object> returns = RoundTripOptions.returnsFor(session.getRoundTripOptions(), outboundLegId);
+        if (returns.size() < 2) {
+            return Optional.empty();
+        }
+        session.setPendingOutboundLegId(outboundLegId);
+        session.setLastResultCards(returns);
+        return Optional.of(OrchestrationResult.cards(
+                "Gidişini seçtim. Şimdi dönüşünü seç (fiyatlar gidiş-dönüş toplamı):", returns));
     }
 
     private Object resolve(List<Object> cards, String reference) {
