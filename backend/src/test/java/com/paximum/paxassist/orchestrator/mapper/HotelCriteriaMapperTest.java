@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class HotelCriteriaMapperTest {
 
-    private final HotelCriteriaMapper mapper = new HotelCriteriaMapper();
+    private final HotelCriteriaMapper mapper = new HotelCriteriaMapper(new GeoCountryResolver());
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private SlotCriteria slots(Map<String, Object> fields) {

@@ -17,6 +17,7 @@ import com.paximum.paxassist.hotel.HotelSearchService;
 import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
+import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
@@ -38,7 +39,7 @@ class DateSuggestionHandlerTest {
 
     private DateSuggestionHandler handler() {
         return new DateSuggestionHandler(
-                slotFilling, new HotelCriteriaMapper(), hotelSearchService, 2, 14, 3);
+                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService, 2, 14, 3);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {

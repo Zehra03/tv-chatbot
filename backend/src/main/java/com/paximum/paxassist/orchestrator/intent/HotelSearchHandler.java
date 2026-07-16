@@ -111,11 +111,12 @@ public class HotelSearchHandler implements IntentHandler {
         context.session().setLastResultCards(cards);
 
         return OrchestrationResult.cards(
-                hotelReply(cards, rawCards, beforeFeatureFilter, merged) + carriedOver, cards);
+                hotelReply(cards, rawCards, beforeFeatureFilter, merged, request.currency()) + carriedOver, cards);
     }
 
     private String hotelReply(List<Object> cards, List<Object> rawCards,
-                              List<Object> beforeFeatureFilter, SlotCriteria merged) {
+                              List<Object> beforeFeatureFilter, SlotCriteria merged,
+                              String searchCurrency) {
         String featureLabels = ResultFilters.describeFeatures(merged.features());
 
         if (!cards.isEmpty()) {
@@ -130,8 +131,10 @@ public class HotelSearchHandler implements IntentHandler {
         }
         // Everything was filtered out by budget while the search itself had results → say so honestly.
         if (!rawCards.isEmpty() && merged.hotelMaxPrice() != null) {
-            String currency = merged.currency() != null ? merged.currency() : "TL";
-            return merged.hotelMaxPrice() + " " + currency
+            // Quote the budget in the currency the search actually ran in, not in whatever the user
+            // happened to type. Since the currency is never asked for, merged.currency() is normally
+            // null here — the old "TL" fallback would have told a EUR-priced search "… TL altında".
+            return merged.hotelMaxPrice() + " " + searchCurrency
                     + " altında uygun otel bulamadım. Bütçeyi biraz artırmayı deneyebilir misin?";
         }
         return "Aradığın kriterlere uygun otel bulamadım. Farklı bir tarih veya şehir deneyebilir misin?";
