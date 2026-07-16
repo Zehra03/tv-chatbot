@@ -13,6 +13,13 @@ import lombok.extern.jackson.Jacksonized;
 public class FlightProduct {
     private final String id;
     /**
+     * The provider's id for the outbound leg. Every round-trip option that flies out on this leg
+     * shares it, which is what lets the return alternatives for a chosen outbound be found.
+     */
+    private final String outboundLegId;
+    /** The provider's id for the return leg; null for a one-way. */
+    private final String returnLegId;
+    /**
      * Offer token for the OUTBOUND leg, required when handing the flight off to the reservation
      * flow. A round trip is booked with this plus {@link #returnOfferId} — TourVisio prices and
      * tokens each leg separately, so one id alone would book a one-way.

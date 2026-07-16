@@ -24,6 +24,12 @@ public class ChatSession {
     private Map<String, Object> accumulatedCriteria;
     private List<Object> lastApiResultCards; // Raw API results, before FILTER intent
     private List<Object> lastResultCards;    // Results shown to the user (after FILTER)
+    // Every outbound+return combination the last round-trip search allows. The shown cards are only
+    // one per outbound (the cheapest way to fly it), so these are what the return alternatives for a
+    // chosen outbound are drawn from. Empty for hotels and one-way flights.
+    private List<Object> roundTripOptions = new ArrayList<>();
+    // Set once the user has picked an outbound and is choosing the return; null at every other time.
+    private String pendingOutboundLegId;
     private final List<ChatMessage> messages = new ArrayList<>();
     // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
     // which result list they are acting on. Kept as a String so this domain type does not
@@ -64,6 +70,14 @@ public class ChatSession {
     public String getActiveDomain() { return activeDomain; }
     public void setActiveDomain(String activeDomain) { this.activeDomain = activeDomain; }
 
+    public List<Object> getRoundTripOptions() { return roundTripOptions; }
+    public void setRoundTripOptions(List<Object> roundTripOptions) { this.roundTripOptions = roundTripOptions; }
+
+    public String getPendingOutboundLegId() { return pendingOutboundLegId; }
+    public void setPendingOutboundLegId(String pendingOutboundLegId) {
+        this.pendingOutboundLegId = pendingOutboundLegId;
+    }
+
     /**
      * Criteria that describe the traveller rather than the search, so they stay true after the user
      * switches from hotels to flights ("vazgeçtim, uçak arıyorum") and must not be asked again.
@@ -87,6 +101,8 @@ public class ChatSession {
         }
         lastApiResultCards = new ArrayList<>();
         lastResultCards = new ArrayList<>();
+        roundTripOptions = new ArrayList<>();
+        pendingOutboundLegId = null;
         activeDomain = domain;
     }
 }

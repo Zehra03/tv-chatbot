@@ -38,9 +38,9 @@ import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSe
  * together — and the pair's two booking tokens both travel on the product, because booking with the
  * outbound token alone would buy a one-way.
  *
- * <p>Each outbound becomes one card, paired with its cheapest compatible return, so the list has the
- * shape users expect ("these are your options, from this price"). Picking a specific return among
- * the alternatives is a separate, later step; nothing here fabricates an id or splits a price.
+ * <p>Every combinable (outbound, return) pair becomes one option, priced with the cheapest fares that
+ * pair allows — so the chat can first offer the outbounds and then, once one is chosen, the returns
+ * that actually fly with it. Nothing here fabricates an id or splits a price.
  */
 @Component
 public class TourVisioFlightResponseMapper {
@@ -83,8 +83,9 @@ public class TourVisioFlightResponseMapper {
         }
 
         return outbounds.stream()
-                .map(outbound -> mapSafely(outbound, () -> toRoundTrip(outbound, returns)))
-                .flatMap(Optional::stream)
+                .flatMap(outbound -> returns.stream()
+                        .map(returnLeg -> mapSafely(outbound, () -> toRoundTrip(outbound, returnLeg)))
+                        .flatMap(Optional::stream))
                 .toList();
     }
 
@@ -127,32 +128,33 @@ public class TourVisioFlightResponseMapper {
     }
 
     /**
-     * Pairs this outbound with the compatible return that makes the cheapest trip. A return is
-     * compatible when one of its offers shares a group key with an outbound offer; the shared key
-     * then names the booking token to use on each side.
+     * One trip flying out on {@code outbound} and back on {@code returnLeg}, at the cheapest fares
+     * the two allow. Empty when the provider does not let these legs be sold together: a return is
+     * combinable only when one of its offers shares a group key with an outbound offer, and that
+     * shared key then names the booking token to use on each side.
      */
-    private Optional<FlightProduct> toRoundTrip(TourVisioFlightResult outbound,
-                                                List<TourVisioFlightResult> returns) {
+    private Optional<FlightProduct> toRoundTrip(TourVisioFlightResult outbound, TourVisioFlightResult returnLeg) {
         Pairing best = null;
         for (TourVisioOffer outboundOffer : outbound.allOffers()) {
-            for (TourVisioFlightResult candidate : returns) {
-                for (TourVisioOffer returnOffer : candidate.allOffers()) {
-                    Pairing pairing = pair(outboundOffer, candidate, returnOffer);
-                    if (pairing != null && (best == null || pairing.total().compareTo(best.total()) < 0)) {
-                        best = pairing;
-                    }
+            for (TourVisioOffer returnOffer : returnLeg.allOffers()) {
+                Pairing pairing = pair(outboundOffer, returnLeg, returnOffer);
+                if (pairing != null && (best == null || pairing.total().compareTo(best.total()) < 0)) {
+                    best = pairing;
                 }
             }
         }
         if (best == null) {
-            log.warn("Skipping outbound {}: no return leg is combinable with it", outbound.id());
             return Optional.empty();
         }
 
-        List<TourVisioFlightItem> returnSegments = best.returnLeg().items();
+        List<TourVisioFlightItem> returnSegments = returnLeg.items();
         Pairing paired = best;
         return baseBuilder(outbound, best.outboundOfferId())
                 .map(builder -> builder
+                        // A pair needs its own id: several returns share one outbound, and a card id
+                        // that repeated across them could not tell the options apart.
+                        .id(outbound.id() + "::" + returnLeg.id())
+                        .returnLegId(returnLeg.id())
                         .returnOfferId(paired.returnOfferId())
                         .returnDepartTime(legDepartTime(returnSegments))
                         .returnArriveTime(legArriveTime(returnSegments))
@@ -222,6 +224,7 @@ public class TourVisioFlightResponseMapper {
         }
         return Optional.of(FlightProduct.builder()
                 .id(outbound.id())
+                .outboundLegId(outbound.id())
                 .offerId(offerId)
                 .airline(airlineOf(segments))
                 .flightNumber(FlightNumberParser.parse(first.flightNo()).number())
