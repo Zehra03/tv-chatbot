@@ -37,16 +37,16 @@ public class SelectHandler implements IntentHandler {
         List<Object> cards = context.session().getLastResultCards();
         if (cards == null || cards.isEmpty()) {
             return OrchestrationResult.message(
-                    "Seçim yapabilmeniz için önce bir arama yapmalıyız. Ne aramak istersiniz?");
+                    "Seçim yapabilmen için önce bir arama yapmalıyız. Ne aramak istersin?");
         }
 
         String reference = context.criteria() != null ? context.criteria().selectionReference() : null;
         Object selected = resolve(cards, reference);
         if (selected == null) {
             return OrchestrationResult.message(
-                    "Hangi sonucu seçtiğinizi anlayamadım. Örneğin \"1\", \"ilk\" ya da \"en ucuz olan\" diyebilirsiniz.");
+                    "Hangi sonucu seçtiğini anlayamadım. Örneğin \"1\", \"ilk\" ya da \"en ucuz olan\" diyebilirsin.");
         }
-        return OrchestrationResult.redirect("Seçiminizi rezervasyon adımına aktarıyorum.", selected);
+        return OrchestrationResult.redirect("Seçimini rezervasyon adımına aktarıyorum.", selected);
     }
 
     private Object resolve(List<Object> cards, String reference) {

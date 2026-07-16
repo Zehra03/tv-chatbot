@@ -158,7 +158,12 @@ export function toPreviewCommand(
     currency: draft.currency,
     totalAmount: draft.price,
     leadGuestName: `${lead.firstName.trim()} ${lead.lastName.trim()}`,
-    offerIds: [draft.offerId],
+    // Gidiş-dönüşte İKİ jeton gider: TourVisio bacakları ayrı fiyatlar ve ayrı jetonlarla satar,
+    // yalnız gidişi göndermek tek yön bilet alırdı.
+    offerIds:
+      draft.productType === 'flight' && draft.returnOfferId
+        ? [draft.offerId, draft.returnOfferId]
+        : [draft.offerId],
     travellers,
   }
   return draft.productType === 'hotel'

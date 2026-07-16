@@ -28,7 +28,7 @@ public class FilterHandler implements IntentHandler {
         List<Object> current = context.session().getLastApiResultCards();
         if (current == null || current.isEmpty()) {
             return OrchestrationResult.message(
-                    "Önce bir otel veya uçuş araması yapmalıyız. Ne aramak istersiniz?");
+                    "Önce bir otel veya uçuş araması yapmalıyız. Ne aramak istersin?");
         }
 
         if (context.intent() == IntentType.CLEAR_FILTER) {

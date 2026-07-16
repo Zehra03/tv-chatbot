@@ -40,7 +40,7 @@ public class OutOfScopeGuard {
     private static final String BLOCK_KEY_PREFIX = "guard:oos:block:";
 
     static final String BLOCK_MESSAGE =
-            "Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.";
+            "Çok fazla konu dışı istek gönderdin. Lütfen bir süre sonra tekrar dene.";
     private static final String BLOCK_REASON = "Out-of-scope abuse: user temporarily blocked";
 
     private final StringRedisTemplate redis;

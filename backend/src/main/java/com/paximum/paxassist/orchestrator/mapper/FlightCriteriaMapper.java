@@ -41,10 +41,9 @@ public class FlightCriteriaMapper {
                     .build();
         }
 
-        String currency = c.currency();
-        if (currency == null || currency.isBlank()) {
-            currency = "TRY";
-        }
+        // The user is never asked for a currency; it follows from their nationality unless they
+        // explicitly named one.
+        String currency = CurrencyByNationality.resolve(c.currency(), c.nationality());
 
         return FlightSearchCriteria.builder()
                 .origin(c.origin())

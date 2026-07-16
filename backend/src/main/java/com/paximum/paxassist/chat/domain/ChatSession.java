@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * In-memory session state. Swapped for a JPA entity once the DB teammate
@@ -62,4 +63,30 @@ public class ChatSession {
 
     public String getActiveDomain() { return activeDomain; }
     public void setActiveDomain(String activeDomain) { this.activeDomain = activeDomain; }
+
+    /**
+     * Criteria that describe the traveller rather than the search, so they stay true after the user
+     * switches from hotels to flights ("vazgeçtim, uçak arıyorum") and must not be asked again.
+     * Keys mirror {@code SlotCriteria}'s field names, which is the shape stored in
+     * {@code accumulatedCriteria}.
+     */
+    private static final Set<String> TRAVELLER_CRITERIA_KEYS =
+            Set.of("adults", "children", "childAges", "nationality", "currency");
+
+    /**
+     * Switches the conversation to another product domain: the previous domain's search criteria and
+     * its result cards are dropped, while the traveller's own details are carried over.
+     *
+     * <p>Dropping the cards is what stops a stale hotel list from being filtered or selected while
+     * the user is already talking about flights — the new domain has no results until its own search
+     * succeeds.
+     */
+    public void switchDomain(String domain) {
+        if (accumulatedCriteria != null) {
+            accumulatedCriteria.keySet().retainAll(TRAVELLER_CRITERIA_KEYS);
+        }
+        lastApiResultCards = new ArrayList<>();
+        lastResultCards = new ArrayList<>();
+        activeDomain = domain;
+    }
 }

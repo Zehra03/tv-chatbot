@@ -20,25 +20,25 @@ import org.springframework.stereotype.Component;
 public class ClarificationCatalog {
 
     private static final Map<String, String> HOTEL_QUESTIONS = Map.of(
-            "destination", "Hangi şehir veya bölgede otel aramamı istersiniz?",
-            "checkIn", "Otele giriş tarihiniz nedir? (örn. 2026-08-01)",
-            "night", "Kaç gece konaklamayı planlıyorsunuz? (ya da çıkış tarihinizi belirtin)",
+            "destination", "Hangi şehir veya bölgede otel aramamı istersin?",
+            "checkIn", "Otele giriş tarihin nedir? (örn. 2026-08-01)",
+            "night", "Kaç gece konaklamayı planlıyorsun? (ya da çıkış tarihini belirt)",
             "adult", "Kaç yetişkin konaklayacak?",
             "childAges", "Çocukların yaşları nedir? (örn. 5 ve 8) — fiyat çocuk yaşına göre değişir."
     );
 
     private static final Map<String, String> FLIGHT_QUESTIONS = Map.of(
-            "origin", "Nereden kalkmak istersiniz?",
-            "destination", "Nereye gitmek istersiniz?",
-            "departDate", "Hangi tarihte gitmek istersiniz? (örn. 2026-08-01)",
-            "returnDate", "Dönüş tarihiniz nedir?",
+            "origin", "Nereden kalkmak istersin?",
+            "destination", "Nereye gitmek istersin?",
+            "departDate", "Hangi tarihte gitmek istersin? (örn. 2026-08-01)",
+            "returnDate", "Dönüş tarihin nedir?",
             "tripType", "Tek yön mü yoksa gidiş-dönüş mü olsun?",
             "passengers", "Kaç yolcu seyahat edecek?",
-            "currency", "Fiyatları hangi para biriminde görmek istersiniz? (örn. TRY)"
+            "currency", "Fiyatları hangi para biriminde görmek istersin? (örn. TRY)"
     );
 
-    private static final String HOTEL_FALLBACK = "Otel araması için biraz daha bilgiye ihtiyacım var. Yardımcı olabilir misiniz?";
-    private static final String FLIGHT_FALLBACK = "Uçuş araması için biraz daha bilgiye ihtiyacım var. Yardımcı olabilir misiniz?";
+    private static final String HOTEL_FALLBACK = "Otel araması için biraz daha bilgiye ihtiyacım var. Yardımcı olabilir misin?";
+    private static final String FLIGHT_FALLBACK = "Uçuş araması için biraz daha bilgiye ihtiyacım var. Yardımcı olabilir misin?";
 
     public String questionForHotel(List<String> missingFields) {
         return firstQuestion(HOTEL_QUESTIONS, missingFields, HOTEL_FALLBACK);

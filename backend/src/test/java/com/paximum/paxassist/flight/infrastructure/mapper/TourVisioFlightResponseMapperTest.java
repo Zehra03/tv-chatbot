@@ -49,11 +49,17 @@ class TourVisioFlightResponseMapperTest {
                 "LHR", "London", "2026-08-01T12:00:00");
     }
 
-    private TourVisioFlightResult flightWith(TourVisioFlightItem... items) {
+    /** A leg priced by a single flat-token offer (the legacy payload shape). */
+    private TourVisioFlightResult legWith(String id, String offerId, TourVisioFlightItem... items) {
         return new TourVisioFlightResult(
-                "flight-1",
+                id,
                 List.of(items),
-                new TourVisioOffer("offer-1", new TourVisioPrice(BigDecimal.TEN, "USD")));
+                new TourVisioOffer(offerId, null, null, null, new TourVisioPrice(BigDecimal.TEN, "USD")),
+                null);
+    }
+
+    private TourVisioFlightResult flightWith(TourVisioFlightItem... items) {
+        return legWith("flight-1", "offer-1", items);
     }
 
     private TourVisioFlightResult validFlight(TourVisioFlightItem item) {
@@ -144,15 +150,16 @@ class TourVisioFlightResponseMapperTest {
     }
 
     @Test
-    void toFlightProducts_mapsReturnLegFromRouteTwoSegments() {
+    void toFlightProducts_pairsTheOutboundAndReturnResultsIntoOneTrip() {
         TourVisioFlightItem outbound = segment(ROUTE_OUTBOUND, "IST", "Istanbul", "2026-08-20T06:45:00",
                 "AYT", "Antalya", "2026-08-20T07:55:00");
         TourVisioFlightItem inbound = segment(ROUTE_RETURN, "AYT", "Antalya", "2026-08-27T07:50:00",
                 "IST", "Istanbul", "2026-08-27T09:00:00");
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
-        List<FlightProduct> products =
-                mapper.toFlightProducts(responseWith(flightWith(outbound, inbound)), TripType.ROUND_TRIP);
+        List<FlightProduct> products = mapper.toFlightProducts(
+                responseWith(legWith("out-1", "offer-out", outbound), legWith("in-1", "offer-in", inbound)),
+                TripType.ROUND_TRIP);
 
         assertThat(products).hasSize(1);
         FlightProduct product = products.get(0);
@@ -162,6 +169,8 @@ class TourVisioFlightResponseMapperTest {
         assertThat(product.getArriveTime()).isEqualTo(Instant.parse("2026-08-20T04:55:00Z"));
         assertThat(product.getReturnDepartTime()).isEqualTo(Instant.parse("2026-08-27T04:50:00Z"));
         assertThat(product.getReturnArriveTime()).isEqualTo(Instant.parse("2026-08-27T06:00:00Z"));
+        assertThat(product.getOfferId()).isEqualTo("offer-out");
+        assertThat(product.getReturnOfferId()).isEqualTo("offer-in");
     }
 
     /** A layover splits a leg into several segments: it departs with the first and lands with the last. */
@@ -178,7 +187,8 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
         List<FlightProduct> products = mapper.toFlightProducts(
-                responseWith(flightWith(outboundLeg1, outboundLeg2, inboundLeg1, inboundLeg2)),
+                responseWith(legWith("out-1", "offer-out", outboundLeg1, outboundLeg2),
+                        legWith("in-1", "offer-in", inboundLeg1, inboundLeg2)),
                 TripType.ROUND_TRIP);
 
         assertThat(products).hasSize(1);
@@ -204,8 +214,9 @@ class TourVisioFlightResponseMapperTest {
                 "IST", "Istanbul", "2026-08-27T09:00:00Z");
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
-        List<FlightProduct> products =
-                mapper.toFlightProducts(responseWith(flightWith(outbound, inbound)), TripType.ROUND_TRIP);
+        List<FlightProduct> products = mapper.toFlightProducts(
+                responseWith(legWith("out-1", "offer-out", outbound), legWith("in-1", "offer-in", inbound)),
+                TripType.ROUND_TRIP);
 
         assertThat(products).hasSize(1);
         assertThat(products.get(0).getDepartTime()).isEqualTo(Instant.parse("2026-08-20T06:45:00Z"));

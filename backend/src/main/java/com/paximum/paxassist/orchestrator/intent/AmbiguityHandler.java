@@ -24,7 +24,7 @@ import com.paximum.paxassist.orchestrator.OrchestrationResult;
 public class AmbiguityHandler implements IntentHandler {
 
     static final String INTENT_QUESTION =
-            "Otel araması mı yoksa uçuş araması mı yapmak istersiniz?";
+            "Otel araması mı yoksa uçuş araması mı yapmak istersin?";
 
     @Override
     public boolean supports(IntentType intent) {

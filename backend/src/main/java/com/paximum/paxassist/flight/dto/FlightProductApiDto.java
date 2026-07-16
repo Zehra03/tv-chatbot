@@ -14,6 +14,8 @@ import com.paximum.paxassist.flight.domain.TripType;
 public record FlightProductApiDto(
         String id,
         String offerId,
+        /** Booking token for the return leg; null for a one-way. A round trip needs BOTH tokens. */
+        String returnOfferId,
         String airline,
         String origin,
         String destination,
@@ -24,6 +26,8 @@ public record FlightProductApiDto(
         String tripType,
         Instant returnDepartTime,
         Instant returnArriveTime,
+        String returnAirline,
+        int returnStops,
         int stops,
         String baggage,
         BigDecimal price,
@@ -33,6 +37,7 @@ public record FlightProductApiDto(
         return new FlightProductApiDto(
                 product.getId(),
                 product.getOfferId(),
+                product.getReturnOfferId(),
                 product.getAirline(),
                 product.getOrigin(),
                 product.getDestination(),
@@ -43,6 +48,8 @@ public record FlightProductApiDto(
                 tripType == TripType.ROUND_TRIP ? "round_trip" : "one_way",
                 product.getReturnDepartTime(),
                 product.getReturnArriveTime(),
+                product.getReturnAirline(),
+                product.getReturnStops(),
                 product.getStops(),
                 product.getBaggage(),
                 product.getPrice(),

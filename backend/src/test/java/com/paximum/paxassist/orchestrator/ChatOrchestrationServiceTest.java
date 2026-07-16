@@ -19,6 +19,7 @@ import com.paximum.paxassist.orchestrator.intent.IntentRouter;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -205,6 +206,26 @@ class ChatOrchestrationServiceTest {
         verify(guardAuditLogger).logBlockedRequestAsync("nasılsın", "Out-of-scope abuse: user temporarily blocked");
         verify(intentRouter, never()).route(any());
         verify(sessionStore, never()).save(any());
+    }
+
+    /**
+     * A greeting must leave the consecutive-out-of-scope streak exactly as it was: counting it would
+     * let "merhaba" spam earn a block, while resetting it would let a greeting slipped between
+     * out-of-scope messages defeat the block.
+     */
+    @Test
+    void greetingTurn_leavesTheOutOfScopeStreakUntouched() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("merhaba"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.GREETING, null));
+        when(intentRouter.route(IntentType.GREETING)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message("Merhaba! Ben seyahat asistanın Paxi."));
+
+        service().handle("s1", "merhaba", CALLER);
+
+        verify(guard, never()).registerOutOfScope(any(), anyBoolean());
+        verify(sessionStore).save(session);
     }
 
     @Test
