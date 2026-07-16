@@ -30,8 +30,9 @@ public class HotelCriteriaMapper {
 
     public HotelSearchRequest toRequest(SlotCriteria c) {
         Integer night = computeNights(c.checkIn(), c.checkOut(), c.nights());
-        // HotelSearchRequest's compact constructor defaults nationality/currency/culture/childAges
-        // when null, so passing nulls here is safe.
+        // HotelSearchRequest's compact constructor defaults nationality/culture/childAges when null,
+        // so passing nulls here is safe. The currency is resolved from the nationality instead of
+        // being asked for (and so is never null by the time it reaches the request).
         return new HotelSearchRequest(
                 c.location(),      // destination
                 c.checkIn(),       // checkIn (YYYY-MM-DD)
@@ -39,7 +40,7 @@ public class HotelCriteriaMapper {
                 c.adults(),        // adult
                 c.childAges(),     // childAges
                 c.nationality(),   // nationality
-                c.currency(),      // currency
+                CurrencyByNationality.resolve(c.currency(), c.nationality()),
                 null               // culture (defaults to tr-TR)
         );
     }
