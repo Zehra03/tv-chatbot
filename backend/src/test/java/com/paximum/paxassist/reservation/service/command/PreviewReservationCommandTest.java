@@ -36,6 +36,7 @@ class PreviewReservationCommandTest {
     private static final String INFANT_NEEDS_FLIGHT = "Bebek (infant) yolcu yalnızca uçuş içeren rezervasyonlarda eklenebilir";
     private static final String INFANT_NEEDS_ADULT = "Her bebek (infant) için bir yetişkin gerekir; bebek sayısı yetişkin sayısını aşamaz";
     private static final String LEAD_NOT_CONTACTABLE = "Ana misafirin e-posta ve telefon bilgisi zorunludur";
+    private static final String CHILD_NOT_DATABLE = "Çocuk/bebek yolcular için yaş veya doğum tarihi gereklidir";
 
     private static ValidatorFactory factory;
     private static Validator validator;
@@ -134,6 +135,41 @@ class PreviewReservationCommandTest {
     void adultFirstWithAChildBehind_isAccepted() {
         assertThat(violations(command(List.of(adult("Ada"), child("Max")), hotelFor(1, 1), null)))
                 .isEmpty();
+    }
+
+    // ── Non-adult travellers must be datable (age or DOB) for TourVisio ──────────────────────
+
+    @Test
+    void childWithNeitherAgeNorBirthDate_isRejected() {
+        // Both null → the request mapper has nothing to send TourVisio as the child's DOB, which it
+        // rejects with ParameterCanNotBeNull. Catch it at the boundary instead of after confirm.
+        assertThat(violations(command(
+                List.of(adult("Ada"), traveller("Max", PassengerType.CHILD, null, false)), hotelFor(1, 1), null)))
+                .contains(CHILD_NOT_DATABLE);
+    }
+
+    @Test
+    void childWithAnAge_isAccepted() {
+        assertThat(violations(command(List.of(adult("Ada"), child("Max")), hotelFor(1, 1), null)))
+                .doesNotContain(CHILD_NOT_DATABLE);
+    }
+
+    @Test
+    void childWithABirthDateButNoAge_isAccepted() {
+        PreviewReservationCommand.Traveller kid = new PreviewReservationCommand.Traveller(
+                null, "Max", "Yılmaz", PassengerType.CHILD, null,
+                null, "ada@example.com", "+905551112233", false, null, null,
+                LocalDate.now().minusYears(8), null, null, null, null);
+        assertThat(violations(command(List.of(adult("Ada"), kid), hotelFor(1, 1), null)))
+                .doesNotContain(CHILD_NOT_DATABLE);
+    }
+
+    @Test
+    void adultWithoutAnAgeOrBirthDate_isAccepted() {
+        // The rule targets non-adults only; an adult still books without a DOB.
+        assertThat(violations(command(
+                List.of(traveller("Ada", PassengerType.ADULT, null, true)), hotelFor(1, 0), null)))
+                .doesNotContain(CHILD_NOT_DATABLE);
     }
 
     // ── The booking must be contactable ──────────────────────────────────────────────────────
