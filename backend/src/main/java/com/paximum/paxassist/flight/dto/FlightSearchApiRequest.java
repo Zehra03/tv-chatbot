@@ -22,8 +22,9 @@ import jakarta.validation.constraints.Size;
 /**
  * The request body {@code POST /api/v1/flights/search} receives from the frontend
  * ({@code FlightSearchCriteria} in {@code frontend/src/types/search.ts}): {@code passengers} is a
- * single count and {@code tripType} is {@code one_way}/{@code round_trip}. Frontend-only filters
- * (departTimeRange, baggage) are applied client-side and ignored here.
+ * single count and {@code tripType} is {@code one_way}/{@code round_trip}. {@code departTimeRange}
+ * is honoured server-side — {@code toCriteria()} maps it onto the criteria and
+ * {@code FlightResultFilter} applies it to the results. {@code baggage} stays a client-side filter.
  *
  * <p>Unlike the chat path — where {@code TravelDateGuard} and slot-filling vet the criteria — this
  * REST boundary is reached directly by the search form, so it carries its own Bean Validation:
