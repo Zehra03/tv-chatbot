@@ -77,6 +77,12 @@ public class SlotGuard {
         if (criteria.childAges() != null && criteria.childAges().stream().anyMatch(age -> age < 0)) {
             return Optional.of("Çocuk yaşları negatif olamaz. Lütfen geçerli yaşlar giriniz.");
         }
+        // A "child" is 0-17; 18+ is an adult. Reject out-of-range ages the LLM may have extracted
+        // ("çocuk 25 yaşında") instead of letting the value reach TourVisio and mis-price the booking.
+        if (criteria.childAges() != null && criteria.childAges().stream().anyMatch(age -> age > 17)) {
+            return Optional.of("Çocuk yaşı 0-17 arasında olmalıdır (18 ve üzeri yetişkin sayılır). "
+                    + "Lütfen geçerli bir çocuk yaşı giriniz.");
+        }
         if (criteria.rooms() != null && criteria.rooms() <= 0) {
             return Optional.of("Oda sayısı en az 1 olmalıdır. Lütfen geçerli bir oda sayısı giriniz.");
         }

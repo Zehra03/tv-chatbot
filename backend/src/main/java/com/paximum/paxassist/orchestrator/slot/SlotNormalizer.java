@@ -85,7 +85,9 @@ public class SlotNormalizer {
         
         java.util.List<Integer> childAges = criteria.childAges();
         if (childAges != null) {
-            childAges = childAges.stream().filter(age -> age >= 0).toList();
+            // Keep only valid child ages (0-17). SlotGuard already asks the user about out-of-range
+            // ages before search; this is the defensive net so an invalid age can never be persisted.
+            childAges = childAges.stream().filter(age -> age >= 0 && age <= 17).toList();
             if (childAges.isEmpty()) {
                 childAges = null;
             }

@@ -106,4 +106,18 @@ class SlotNormalizerTest {
         assertThat(normalized.children()).isNull();
         assertThat(normalized.childAges()).containsExactly(5, 8);
     }
+
+    @Test
+    void shouldDropChildAgesOutsideZeroToSeventeen() {
+        SlotCriteria criteria = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null,
+                null, null, java.util.List.of(5, 25, 17, -3), null, null,
+                null, null, null
+        );
+
+        SlotCriteria normalized = normalizer.normalize(criteria);
+
+        assertThat(normalized.childAges()).containsExactly(5, 17);
+    }
 }
