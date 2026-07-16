@@ -23,6 +23,7 @@ import {
   reservationFixtures,
 } from './fixtures'
 import {
+  claimSeedSessions,
   deleteSessionState,
   getSessionState,
   listSessionStates,
@@ -158,6 +159,21 @@ function issueSession(user: AuthUser): MockAuthSession {
   }
 }
 
+/**
+ * Chat oturumunun sahibini çözer (gerçek backend ChatController.resolveCaller paritesi):
+ * geçerli Bearer jetonu → "user:<id>"; jeton yoksa X-Guest-Id → "guest:<id>"; hiçbiri yoksa
+ * "anon" (yalnız kimliksiz/test akışı — gerçek uygulamada /chat her zaman kimlikli). Böylece
+ * bir üyenin geçmişi, çıkış yapıp misafir olan çağrana ASLA görünmez.
+ */
+function resolveChatOwner(request: Request): string {
+  const session = readAuthSession()
+  const auth = request.headers.get('Authorization')
+  if (session && auth === `Bearer ${session.token}`) return `user:${session.user.id}`
+  const guestId = request.headers.get('X-Guest-Id')?.trim()
+  if (guestId) return `guest:${guestId.slice(0, 64)}`
+  return 'anon'
+}
+
 /** Backend'in ErrorResponse kaydıyla aynı gövde: { error, message, timestamp }. */
 function errorBody(error: string, message: string) {
   return { error, message, timestamp: new Date().toISOString() }
@@ -172,19 +188,21 @@ export const handlers: RequestHandler[] = [
   // ── Chat ────────────────────────────────────────────────────────────────
   http.post('/api/v1/chat', async ({ request }) => {
     const body = (await request.json()) as SendMessageRequest
-    return HttpResponse.json(processMessage(body.sessionId, body.message ?? ''))
+    return HttpResponse.json(processMessage(body.sessionId, body.message ?? '', resolveChatOwner(request)))
   }),
 
   // Statik path, ':sessionId' kalıbından ÖNCE kayıtlı olmalı (MSW sıra ile eşler).
-  http.get('/api/v1/chat/sessions', () => HttpResponse.json(listSessionStates())),
+  http.get('/api/v1/chat/sessions', ({ request }) =>
+    HttpResponse.json(listSessionStates(resolveChatOwner(request))),
+  ),
 
-  http.get('/api/v1/chat/:sessionId', ({ params }) => {
-    const session = getSessionState(String(params.sessionId))
+  http.get('/api/v1/chat/:sessionId', ({ params, request }) => {
+    const session = getSessionState(String(params.sessionId), resolveChatOwner(request))
     return session ? HttpResponse.json(session) : notFound('Oturum bulunamadı.')
   }),
 
-  http.delete('/api/v1/chat/:sessionId', ({ params }) => {
-    const ok = deleteSessionState(String(params.sessionId))
+  http.delete('/api/v1/chat/:sessionId', ({ params, request }) => {
+    const ok = deleteSessionState(String(params.sessionId), resolveChatOwner(request))
     return ok ? new HttpResponse(null, { status: 204 }) : notFound('Oturum bulunamadı.')
   }),
 
@@ -341,6 +359,7 @@ export const handlers: RequestHandler[] = [
     const user: AuthUser = { id: crypto.randomUUID(), email: body.email, name: body.name }
     const session = issueSession(user)
     writeAuthSession(session)
+    claimSeedSessions(`user:${user.id}`)
     return HttpResponse.json(
       { user: session.user, token: session.token, refreshToken: session.refreshToken },
       { status: 201 },
@@ -362,6 +381,7 @@ export const handlers: RequestHandler[] = [
     }
     const session = issueSession(user)
     writeAuthSession(session)
+    claimSeedSessions(`user:${user.id}`)
     return HttpResponse.json({
       user: session.user,
       token: session.token,
