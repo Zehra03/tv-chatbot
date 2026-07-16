@@ -46,7 +46,8 @@ Bu repo, SAN TSG staj kapsamindaki gereksinimlere gore Spring Boot + PostgreSQL 
 ### Backend
 
 1. Bagimliliklar: `docker compose up -d postgres redis`
-	- Ollama calismiyorsa `.env` icinde `SPRING_PROFILES_ACTIVE=dev,mock-ai` kullan.
+	- LLM anahtarlarin (GEMINI_API_KEY / DEEPSEEK_API_KEY) yoksa `.env` icinde
+	  `SPRING_PROFILES_ACTIVE=dev,mock-ai` kullan — sohbet mock'lanir, validator anahtarsiz provider'a sabitlenir.
 2. `backend/` altinda: `mvn spring-boot:run` (Maven wrapper henuz yok)
 
 ### Frontend

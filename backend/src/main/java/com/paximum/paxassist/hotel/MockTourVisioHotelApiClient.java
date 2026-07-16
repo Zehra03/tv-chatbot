@@ -11,7 +11,7 @@ import java.util.Locale;
 
 /**
  * Static hotel data for offline runs — active under the {@code mock} (CI/context tests) and
- * {@code demo} (local end-to-end with Ollama + Flyway) profiles, so hotel search returns real
+ * {@code demo} (local end-to-end with a real chat model + Flyway) profiles, so hotel search returns real
  * cards without TourVisio credentials. The real client ({@link TourVisioHotelApiClientImpl}) is
  * {@code @Profile("!mock & !demo")}, so exactly one is ever wired.
  */

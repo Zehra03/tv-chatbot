@@ -2,12 +2,13 @@
 #
 # Activates MockTourVisioHotelApiClient + MockFlightSearchService (their @Profile is "mock | demo"),
 # so hotel/flight search return demo cards WITHOUT TourVisio credentials, while everything else runs
-# for real: Postgres + Flyway (chat/session persistence), Redis (rate limit/cache), and the Ollama
-# chat model (real replies — needs the ollama service up with the model pulled).
+# for real: Postgres + Flyway (chat/session persistence), Redis (rate limit/cache), and the real chat
+# model — Gemini (needs GEMINI_API_KEY). This profile does not pin app.validator.provider either, so
+# the Validator runs on its default DeepSeek client and needs DEEPSEEK_API_KEY (fail-fast without it).
 #
-# Contrast with the 'mock' profile (CI context test): that one turns Flyway OFF, ddl-auto=none, and
-# the Ollama chat OFF (empty mock model). 'demo' keeps all of those ON — only the TourVisio-backed
-# search DATA is mocked. Run with SPRING_PROFILES_ACTIVE=demo.
+# Contrast with the 'mock' profile (CI context test): that one turns Flyway OFF, ddl-auto=none, the
+# chat model OFF (empty mock model) and pins the Validator to a key-less provider. 'demo' keeps all of
+# those ON — only the TourVisio-backed search DATA is mocked. Run with SPRING_PROFILES_ACTIVE=demo.
 spring:
   flyway:
     enabled: true
