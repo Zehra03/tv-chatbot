@@ -110,6 +110,20 @@ class SlotNormalizerTest {
     }
 
     @Test
+    void shouldDropChildAgesOutsideZeroToSeventeen() {
+        SlotCriteria criteria = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                null, null, java.util.List.of(5, 25, 17, -3), null, null,
+                null, null, null
+        );
+
+        SlotCriteria normalized = normalizer.normalize(criteria);
+
+        assertThat(normalized.childAges()).containsExactly(5, 17);
+    }
+
+    @Test
     void shouldPreserveFlightFilterSlots() {
         // airline / departTimeRange carry no date/number logic — normalize must pass them through
         // untouched (alongside directFlight) so the flight search can act on them.

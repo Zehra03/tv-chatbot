@@ -118,6 +118,20 @@ class SlotGuardTest {
     }
 
     @Test
+    void childAgeAbove17_returnsMessage() {
+        // "çocuk 25 yaşında" → out of the 0-17 child range; must be rejected before search.
+        Optional<String> msg = guard.checkInvalidSlots(slots(Map.of("childAges", java.util.List.of(5, 25))));
+        assertThat(msg).isPresent();
+        assertThat(msg.get()).contains("0-17");
+    }
+
+    @Test
+    void childAge17IsAccepted() {
+        // 17 is still a child; only 18+ is rejected.
+        assertThat(guard.checkInvalidSlots(slots(Map.of("childAges", java.util.List.of(17))))).isEmpty();
+    }
+
+    @Test
     void zeroOrNegativeRooms_returnsMessage() {
         assertThat(guard.checkInvalidSlots(slots(Map.of("rooms", 0)))).isPresent();
         assertThat(guard.checkInvalidSlots(slots(Map.of("rooms", -1)))).isPresent();

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Component;
 /**
  * Turns a business module's technical missing-field names into a friendly Turkish clarifying
  * question. The field-name strings mirror exactly what the modules report:
- * hotel → {@code destination, checkIn, night, adult}; flight → {@code origin, destination,
+ * hotel → {@code destination, checkIn, night, adult, childAges}; flight → {@code origin, destination,
  * departDate, tripType, returnDate, passengers, currency}.
  *
  * <p>Design choice: we ask for the FIRST missing field only (one short question per turn),
@@ -23,7 +23,8 @@ public class ClarificationCatalog {
             "destination", "Hangi şehir veya bölgede otel aramamı istersiniz?",
             "checkIn", "Otele giriş tarihiniz nedir? (örn. 2026-08-01)",
             "night", "Kaç gece konaklamayı planlıyorsunuz? (ya da çıkış tarihinizi belirtin)",
-            "adult", "Kaç yetişkin konaklayacak?"
+            "adult", "Kaç yetişkin konaklayacak?",
+            "childAges", "Çocukların yaşları nedir? (örn. 5 ve 8) — fiyat çocuk yaşına göre değişir."
     );
 
     private static final Map<String, String> FLIGHT_QUESTIONS = Map.of(

@@ -73,6 +73,15 @@ public class HotelSearchHandler implements IntentHandler {
 
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
+        // Child ages are mandatory once children are present: the hotel request models each child
+        // by age (there is no separate child COUNT field), so a missing/short age list would be
+        // silently searched — and priced — as if childless. That is exactly the misleading price
+        // Spec §3.2 forbids, so ask for the ages here instead of running the search.
+        if (merged.children() != null && merged.children() > 0
+                && (merged.childAges() == null || merged.childAges().size() < merged.children())) {
+            return OrchestrationResult.clarify(clarifications.questionForHotel(List.of("childAges")), "hotel");
+        }
+
         HotelSearchRequest request = mapper.toRequest(merged);
         HotelSearchResponse response = hotelSearchService.searchHotels(request);
 
