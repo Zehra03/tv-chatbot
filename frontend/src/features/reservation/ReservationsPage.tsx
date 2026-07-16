@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { Hotel, Plane } from 'lucide-react'
+import { FileDown, Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
@@ -121,15 +121,33 @@ export function ReservationsPage() {
                       {RESERVATION_STATUS_LABELS[r.status]}
                     </Badge>
                   </td>
-                  <td className="p-3 text-right">
-                    <Button
-                      asChild
-                      size="sm"
-                      variant="outline"
-                      className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
-                    >
-                      <Link to={`/reservations/${r.id}`}>Detay</Link>
-                    </Button>
+                  <td className="p-3">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
+                      >
+                        <Link to={`/reservations/${r.id}`}>Detay</Link>
+                      </Button>
+                      {/* İkon düğme: satır zaten 6 sütun geniş, metinli ikinci eylem
+                          taşırıyordu. Voucher rotası özeti kendi çeker — liste
+                          satırında yolcu/otel verisi yok. */}
+                      <Button
+                        asChild
+                        size="icon"
+                        variant="outline"
+                        className="h-8 w-8 border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
+                      >
+                        <Link
+                          to={`/reservations/${r.id}/print`}
+                          aria-label={`${r.reservationNumber} özetini PDF olarak indir`}
+                        >
+                          <FileDown className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                    </div>
                   </td>
                 </motion.tr>
               ))}

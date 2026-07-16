@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, Hotel, Plane } from 'lucide-react'
+import { ArrowLeft, CheckCircle2, FileDown, Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -179,17 +179,36 @@ export function ReservationDetailPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <Button
-        asChild
-        variant="ghost"
-        size="sm"
-        className="-ml-2 text-brand-ice/80 hover:bg-white/10 hover:text-white"
-      >
-        <Link to="/reservations">
-          <ArrowLeft className="h-4 w-4" />
-          Rezervasyonlarım
-        </Link>
-      </Button>
+      <div className="flex items-center justify-between gap-3">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="-ml-2 text-brand-ice/80 hover:bg-white/10 hover:text-white"
+        >
+          <Link to="/reservations">
+            <ArrowLeft className="h-4 w-4" />
+            Rezervasyonlarım
+          </Link>
+        </Button>
+
+        {/* Yazdırma voucher'ı ayrı bir rota (Layout'suz, kâğıt düzeni); açılınca
+            kendini yazdırır. Durumdan bağımsız gösterilir — iptal/başarısız kayıt
+            da arşivlenebilmeli, voucher durumu rozetiyle basar. */}
+        {data && (
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
+          >
+            <Link to={`/reservations/${data.id}/print`}>
+              <FileDown className="h-4 w-4" />
+              PDF olarak indir
+            </Link>
+          </Button>
+        )}
+      </div>
 
       {justBooked && (
         <div
