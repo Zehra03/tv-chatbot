@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -62,6 +62,15 @@ async function send(user: ReturnType<typeof userEvent.setup>, text: string) {
   await user.click(screen.getByRole('button', { name: /gönder/i }))
 }
 
+/**
+ * Mesaj thread'i. Bir turun metni ekranda iki yerde geçer — balonda ve kenar
+ * çubuğundaki oturum başlığında (ilk mesaj başlık olur) — bu yüzden balonu
+ * doğrulayan sorgular thread'e daraltılmalı, yoksa "multiple elements" olur.
+ */
+function thread() {
+  return within(screen.getByRole('log', { name: 'Sohbet mesajları' }))
+}
+
 describe('ChatPage (MSW ile uçtan uca)', () => {
   it('eksik kriterde asistan açıklayıcı soru sorar; biriken kriterler rozetlerde korunur', async () => {
     const user = userEvent.setup()
@@ -69,7 +78,7 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
 
     // Intent belirsiz → asistan intent sorusu sorar; kullanıcı mesajı thread'de.
     await send(user, 'merhaba')
-    expect(await screen.findByText('merhaba')).toBeTruthy()
+    expect(await thread().findByText('merhaba')).toBeTruthy()
     expect(
       await screen.findByText('Otel araması mı yoksa uçuş araması mı yapmak istersiniz?', {}, { timeout: 3000 }),
     ).toBeTruthy()
@@ -106,7 +115,7 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
 
     // Kart tıklanınca ham "/otel" değil doğal cümle kullanıcı balonunda görünür...
     await user.click(screen.getByRole('button', { name: 'Otel ara' }))
-    expect(await screen.findByText('Otel aramak istiyorum')).toBeTruthy()
+    expect(await thread().findByText('Otel aramak istiyorum')).toBeTruthy()
     // ...ve doğru intent (otel) tetiklenir → slot-filling ilk soruyu sorar.
     expect(
       await screen.findByText('Hangi şehir veya bölgede otel arıyorsunuz?', {}, { timeout: 3000 }),
@@ -128,7 +137,7 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     renderChat()
 
     await send(user, '/ucus')
-    expect(await screen.findByText('Uçuş aramak istiyorum')).toBeTruthy()
+    expect(await thread().findByText('Uçuş aramak istiyorum')).toBeTruthy()
     expect(
       await screen.findByText('Nereden kalkış yapacaksınız?', {}, { timeout: 3000 }),
     ).toBeTruthy()
