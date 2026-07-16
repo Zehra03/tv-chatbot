@@ -97,7 +97,7 @@ public class ReservationTourVisioRequestMapper {
                 t.firstName(),
                 t.lastName(),
                 t.leader(),
-                formatDateTime(t.birthDate()),
+                formatDateTime(effectiveBirthDate(t)),
                 t.nationalityCode() == null ? null : new SetReservationInfoRequest.Nationality(t.nationalityCode()),
                 t.identityNumber(),
                 mapPassport(t.passport()),
@@ -164,6 +164,26 @@ public class ReservationTourVisioRequestMapper {
 
     private String culture(PreviewReservationCommand command) {
         return command.culture() != null ? command.culture() : DEFAULT_CULTURE;
+    }
+
+    /**
+     * The birth date to send for a traveller. TourVisio requires a date of birth for non-adult
+     * travellers — a null one is rejected mid-transaction with {@code ParameterCanNotBeNull}, which is
+     * why child bookings failed while adult-only ones went through. The booking form collects only an
+     * age (not a real DOB) for children/infants, so when the birth date is absent we derive a nominal
+     * one from the age: a traveller who is {@code age} years old as of today. Only the age band matters
+     * to the provider, and the exact age we actually store lives on the {@link com.paximum.paxassist.reservation.domain.Passenger}
+     * entity — this derived date never leaves the TourVisio request. Adults are left untouched (their
+     * request already works and needs no DOB).
+     */
+    private LocalDate effectiveBirthDate(PreviewReservationCommand.Traveller t) {
+        if (t.birthDate() != null) {
+            return t.birthDate();
+        }
+        if (t.age() != null && t.passengerType() != null && t.passengerType() != PassengerType.ADULT) {
+            return LocalDate.now().minusYears(t.age());
+        }
+        return null;
     }
 
     /** LocalDate -> "yyyy-MM-ddT00:00:00" (the datetime format the traveller/passport fields use). */
