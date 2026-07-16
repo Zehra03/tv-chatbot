@@ -28,11 +28,17 @@ import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 @Component
 public class HotelCriteriaMapper {
 
+    private final GeoCountryResolver geoCountry;
+
+    public HotelCriteriaMapper(GeoCountryResolver geoCountry) {
+        this.geoCountry = geoCountry;
+    }
+
     public HotelSearchRequest toRequest(SlotCriteria c) {
         Integer night = computeNights(c.checkIn(), c.checkOut(), c.nights());
         // HotelSearchRequest's compact constructor defaults nationality/culture/childAges when null,
-        // so passing nulls here is safe. The currency is resolved from the nationality instead of
-        // being asked for (and so is never null by the time it reaches the request).
+        // so passing nulls here is safe. The currency is never asked for: it follows from where the
+        // request came from unless the user named one (and so is never null by the time it lands).
         return new HotelSearchRequest(
                 c.location(),      // destination
                 c.checkIn(),       // checkIn (YYYY-MM-DD)
@@ -40,7 +46,7 @@ public class HotelCriteriaMapper {
                 c.adults(),        // adult
                 c.childAges(),     // childAges
                 c.nationality(),   // nationality
-                CurrencyByNationality.resolve(c.currency(), c.nationality()),
+                CurrencyByCountry.resolve(c.currency(), geoCountry.currentCountry().orElse(null)),
                 null               // culture (defaults to tr-TR)
         );
     }

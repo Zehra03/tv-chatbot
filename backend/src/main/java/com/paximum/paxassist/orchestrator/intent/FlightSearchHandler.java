@@ -103,10 +103,12 @@ public class FlightSearchHandler implements IntentHandler {
         context.session().setLastApiResultCards(rawCards);
         context.session().setLastResultCards(cards);
 
-        return OrchestrationResult.cards(flightReply(cards, rawCards, merged, roundTrip) + carriedOver, cards);
+        return OrchestrationResult.cards(
+                flightReply(cards, rawCards, merged, roundTrip, criteria.getCurrency()) + carriedOver, cards);
     }
 
-    private String flightReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged, boolean roundTrip) {
+    private String flightReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged,
+                               boolean roundTrip, String searchCurrency) {
         if (!cards.isEmpty() && roundTrip) {
             // Say the price covers both legs: the same number next to a single outbound would
             // otherwise read as the price of that flight alone.
@@ -117,8 +119,9 @@ public class FlightSearchHandler implements IntentHandler {
             return "Aramana uygun " + cards.size() + " uçuş buldum:";
         }
         if (!rawCards.isEmpty() && merged.flightMaxPrice() != null) {
-            String currency = merged.currency() != null ? merged.currency() : "TL";
-            return merged.flightMaxPrice() + " " + currency
+            // The currency the search ran in — not merged.currency(), which is normally null since
+            // the user is never asked. See the same fix in HotelSearchHandler.
+            return merged.flightMaxPrice() + " " + searchCurrency
                     + " altında uygun uçuş bulamadım. Bütçeyi biraz artırmayı deneyebilir misin?";
         }
         return "Aradığın kriterlere uygun uçuş bulamadım. Farklı bir tarih veya güzergah deneyebilir misin?";

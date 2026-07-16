@@ -4,17 +4,23 @@ import java.util.Locale;
 import java.util.Map;
 
 /**
- * Picks the search currency from the traveller's nationality, so Paxi never has to ask for it —
- * a question users find pointless ("Fiyatları hangi para biriminde görmek istersin?") when the
- * answer is obvious from who they are.
+ * Picks the search currency from the country the traveller is browsing FROM, so Paxi never has to
+ * ask for it — a question users find pointless ("Fiyatları hangi para biriminde görmek istersin?")
+ * when the answer follows from where they are.
+ *
+ * <p>Deliberately keyed on location, not nationality. Those are different facts and only location
+ * predicts how someone pays: a Turkish citizen living in Germany connects from a DE address and
+ * settles in EUR, so quoting them TRY because their passport says TR would be the worse guess.
+ * Nationality stays a separate, user-supplied field — it decides the provider's pricing contract
+ * and lands on the reservation as a fact about a person, so no guess may fill it silently.
  *
  * <p>This is a display/search currency only: the provider prices in it, and the reservation flow
- * shows what the provider returned. An unknown or missing nationality falls back to {@code TRY},
- * matching the {@code TR} nationality default the search requests already apply.
+ * shows what the provider returned. An unknown or missing country falls back to {@code TRY}.
+ * The guess is always overridable by the user, which is what makes guessing acceptable here at all.
  */
-public final class CurrencyByNationality {
+public final class CurrencyByCountry {
 
-    private CurrencyByNationality() {
+    private CurrencyByCountry() {
     }
 
     static final String DEFAULT_CURRENCY = "TRY";
@@ -56,21 +62,21 @@ public final class CurrencyByNationality {
             Map.entry("MT", "EUR"), Map.entry("HR", "EUR"));
 
     /**
-     * @param nationality ISO-3166 alpha-2 country code, or null
-     * @return the currency to search in; {@code TRY} when the nationality is missing or unmapped
+     * @param countryCode ISO-3166 alpha-2 code of where the request came from, or null
+     * @return the currency to search in; {@code TRY} when the country is missing or unmapped
      */
-    public static String forNationality(String nationality) {
-        if (nationality == null || nationality.isBlank()) {
+    public static String forCountry(String countryCode) {
+        if (countryCode == null || countryCode.isBlank()) {
             return DEFAULT_CURRENCY;
         }
-        return CURRENCIES.getOrDefault(nationality.strip().toUpperCase(Locale.ROOT), DEFAULT_CURRENCY);
+        return CURRENCIES.getOrDefault(countryCode.strip().toUpperCase(Locale.ROOT), DEFAULT_CURRENCY);
     }
 
-    /** The explicitly requested currency when the user named one, otherwise the nationality's. */
-    public static String resolve(String requestedCurrency, String nationality) {
+    /** The currency the user chose when they named one, otherwise the one their location suggests. */
+    public static String resolve(String requestedCurrency, String countryCode) {
         if (requestedCurrency != null && !requestedCurrency.isBlank()) {
             return requestedCurrency;
         }
-        return forNationality(nationality);
+        return forCountry(countryCode);
     }
 }
