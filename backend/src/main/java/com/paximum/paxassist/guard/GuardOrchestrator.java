@@ -15,11 +15,11 @@ import com.paximum.paxassist.guard.config.GuardProperties;
 public class GuardOrchestrator {
 
     private static final String STANDARD_REJECTION_MESSAGE =
-            "İsteğiniz güvenlik politikalarımız gereği işleme alınamamıştır.";
+            "İsteğin güvenlik politikalarımız gereği işleme alınamadı.";
 
     /** Polite, fixed text — no LLM call, so an oversized message costs no tokens. */
     static final String TOO_LONG_MESSAGE =
-            "Mesajınız çok uzun, lütfen daha kısa bir mesajla tekrar deneyin.";
+            "Mesajın çok uzun, lütfen daha kısa bir mesajla tekrar dene.";
     private static final String TOO_LONG_REASON = "Message exceeds the configured maximum length";
 
     private final GuardRuleService guardRuleService;

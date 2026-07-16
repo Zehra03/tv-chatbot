@@ -8,5 +8,6 @@ public enum IntentType {
     SELECT,             // listeden ürün seçimi
     DATE_ALTERNATIVES,  // sonuçsuz aramadan sonra "başka hangi tarihte müsait?" — boş tarih önerisi
     AMBIGUOUS,          // otel mi uçuş mu belirsiz — seçenekli kart ile netleştirilir
-    OTHER               // kapsam dışı / selamlama
+    GREETING,           // sadece selamlama ("merhaba") — kodda tespit edilir, sabit metinle yanıtlanır
+    OTHER               // kapsam dışı
 }

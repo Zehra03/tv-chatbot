@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.ai.IntentType;
+import com.paximum.paxassist.auth.service.GreetingNameService;
 import com.paximum.paxassist.chat.service.ChatService;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
@@ -16,7 +17,7 @@ import com.paximum.paxassist.validator.ValidationOutcome;
 import com.paximum.paxassist.validator.ValidationResult;
 
 /**
- * Handles OTHER intent (greeting, out-of-scope, ambiguous) via the conversational {@link ChatService},
+ * Handles OTHER intent (out-of-scope, small talk, unrecognised) via the conversational {@link ChatService},
  * with the reply checked by the second-layer {@link ValidationOrchestrator} (no fabricated prices, no
  * prompt leak, no booking promise, on-topic Turkish) before it reaches the user.
  *
@@ -43,10 +44,13 @@ public class FallbackHandler implements IntentHandler {
 
     private final ChatService chatService;
     private final ValidationOrchestrator validationOrchestrator;
+    private final GreetingNameService greetingNameService;
 
-    public FallbackHandler(ChatService chatService, ValidationOrchestrator validationOrchestrator) {
+    public FallbackHandler(ChatService chatService, ValidationOrchestrator validationOrchestrator,
+                           GreetingNameService greetingNameService) {
         this.chatService = chatService;
         this.validationOrchestrator = validationOrchestrator;
+        this.greetingNameService = greetingNameService;
     }
 
     @Override
@@ -58,11 +62,13 @@ public class FallbackHandler implements IntentHandler {
     public OrchestrationResult handle(OrchestrationContext context) {
         String userMessage = context.userMessage();
         List<String> feedback = new ArrayList<>();
+        // Null for guests — they are greeted without a name. Resolved once per turn, not per retry.
+        String firstName = greetingNameService.firstNameOf(context.session().getUserId()).orElse(null);
 
         // Terminates via the validator's retryAllowed ceiling: once it stops offering a retry
         // (REJECTED and attempt >= max-retries) we return the safe fallback; APPROVED returns earlier.
         for (int attempt = 1; ; attempt++) {
-            String candidate = generate(userMessage, feedback);
+            String candidate = generate(userMessage, feedback, firstName);
 
             ValidationOutcome outcome;
             try {
@@ -98,11 +104,11 @@ public class FallbackHandler implements IntentHandler {
      * First round sends the raw message; on a retry the validator's feedback is appended so the model
      * corrects its previous reply.
      */
-    private String generate(String userMessage, List<String> feedback) {
+    private String generate(String userMessage, List<String> feedback, String firstName) {
         String prompt = feedback.isEmpty()
                 ? userMessage
                 : userMessage + "\n\n[Sistem notu: Önceki yanıtın şu nedenle uygun değildi, lütfen düzelt: "
                         + String.join(" | ", feedback) + "]";
-        return chatService.chat(prompt).reply();
+        return chatService.chat(prompt, firstName).reply();
     }
 }

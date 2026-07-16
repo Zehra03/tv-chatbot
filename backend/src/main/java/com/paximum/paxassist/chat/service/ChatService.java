@@ -1,9 +1,11 @@
 package com.paximum.paxassist.chat.service;
 
+import com.paximum.paxassist.chat.config.PaxiSystemPrompt;
 import com.paximum.paxassist.chat.dto.AiReply;
 import com.paximum.paxassist.chat.exception.AiClientException;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.lang.NonNull;
+import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,10 +21,19 @@ public class ChatService {
     }
 
     public AiReply chat(@NonNull String message) {
+        return chat(message, null);
+    }
+
+    /**
+     * @param firstName the caller's first name so Paxi can greet them by it, or null for a guest
+     */
+    public AiReply chat(@NonNull String message, @Nullable String firstName) {
+        String systemPrompt = PaxiSystemPrompt.forUser(firstName);
         AiClientException lastError = null;
         for (int attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
             try {
                 AiReply reply = chatClient.prompt()
+                        .system(systemPrompt)
                         .user(message)
                         .call()
                         .entity(AiReply.class);
