@@ -324,3 +324,51 @@ Her satır bir test girdisi. Kolonlar:
   senaryolar eklenerek konuşma akışları test edilir.
 - Kart uygulandığında: `Kart? = EVET` satırları için `options` alanının dolduğu ve tıklama akışının
   doğru sonraki turu ürettiği testleri eklenir.
+
+---
+
+## 8. Fail kaydı (yeniden test izlenebilirliği)
+
+Bir senaryo **kaldığında** (beklenen ≠ gerçekleşen) aşağıdaki tabloya bir satır eklenir. Amaç: her
+başarısızlığın hangi senaryodan çıktığı, neden olduğu ve **kanıtının nerede olduğu** sonradan tek
+bakışta bulunabilsin — yeniden test edilirken aynı girdi birebir tekrarlanabilsin.
+
+### 8.1 Alanlar
+
+| Alan | Ne yazılır |
+|---|---|
+| **ID** | Fail kaydının kendi kodu: `K-<senaryo>-<sıra>` (ör. `K-K1-01`). `<senaryo>` = §4 tablolarındaki satır kodu (`A1`, `K1`, `O3`…). Senaryo dışı bir bulgu ise `K-X-<sıra>`. |
+| **Senaryo / Girdi** | Senaryo kodu + gönderilen ham mesaj (kopyala-yapıştır çalışacak şekilde). |
+| **Beklenen** | §4'teki beklenen intent/slot/davranış. |
+| **Gerçekleşen** | Sistemin fiilen döndürdüğü `reply.content` / slot / davranış. |
+| **Neden** | Kök neden (biliniyorsa): hangi modül/kural. Bilinmiyorsa `araştırılacak`. |
+| **Kanıt** | Aşağıdaki kanıt kuralına göre `traceId` + log satırı / CSV satırı / ekran görüntüsü yolu. |
+| **Durum** | `AÇIK` · `DÜZELTİLDİ (<commit>)` · `KABUL EDİLDİ (gerekçe)` |
+
+### 8.2 Kanıt nasıl toplanır
+
+Her turun **`sessionId`'si `traceId` olarak** validator log satırlarına basılır
+(`orchestrator/intent/FallbackHandler.java` → `validator/ValidationOrchestrator.java`). Fail eden turun
+`sessionId`'sini (`POST /api/v1/chat` yanıtındaki `sessionId`) not al ve o turun bütün verdict/feedback
+satırlarını backend logundan çek:
+
+```bash
+grep 'validator.feedback traceId=<sessionId>' backend.log
+# validator.feedback traceId=abc-123 cohort=B_TREATMENT attempt=1 verdict=REJECTED \
+#   retryAllowed=true latencyMs=812 action=regenerate feedback="..."
+```
+
+Bu satır(lar) **Kanıt** kolonuna aynen yapıştırılır. Notlar:
+
+- `traceId=-` görünüyorsa çağıran korelasyon id'si geçmemiştir — kayıt izlenebilir değildir, log satırı
+  yerine ham istek/yanıt gövdesini kanıt olarak ekle.
+- `cohort=A_CONTROL` veya `cohort=DISABLED` ise validator o turda **hiç çalışmamıştır**
+  (A/B kontrol grubu / kapalı) — fail'i validator'a yazma, önce `cohort=B_TREATMENT` ile tekrarla.
+- A/B harness koşusundan gelen bulgularda kanıt, harness'ın yazdığı CSV'nin ilgili `id` satırıdır
+  (`ValidatorAbComparisonHarness` → `validator-ab-*.csv`).
+
+### 8.3 Tablo
+
+| ID | Senaryo / Girdi | Beklenen | Gerçekleşen | Neden | Kanıt | Durum |
+|---|---|---|---|---|---|---|
+| _(örnek — silinmeyecek şablon satırı)_ | `K1` · "havuzu var mı" | OTHER; uydurma olanak yok, dürüst yönlendirme | — | — | `traceId=…` | — |

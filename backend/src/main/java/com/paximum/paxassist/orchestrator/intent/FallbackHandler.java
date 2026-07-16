@@ -66,7 +66,8 @@ public class FallbackHandler implements IntentHandler {
 
             ValidationOutcome outcome;
             try {
-                outcome = validationOrchestrator.validate(userMessage, candidate, NO_GROUNDING_CONTEXT, attempt);
+                outcome = validationOrchestrator.validate(context.session().getId(), userMessage, candidate,
+                        NO_GROUNDING_CONTEXT, attempt);
             } catch (RuntimeException e) {
                 // Fail-open: the validator is a second safety layer. If it is unavailable the reply was
                 // already produced under the assistant's own guardrails, so show it rather than failing

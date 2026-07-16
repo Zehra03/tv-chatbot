@@ -17,9 +17,7 @@ import java.util.function.BooleanSupplier;
  * <p>Every verdict is written as one {@code validator.feedback} line carrying the caller's
  * {@code traceId} (the chat session id). That is the hook the test catalogue's fail table hangs on:
  * a scenario run records its trace id, and every rejection/feedback for that run is then
- * {@code grep}-able by it. (The caller currently uses the untraced overload, so the id only starts
- * flowing once {@code orchestrator.intent.FallbackHandler} passes its session id — tracked as a
- * separate card against the orchestrator module.)
+ * {@code grep}-able by it — see the fail-record table in {@code docs/chatbot-test-senaryolari.md}.
  *
  * <h2>Scope decision: why only OTHER answers are validated</h2>
  * The single caller is the OTHER-intent fallback, i.e. the only reply the main LLM writes freely.
@@ -58,9 +56,9 @@ public class ValidationOrchestrator {
     }
 
     /**
-     * Untraced overload — keeps the existing caller contract. Verdicts still log, with {@code traceId=-}:
-     * without a correlation id a rejection cannot be tied back to the conversation that produced it, so
-     * prefer {@link #validate(String, String, String, String, int)}.
+     * Untraced overload, for callers that genuinely have no correlation id. Verdicts still log, with
+     * {@code traceId=-}: without an id a rejection cannot be tied back to the conversation that produced
+     * it, so prefer {@link #validate(String, String, String, String, int)}.
      */
     public ValidationOutcome validate(String question, String candidateAnswer, String groundingContext,
                                        int attemptNumber) {
