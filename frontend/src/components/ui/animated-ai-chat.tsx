@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as React from "react"
+import { CHAT_COMMANDS } from "@/features/chat/commands";
 
 interface UseAutoResizeTextareaProps {
     minHeight: number;
@@ -66,12 +67,14 @@ function useAutoResizeTextarea({
     return { textareaRef, adjustHeight };
 }
 
-interface CommandSuggestion {
-    icon: React.ReactNode;
-    label: string;
-    description: string;
-    prefix: string;
-}
+/** Komut → ikon eşlemesi. Komut verisinin (label/prefix/action) TEK kaynağı
+ * `@/features/chat/commands`; ikonlar JSX olduğu için burada, prefix ile eşlenir. */
+const COMMAND_ICONS: Record<string, React.ReactNode> = {
+    "/otel": <Hotel className="w-4 h-4" />,
+    "/ucus": <Plane className="w-4 h-4" />,
+    "/rezervasyon": <CalendarCheck className="w-4 h-4" />,
+    "/oneri": <Sparkles className="w-4 h-4" />,
+};
 
 interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
@@ -156,38 +159,15 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
     });
     const commandPaletteRef = useRef<HTMLDivElement>(null);
 
-    const commandSuggestions: CommandSuggestion[] = [
-        {
-            icon: <Hotel className="w-4 h-4" />,
-            label: "Otel ara",
-            description: "Şehir ve tarihe göre otel bul",
-            prefix: "/otel"
-        },
-        {
-            icon: <Plane className="w-4 h-4" />,
-            label: "Uçuş ara",
-            description: "Kalkış ve varışa göre uçuş bul",
-            prefix: "/ucus"
-        },
-        {
-            icon: <CalendarCheck className="w-4 h-4" />,
-            label: "Rezervasyonlarım",
-            description: "Mevcut rezervasyonlarını görüntüle",
-            prefix: "/rezervasyon"
-        },
-        {
-            icon: <Sparkles className="w-4 h-4" />,
-            label: "Öneri al",
-            description: "Bütçene göre tatil önerisi al",
-            prefix: "/oneri"
-        },
-    ];
+    // Komut listesi (label/prefix/action) tek kaynaktan gelir; resolveCommand ile
+    // aynı veriyi paylaşır ki render edilen kart ile gönderilen intent hiç ayrışmasın.
+    const commandSuggestions = CHAT_COMMANDS;
 
     useEffect(() => {
         if (value.startsWith('/') && !value.includes(' ')) {
             setShowCommandPalette(true);
             
-            const matchingSuggestionIndex = commandSuggestions.findIndex(
+            const matchingSuggestionIndex = CHAT_COMMANDS.findIndex(
                 (cmd) => cmd.prefix.startsWith(value)
             );
             
@@ -246,12 +226,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
             } else if (e.key === 'Tab' || e.key === 'Enter') {
                 e.preventDefault();
                 if (activeSuggestion >= 0) {
-                    const selectedCommand = commandSuggestions[activeSuggestion];
-                    setValue(selectedCommand.prefix + ' ');
-                    setShowCommandPalette(false);
-                    
-                    setRecentCommand(selectedCommand.label);
-                    setTimeout(() => setRecentCommand(null), 3500);
+                    selectCommandSuggestion(activeSuggestion);
                 }
             } else if (e.key === 'Escape') {
                 e.preventDefault();
@@ -291,11 +266,35 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
     };
 
 
+    // Bir komutu HEMEN çalıştırır: prefix'i üst bileşene teslim eder (onSend =
+    // ChatPage.handleSend → resolveCommand ile arama komutu doğal cümleye çevrilir,
+    // "/rezervasyon" ise /reservations'a yönlendirir). Playground'da (onSend yok)
+    // yalnız prefill yapar.
+    const runCommand = (prefix: string) => {
+        setShowCommandPalette(false);
+        const trimmed = prefix.trim();
+        if (!trimmed || disabled) return;
+        if (onSend) {
+            onSend(trimmed);
+            setValue("");
+            adjustHeight(true);
+            textareaRef.current?.focus();
+            return;
+        }
+        setValue(prefix + ' ');
+    };
+
+    // Komut paletinden seçim: yönlendirme komutu (ör. /rezervasyon) anında
+    // çalışır; arama komutu ise otomatik-tamamlanır (kullanıcı şehir/tarih
+    // eklesin) — hızlı-eylem kartları ise her zaman anında çalışır (runCommand).
     const selectCommandSuggestion = (index: number) => {
         const selectedCommand = commandSuggestions[index];
-        setValue(selectedCommand.prefix + ' ');
-        setShowCommandPalette(false);
-        
+        if (selectedCommand.action.type === 'navigate') {
+            runCommand(selectedCommand.prefix);
+        } else {
+            setValue(selectedCommand.prefix + ' ');
+            setShowCommandPalette(false);
+        }
         setRecentCommand(selectedCommand.label);
         setTimeout(() => setRecentCommand(null), 2000);
     };
@@ -385,7 +384,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                                 transition={{ delay: index * 0.03 }}
                                             >
                                                 <div className="w-5 h-5 flex items-center justify-center text-white/60">
-                                                    {suggestion.icon}
+                                                    {COMMAND_ICONS[suggestion.prefix]}
                                                 </div>
                                                 <div className="font-medium">{suggestion.label}</div>
                                                 <div className="text-white/40 text-xs ml-1">
@@ -486,13 +485,15 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                 {commandSuggestions.map((suggestion, index) => (
                                     <motion.button
                                         key={suggestion.prefix}
-                                        onClick={() => selectCommandSuggestion(index)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] rounded-lg text-sm text-white/60 hover:text-white/90 transition-all relative group"
+                                        type="button"
+                                        onClick={() => runCommand(suggestion.prefix)}
+                                        disabled={disabled}
+                                        className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] rounded-lg text-sm text-white/60 hover:text-white/90 transition-all relative group disabled:opacity-50 disabled:cursor-not-allowed"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
                                     >
-                                        {suggestion.icon}
+                                        {COMMAND_ICONS[suggestion.prefix]}
                                         <span>{suggestion.label}</span>
                                         <motion.div
                                             className="absolute inset-0 border border-white/[0.05] rounded-lg"

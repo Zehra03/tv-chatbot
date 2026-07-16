@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
 import { AnimatedAIChat } from '@/components/ui/animated-ai-chat'
 import { MessageList } from '@/features/chat/MessageList'
@@ -6,6 +7,7 @@ import { CriteriaChips } from '@/features/chat/CriteriaChips'
 import { SessionSidebar } from '@/features/chat/SessionSidebar'
 import { ResultsDrawer, ResultsPanel } from '@/features/chat/ResultsPanel'
 import { useSendMessage } from '@/features/chat/useSendMessage'
+import { resolveCommand } from '@/features/chat/commands'
 import { isSearchTurn } from '@/features/chat/isSearchTurn'
 import { useDelayedFlag } from '@/lib/useDelayedFlag'
 
@@ -30,6 +32,7 @@ const SEARCH_HINT_DELAY_MS = 700
  */
 export function ChatPage() {
   const sendMessage = useSendMessage()
+  const navigate = useNavigate()
   const pendingQuestion = useAppSelector((s) => s.chat.pendingQuestion)
   const messages = useAppSelector((s) => s.chat.messages)
   // Biriken arama kriteri — sonuç panelindeki "Seç"in rezervasyon snapshot'ını kurabilmesi için
@@ -70,6 +73,21 @@ export function ChatPage() {
     setDrawerOpen(true) // Mobilde drawer açılır; lg+'da docked panel zaten görünür.
   }
 
+  // Composer'dan gelen ham metni backend'e GİTMEDEN önce komut olarak çözer:
+  // "/rezervasyon" → sohbete mesaj yazmadan /reservations'a yönlendir; arama
+  // komutları doğal cümleye çevrilip normal akışa girer (kullanıcı balonunda "/otel"
+  // değil "Otel aramak istiyorum" görünür, intent doğru tetiklenir); komut olmayan
+  // mesaj olduğu gibi gider. Boş metin (ör. yalnız "/") gönderilmez.
+  const handleSend = (raw: string) => {
+    const resolved = resolveCommand(raw)
+    if (resolved?.type === 'navigate') {
+      navigate(resolved.to)
+      return
+    }
+    const text = resolved ? resolved.text : raw
+    if (text.trim()) sendMessage.send(text)
+  }
+
   return (
     <div className="flex min-h-0 w-full flex-1 gap-4">
       <SessionSidebar />
@@ -89,7 +107,7 @@ export function ChatPage() {
         )}
         <AnimatedAIChat
           hero={isEmpty}
-          onSend={sendMessage.send}
+          onSend={handleSend}
           disabled={sendMessage.isPending}
           placeholder={pendingQuestion}
         />
