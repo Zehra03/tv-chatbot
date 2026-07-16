@@ -112,7 +112,11 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(List.of(allowedOrigin));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
+        // X-Guest-Id: opaque per-visitor key the frontend sends on every tokenless request
+        // (guest chat/search). Without it in the allow-list, the CORS preflight rejects any
+        // request carrying the header — including /auth/login when a guest id is still in
+        // localStorage — surfacing as a browser "Network Error".
+        configuration.setAllowedHeaders(List.of("Authorization", "Content-Type", "X-Guest-Id"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
