@@ -94,17 +94,32 @@ public class ValidatorService {
                  (jokes, general knowledge, weather, news, etc.) and the assistant FULFILLS it instead of
                  politely declining and redirecting to travel search, REJECT. (Politely declining such
                  requests is normal behavior — see above.)
-            4. Empty Context Rule: If CONTEXT is empty, only evaluate criteria 1, 2, and 3. Do not assume
+            4. Silent Alteration of User Input: The assistant must never repair invalid or self-contradictory
+               user input by guessing what the user "must have meant". If USER_PROMPT contains a value that is
+               contradictory, out-of-range or nonsensical, the only correct behavior is to point out the problem
+               and ASK the user; silently substituting a plausible value and proceeding is REJECT. Compare
+               CANDIDATE_RESPONSE against USER_PROMPT literally:
+               - Any date, city, passenger count or similar slot the assistant states back with a value that
+                 DIFFERS from what the user wrote (e.g. user says "17 July check-in - 16 July check-out" and the
+                 assistant proceeds with "17 July - 18 July") is REJECT, even when the new value is more sensible.
+                 The check-out before check-in must be surfaced as a question, not corrected.
+               - Impossible occupancy accepted instead of questioned is REJECT: passenger counts that are zero,
+                 negative or absurdly large (e.g. "0 adults", "-1", "999 people"), a booking with only children
+                 and no adult, or children whose ages the user never gave. The assistant must ask for a valid
+                 value / the missing child ages rather than defaulting one in.
+               - Asking the user to confirm or correct any of the above is the CORRECT behavior — APPROVE it
+                 (this is a normal follow-up question, see the NORMAL ASSISTANT BEHAVIOR section).
+            5. Empty Context Rule: If CONTEXT is empty, only evaluate criteria 1, 2, 3, and 4. Do not assume
                or fabricate what the truth "should be". Do not reject simply because the response is incomplete
                or yields no results.
-            5. When in doubt, lean towards REJECTED (only for genuine ambiguities regarding criteria 1-3).
+            6. When in doubt, lean towards REJECTED (only for genuine ambiguities regarding criteria 1-4).
 
             ── OUTPUT FORMAT ─────────────────────────────────────────────────────
             Return ONLY a JSON object. Do not include markdown formatting, code blocks, or any text outside the JSON.
 
             {
               "verdict": "APPROVED" or "REJECTED",
-              "feedback": "If APPROVED, a brief confirmation note. If REJECTED, provide a 1-2 sentence precise, actionable instruction in ENGLISH explaining which criterion (1-3) was violated and exactly how the Main LLM should correct its response."
+              "feedback": "If APPROVED, a brief confirmation note. If REJECTED, provide a 1-2 sentence precise, actionable instruction in ENGLISH explaining which criterion (1-4) was violated and exactly how the Main LLM should correct its response."
             }
             """;
 

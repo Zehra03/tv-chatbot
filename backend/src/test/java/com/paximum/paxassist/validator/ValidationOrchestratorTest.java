@@ -119,8 +119,8 @@ class ValidationOrchestratorTest {
 
     @Test
     void shouldValidateWithoutATraceIdViaTheUntracedOverload() {
-        // The current caller (orchestrator's FallbackHandler) passes no trace id yet; that path must
-        // keep working and still reach the validator.
+        // Callers without a correlation id must still reach the validator; the verdict simply logs
+        // traceId=-. (The FallbackHandler caller passes its session id — see FallbackHandlerTest.)
         when(validatorService.validate(anyString(), anyString(), any()))
                 .thenReturn(callResult(ValidationResult.Verdict.APPROVED));
         ValidationOrchestrator orchestrator = orchestrator(true, false, 2, true);

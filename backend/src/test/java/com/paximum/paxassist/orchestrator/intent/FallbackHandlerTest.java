@@ -65,7 +65,7 @@ class FallbackHandlerTest {
         FallbackHandler handler = new FallbackHandler(chatService, validationOrchestrator);
         when(chatService.chat(anyString()))
                 .thenReturn(new AiReply("Size otel veya uçuş aramasında yardımcı olabilirim."));
-        when(validationOrchestrator.validate(eq("merhaba"), anyString(), any(), anyInt()))
+        when(validationOrchestrator.validate(eq("s1"), eq("merhaba"), anyString(), any(), anyInt()))
                 .thenReturn(approved());
 
         OrchestrationResult result = handler.handle(otherContext("merhaba"));
@@ -82,7 +82,7 @@ class FallbackHandlerTest {
         when(chatService.chat(anyString()))
                 .thenReturn(new AiReply("ilk taslak"))
                 .thenReturn(new AiReply("düzeltilmiş yanıt"));
-        when(validationOrchestrator.validate(eq("merhaba"), anyString(), any(), anyInt()))
+        when(validationOrchestrator.validate(eq("s1"), eq("merhaba"), anyString(), any(), anyInt()))
                 .thenReturn(rejected(true, "Kapsam dışına çıkma."))
                 .thenReturn(approved());
 
@@ -101,7 +101,7 @@ class FallbackHandlerTest {
     void returnsSafeFallbackWhenRejectedAndNoRetryRemains() {
         FallbackHandler handler = new FallbackHandler(chatService, validationOrchestrator);
         when(chatService.chat(anyString())).thenReturn(new AiReply("uydurma fiyatlı yanıt"));
-        when(validationOrchestrator.validate(eq("merhaba"), anyString(), any(), anyInt()))
+        when(validationOrchestrator.validate(eq("s1"), eq("merhaba"), anyString(), any(), anyInt()))
                 .thenReturn(rejected(false, "Uydurma fiyat içeriyor."));
 
         OrchestrationResult result = handler.handle(otherContext("merhaba"));
@@ -110,10 +110,24 @@ class FallbackHandlerTest {
     }
 
     @Test
+    void passesTheSessionIdAsTraceIdSoVerdictsAreTraceableToTheConversation() {
+        // Every validator.feedback log line must carry this turn's session id, otherwise a rejection
+        // cannot be tied back to the scenario run that produced it (test-catalogue fail records).
+        FallbackHandler handler = new FallbackHandler(chatService, validationOrchestrator);
+        when(chatService.chat(anyString())).thenReturn(new AiReply("yanıt"));
+        when(validationOrchestrator.validate(anyString(), anyString(), anyString(), any(), anyInt()))
+                .thenReturn(approved());
+
+        handler.handle(otherContext("merhaba"));
+
+        verify(validationOrchestrator).validate(eq("s1"), eq("merhaba"), eq("yanıt"), any(), eq(1));
+    }
+
+    @Test
     void failsOpenAndReturnsCandidateWhenValidatorThrows() {
         FallbackHandler handler = new FallbackHandler(chatService, validationOrchestrator);
         when(chatService.chat(anyString())).thenReturn(new AiReply("doğrulanamayan yanıt"));
-        when(validationOrchestrator.validate(eq("merhaba"), anyString(), any(), anyInt()))
+        when(validationOrchestrator.validate(eq("s1"), eq("merhaba"), anyString(), any(), anyInt()))
                 .thenThrow(new RuntimeException("validator down"));
 
         OrchestrationResult result = handler.handle(otherContext("merhaba"));
