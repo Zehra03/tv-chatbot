@@ -19,7 +19,7 @@ afterEach(() => {
 })
 afterAll(() => server.close())
 
-function renderPage(id: string) {
+function renderPage(id: string, state?: { justBooked?: boolean }) {
   const store = configureStore({
     reducer: {
       auth: authReducer,
@@ -34,7 +34,7 @@ function renderPage(id: string) {
   render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={[`/reservations/${id}`]}>
+        <MemoryRouter initialEntries={[{ pathname: `/reservations/${id}`, state }]}>
           <Routes>
             <Route path="/reservations/:id" element={<ReservationDetailPage />} />
           </Routes>
@@ -89,6 +89,21 @@ describe('ReservationDetailPage (MSW ile)', () => {
       { timeout: 3000 },
     )
     expect(screen.queryByRole('button', { name: 'Rezervasyonu iptal et' })).toBeNull()
+  })
+
+  it('kesin onaydan sonra (justBooked) tek seferlik "alındı" bandı gösterir', async () => {
+    renderPage('1001', { justBooked: true })
+
+    // Detay yüklenince LoadingState (o da role="status") kalkar; geriye yalnız band kalır.
+    expect(await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByRole('status').textContent).toContain('Rezervasyonunuz alındı')
+  })
+
+  it('doğrudan açılışta (justBooked yok) "alındı" bandı gösterilmez', async () => {
+    renderPage('1001')
+
+    expect(await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.queryByRole('status')).toBeNull()
   })
 
   it('bulunamayan rezervasyonda hata gösterir', async () => {

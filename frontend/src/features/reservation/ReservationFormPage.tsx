@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Controller, useFieldArray, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { motion } from 'framer-motion'
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { AiOffBanner } from '@/features/reservation/AiOffBanner'
 import { FormStepper } from '@/features/reservation/FormStepper'
@@ -26,10 +25,6 @@ import {
 } from '@/features/reservation/reservationFormSchema'
 import { useReservationPreview } from '@/features/reservation/useReservationPreview'
 import { useConfirmReservation } from '@/features/reservation/useConfirmReservation'
-import {
-  RESERVATION_STATUS_LABELS,
-  reservationStatusVariant,
-} from '@/features/reservation/status'
 import type { ApiError, NeedsConfirmationResponse, PreviewReservationCommand } from '@/api'
 import { formatDate, formatDateTime, formatPrice } from '@/utils/format'
 
@@ -76,6 +71,7 @@ function previewErrorMessage(error: ApiError): string {
  */
 export function ReservationFormPage() {
   const draft = useAppSelector((s) => s.reservationDraft.draft)
+  const navigate = useNavigate()
   const preview = useReservationPreview()
   const confirm = useConfirmReservation()
   const [request, setRequest] = useState<PreviewReservationCommand | null>(null)
@@ -93,6 +89,24 @@ export function ReservationFormPage() {
       setWarning(null)
     }
   }, [confirm.data])
+
+  // Kesin onay başarılı → kullanıcıyı kalıcı (URL'li) rezervasyon sayfasına taşı. Eski satır-içi
+  // başarı ekranı geçici state'e bağlıydı (React Query mutation sonucu + Redux taslak; taslak
+  // KALICI DEĞİL). Canlı backend'de yavaş TourVisio commit'i sırasında bir remount/sayfa yenilemesi
+  // bu state'i düşürüp kullanıcıyı boş forma ("Önce bir ürün seçmelisiniz") atabiliyordu. Detay
+  // sayfası rezervasyonu backend'den okur ve yenilemeye dayanır. replace: geri tuşuyla forma dönülmez;
+  // state.justBooked: detay sayfası tek seferlik "alındı" bandını gösterir (toast'a ek).
+  useEffect(() => {
+    if (confirm.data?.kind === 'created') {
+      navigate(`/reservations/${confirm.data.reservation.id}`, {
+        replace: true,
+        state: { justBooked: true },
+      })
+    } else if (confirm.data?.kind === 'createdFallback') {
+      // Özet yeniden okunamadı (id yok) → listeye götür; onay toast'ı kullanıcıyı zaten bilgilendirir.
+      navigate('/reservations', { replace: true, state: { justBooked: true } })
+    }
+  }, [confirm.data, navigate])
 
   const {
     register,
@@ -116,67 +130,28 @@ export function ReservationFormPage() {
     setWarning(null)
   }
 
-  // Başarı ekranı (kesin onay) — taslak başarıda temizlendiğinden no-draft kontrolünden ÖNCE.
-  if (confirm.data?.kind === 'created') {
-    const reservation = confirm.data.reservation
-    return (
-      <div className="mx-auto max-w-2xl space-y-6">
-        <FormStepper current={3} />
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
-          <CardContent className="relative space-y-4 overflow-hidden p-8 text-center">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-teal/15 to-transparent"
-            />
-            <motion.div
-              initial={{ scale: 0.4, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 260, damping: 18 }}
-              className="relative mx-auto w-fit"
-            >
-              <CheckCircle2 className="h-10 w-10 text-brand-teal" aria-hidden />
-            </motion.div>
-            <h1 className="text-xl font-bold">Rezervasyonunuz alındı</h1>
-            <div>
-              <p className="text-sm text-brand-ice/70">Rezervasyon numaranız</p>
-              <p className="break-all font-mono text-lg font-semibold">
-                {reservation.reservationNumber}
-              </p>
-            </div>
-            <div className="flex items-center justify-center gap-3">
-              <Badge variant={reservationStatusVariant(reservation.status)}>
-                {RESERVATION_STATUS_LABELS[reservation.status]}
-              </Badge>
-              <span className="font-bold">
-                {formatPrice(reservation.totalAmount, reservation.currency)}
-              </span>
-            </div>
-            <div className="flex justify-center gap-3">
-              <Button asChild>
-                <Link to={`/reservations/${reservation.id}`}>Detayı gör</Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/reservations">Rezervasyonlarım</Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    )
-  }
-
-  // Oluştu ama özet yeniden okunamadı (nadir) — yine de başarı, listeye yönlendir.
-  if (confirm.data?.kind === 'createdFallback') {
+  // Kesin onay başarılı — yukarıdaki useEffect kullanıcıyı kalıcı rezervasyon sayfasına yönlendirir.
+  // Bu erken dönüş, yönlendirme gerçekleşene kadarki tek render'da no-draft ekranının görünmemesi
+  // içindir (taslak onSuccess'te temizlenmiş olabilir). Yönlendirme herhangi bir sebeple gecikirse
+  // elle geçiş linki sunulur. no-draft kontrolünden ÖNCE gelir.
+  if (confirm.data?.kind === 'created' || confirm.data?.kind === 'createdFallback') {
+    const detailTo =
+      confirm.data.kind === 'created'
+        ? `/reservations/${confirm.data.reservation.id}`
+        : '/reservations'
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={3} />
         <Card className="glass-card border-white/15 bg-white/10 text-white">
           <CardContent className="space-y-4 p-8 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-brand-teal" aria-hidden />
-            <h1 className="text-xl font-bold">Rezervasyonunuz oluşturuldu</h1>
-            <p className="text-sm text-brand-ice/70">{confirm.data.outcome.message}</p>
-            <Button asChild>
-              <Link to="/reservations">Rezervasyonlarım</Link>
+            <h1 className="text-xl font-bold">Rezervasyonunuz alındı</h1>
+            <p className="flex items-center justify-center gap-2 text-sm text-brand-ice/70">
+              <Spinner size={16} decorative className="text-brand-ice/70" />
+              Rezervasyonunuza yönlendiriliyorsunuz…
+            </p>
+            <Button asChild variant="outline">
+              <Link to={detailTo}>Rezervasyonuma git</Link>
             </Button>
           </CardContent>
         </Card>

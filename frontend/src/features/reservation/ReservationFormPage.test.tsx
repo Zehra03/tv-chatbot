@@ -4,7 +4,7 @@ import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { MemoryRouter, Route, Routes, useParams } from 'react-router-dom'
 import { configureStore } from '@reduxjs/toolkit'
 import { server } from '@/mocks/server'
 import authReducer from '@/features/auth/authSlice'
@@ -50,6 +50,12 @@ const makeHotelDraft = (offerId = 'off-htl-mock-001'): ReservationDraft => ({
 
 const hotelDraft: ReservationDraft = makeHotelDraft()
 
+/** Yönlendirme hedefi işaretçisi — kesin onay sonrası detay sayfasına gidildiğini doğrular. */
+function DetailMarker() {
+  const { id } = useParams()
+  return <div>Rezervasyon detayı #{id}</div>
+}
+
 function renderPage(draft: ReservationDraft | null = hotelDraft) {
   const store = configureStore({
     reducer: {
@@ -69,6 +75,9 @@ function renderPage(draft: ReservationDraft | null = hotelDraft) {
         <MemoryRouter initialEntries={['/reservation/new']}>
           <Routes>
             <Route path="/reservation/new" element={<ReservationFormPage />} />
+            {/* Kesin onay başarıda buraya yönlendirir (created → detay, fallback → liste). */}
+            <Route path="/reservations/:id" element={<DetailMarker />} />
+            <Route path="/reservations" element={<div>Rezervasyon listesi</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -155,7 +164,7 @@ describe('ReservationFormPage', () => {
     await screen.findByText(/Toplam:/, {}, { timeout: 3000 })
   }
 
-  it('başarıda sonuç ekranı gösterilir, liste invalidate edilir, taslak temizlenir', async () => {
+  it('başarıda detay sayfasına yönlendirir, liste invalidate edilir, taslak temizlenir', async () => {
     const user = userEvent.setup()
     const { store, queryClient } = renderPage()
     const invalidateSpy = vi.spyOn(queryClient, 'invalidateQueries')
@@ -164,10 +173,11 @@ describe('ReservationFormPage', () => {
     await user.click(screen.getByRole('checkbox'))
     await user.click(screen.getByRole('button', { name: 'Rezervasyonu onayla' }))
 
-    // Başarı ekranı: numara + durum + detay/liste bağlantıları.
-    expect(await screen.findByText('Rezervasyonunuz alındı', {}, { timeout: 3000 })).toBeTruthy()
-    expect(screen.getByText(/PAX-MOCK-\d+/)).toBeTruthy()
-    expect(screen.getByRole('link', { name: 'Detayı gör' })).toBeTruthy()
+    // Kesin onay başarılı → kullanıcı rezervasyonun kalıcı (URL'li) detay sayfasına taşınır;
+    // artık geçici satır-içi başarı ekranına bağlı değil (canlı backend'de düşebiliyordu).
+    expect(
+      await screen.findByText(/Rezervasyon detayı #\d+/, {}, { timeout: 3000 }),
+    ).toBeTruthy()
 
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['reservations'] })
     expect(store.getState().reservationDraft.draft).toBeNull()
@@ -191,7 +201,7 @@ describe('ReservationFormPage', () => {
     expect(screen.getByRole('button', { name: 'Önizlemeye dön' })).toBeTruthy()
   })
 
-  it('uyarı (çift rezervasyon) gelince ikinci onay istenir; "Yine de onayla" başarıya götürür', async () => {
+  it('uyarı (çift rezervasyon) gelince ikinci onay istenir; "Yine de onayla" detaya götürür', async () => {
     const user = userEvent.setup()
     // offerId 'OFFER-DUP' → mock 200 NeedsConfirmationResponse döndürür (uyarı dalı).
     renderPage(makeHotelDraft('OFFER-DUP'))
@@ -205,7 +215,9 @@ describe('ReservationFormPage', () => {
     expect(screen.getByText(/DuplicateReservationFound/)).toBeTruthy()
 
     await user.click(screen.getByRole('button', { name: 'Yine de onayla' }))
-    expect(await screen.findByText('Rezervasyonunuz alındı', {}, { timeout: 3000 })).toBeTruthy()
+    expect(
+      await screen.findByText(/Rezervasyon detayı #\d+/, {}, { timeout: 3000 }),
+    ).toBeTruthy()
   })
 
   it('geçersiz snapshot (oda > yetişkin) istemcide uyarır, önizleme isteği gönderilmez', async () => {
