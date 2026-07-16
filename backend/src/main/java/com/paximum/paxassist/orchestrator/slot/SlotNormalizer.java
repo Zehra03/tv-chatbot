@@ -113,6 +113,8 @@ public class SlotNormalizer {
                 criteria.cabinClass(),
                 flightMaxPrice,
                 criteria.directFlight(),
+                criteria.airline(),
+                criteria.departTimeRange(),
                 adults,
                 children,
                 childAges,
