@@ -81,7 +81,10 @@ tourvisio:
   password: ${TOURVISIO_PASSWORD:}
 
 server:
-  port: ${SERVER_PORT:${BACKEND_PORT:8080}}
+  # Resolution order: SERVER_PORT (explicit override, what docker-compose sets) → PORT (injected by
+  # managed platforms like Railway/Render; the service is unreachable if we don't bind to it) →
+  # BACKEND_PORT (local .env) → 8080.
+  port: ${SERVER_PORT:${PORT:${BACKEND_PORT:8080}}}
   error:
     # Pinned, not left to Spring's defaults: an unhandled error is answered by
     # GlobalExceptionHandler's fixed INTERNAL_ERROR body, and nothing about the cause
