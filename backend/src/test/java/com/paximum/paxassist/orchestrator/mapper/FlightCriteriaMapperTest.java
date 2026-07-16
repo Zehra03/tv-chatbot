@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class FlightCriteriaMapperTest {
 
-    private final FlightCriteriaMapper mapper = new FlightCriteriaMapper();
+    private final FlightCriteriaMapper mapper = new FlightCriteriaMapper(new GeoCountryResolver());
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private SlotCriteria slots(Map<String, Object> fields) {

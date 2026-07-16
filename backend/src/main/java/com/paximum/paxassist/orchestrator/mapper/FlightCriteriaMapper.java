@@ -27,6 +27,12 @@ import com.paximum.paxassist.flight.domain.TripType;
 @Component
 public class FlightCriteriaMapper {
 
+    private final GeoCountryResolver geoCountry;
+
+    public FlightCriteriaMapper(GeoCountryResolver geoCountry) {
+        this.geoCountry = geoCountry;
+    }
+
     public FlightSearchCriteria toCriteria(SlotCriteria c) {
         LocalDate departDate = parse(c.departureDate());
         LocalDate returnDate = parse(c.returnDate());
@@ -41,9 +47,9 @@ public class FlightCriteriaMapper {
                     .build();
         }
 
-        // The user is never asked for a currency; it follows from their nationality unless they
-        // explicitly named one.
-        String currency = CurrencyByNationality.resolve(c.currency(), c.nationality());
+        // The user is never asked for a currency; it follows from where the request came from
+        // unless they explicitly named one.
+        String currency = CurrencyByCountry.resolve(c.currency(), geoCountry.currentCountry().orElse(null));
 
         return FlightSearchCriteria.builder()
                 .origin(c.origin())

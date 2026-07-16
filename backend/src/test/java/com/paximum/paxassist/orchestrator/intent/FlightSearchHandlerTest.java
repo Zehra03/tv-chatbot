@@ -26,6 +26,7 @@ import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
+import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -49,7 +50,7 @@ class FlightSearchHandlerTest {
         slotGuard = mock(SlotGuard.class);
         when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
         return new FlightSearchHandler(
-                slotFilling, new FlightCriteriaMapper(), flightSearchService, new ClarificationCatalog(), slotGuard);
+                slotFilling, new FlightCriteriaMapper(new GeoCountryResolver()), flightSearchService, new ClarificationCatalog(), slotGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
