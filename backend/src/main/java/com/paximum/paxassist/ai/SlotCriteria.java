@@ -12,7 +12,8 @@ import java.util.List;
  *
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
  *                nationality, currency, rooms, stars, boardType, features, hotelMaxPrice, sortBy
- * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice
+ * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice,
+ *                directFlight, airline, departTimeRange
  * Shared        : adults, children, childAges, nationality, currency
  * SELECT intent : selectionReference
  *
@@ -42,6 +43,8 @@ public record SlotCriteria(
         String cabinClass,        // ECONOMY | BUSINESS | FIRST
         Integer flightMaxPrice,   // upper price limit for a FLIGHT search, e.g. "uçuşa 3000 tl max" → 3000
         Boolean directFlight,     // true: direct/non-stop, false: layovers, null: any
+        String airline,           // preferred airline as the user stated it, e.g. "THY", "Pegasus"
+        String departTimeRange,   // departure time-of-day bucket: morning | afternoon | evening | night
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -59,13 +62,36 @@ public record SlotCriteria(
 ) {
 
     /**
+     * Backward-compatible constructor without the flight-filter fields {@code airline} and
+     * {@code departTimeRange} (both default to {@code null}). Kept so existing positional callers
+     * in the orchestrator (SlotMerger / SlotNormalizer) keep compiling while they are migrated to
+     * the canonical 27-arg form; once they carry the two new fields through, this bridge can go.
+     */
+    public SlotCriteria(
+            String location, String checkIn, String checkOut, Integer nights, Integer rooms,
+            Integer stars, Integer maxStars, String boardType, List<String> features, Integer hotelMaxPrice,
+            String origin, String destination, String departureDate, String returnDate, String cabinClass,
+            Integer flightMaxPrice, Boolean directFlight,
+            Integer adults, Integer children, List<Integer> childAges, String nationality, String currency,
+            String sortBy, Integer limit, String selectionReference) {
+        this(location, checkIn, checkOut, nights, rooms, stars, maxStars, boardType, features, hotelMaxPrice,
+                origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice, directFlight,
+                null, null,
+                adults, children, childAges, nationality, currency, sortBy, limit, selectionReference);
+    }
+
+    /**
      * An all-null criteria — used so slot accumulation never yields {@code null} when a turn
      * carries an intent but no slots yet (e.g. "otel arıyorum"), keeping the mappers null-safe.
      */
     public static SlotCriteria empty() {
         return new SlotCriteria(
+                // hotel (10)
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null);
+                // flight (9): origin, destination, departureDate, returnDate, cabinClass,
+                //             flightMaxPrice, directFlight, airline, departTimeRange
+                null, null, null, null, null, null, null, null, null,
+                // shared (5) + filter/sort (2) + select (1)
+                null, null, null, null, null, null, null, null);
     }
 }
