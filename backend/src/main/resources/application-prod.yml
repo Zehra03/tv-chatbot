@@ -1,0 +1,23 @@
+# 'prod' profile — production hardening on top of the default application.yml.
+#
+# The DEFAULT profile is already production-shaped (Flyway ON, ddl-auto=validate, real TourVisio +
+# Gemini). This profile only trims what's noisy/unsafe for a live deployment; every secret and
+# connection string still comes from env vars (see docs/deployment.md for the Railway/Vercel map).
+# Activate with SPRING_PROFILES_ACTIVE=prod.
+spring:
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      # Off in prod: pretty-printed SQL is dev debugging noise and can leak query shape into logs.
+      "[hibernate.format_sql]": false
+
+logging:
+  level:
+    root: INFO
+    com.paximum.paxassist: INFO
+    # Silence Hibernate SQL echo in production logs.
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN

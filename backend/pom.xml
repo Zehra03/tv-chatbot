@@ -18,16 +18,96 @@
 
     <properties>
         <java.version>21</java.version>
+        <spring-ai.version>1.0.0</spring-ai.version>
+        <spring-cloud.version>2025.0.0</spring-cloud.version>
+        <gatling.version>3.11.5</gatling.version>
+        <gatling-maven-plugin.version>4.8.0</gatling-maven-plugin.version>
+        <jjwt.version>0.12.6</jjwt.version>
     </properties>
 
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.springframework.ai</groupId>
+                <artifactId>spring-ai-bom</artifactId>
+                <version>${spring-ai.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-ollama</artifactId>
+        </dependency>
+        <!-- OpenAI-compatible client used to talk to Google Gemini's OpenAI endpoint
+        (https://generativelanguage.googleapis.com/v1beta/openai). Main chat + intent extraction
+        run on Gemini; the Validator keeps its own Ollama client. Provider is selected via
+        spring.ai.model.chat=openai so the two chat starters don't both create a ChatModel bean. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
+        </dependency>
+        <!-- MCP server (WebMVC/SSE transport): exposes the hotel/flight SEARCH use-cases as
+        Model Context Protocol tools so external MCP clients can call them. Search-only surface —
+        no reservation/booking tool is ever registered. Version managed by the spring-ai-bom. -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server-webmvc</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+        <!-- Bucket4j distributed rate limiting over the existing Lettuce/Redis client.
+        JDK17 artifact is the correct target for Java 21; lettuce-core version is
+        governed by the Spring Boot 3.5 BOM so we reuse the same client. -->
+        <dependency>
+            <groupId>com.bucket4j</groupId>
+            <artifactId>bucket4j_jdk17-lettuce</artifactId>
+            <version>8.15.0</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -50,6 +130,14 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- In-memory DB used only by the `loadtest` profile so the app (incl. the
+        always-on JPA-backed security layer) boots with no external Postgres. Runtime
+        scope so both `mvn test` and `mvn spring-boot:run -Ploadtest` (Gatling) can use it. -->
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-configuration-processor</artifactId>
@@ -60,14 +148,49 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+        <!-- MUST stay on the 2.x line: springdoc 3.x targets Spring Boot 4 / Spring Framework 6→7
+        and drags in Boot 4.0 autoconfigure modules (org.springframework.boot.webmvc.autoconfigure),
+        which collide with this project's Boot 3.5 autoconfigure (duplicate ErrorMvcAutoConfiguration
+        → context fails to start). But 2.5.0 is too OLD for Boot 3.5: it calls the
+        ControllerAdviceBean(Object) constructor removed in Spring Framework 6.2, so /v3/api-docs
+        throws NoSuchMethodError (500). 2.8.x is the sweet spot — 2.x line (no Boot 4 modules) and
+        compiled against SF 6.2 (constructor fix landed in 2.7.0). Pinned to 2.8.14 specifically:
+        2.8.15+ introduced a swagger-ui resource-handler pattern (/swagger-ui/**/*swagger-initializer.js)
+        that the Boot 3.4+ PathPatternParser rejects ("No more pattern data allowed after ** element"),
+        so the context fails to start. See springdoc-openapi issue #3210. -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-            <version>2.5.0</version>
+            <version>2.8.14</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Testcontainers (version managed by the Spring Boot BOM) — used by the
+        rate limiter fail-open integration test to start/stop a real Redis. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Postgres container for the chat-persistence integration test (Flyway + ddl-auto=validate
+        against a real Postgres). Version managed by the Spring Boot BOM. -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>postgresql</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Gatling (Java DSL) load-test simulations for the rate limiter. -->
+        <dependency>
+            <groupId>io.gatling.highcharts</groupId>
+            <artifactId>gatling-charts-highcharts</artifactId>
+            <version>${gatling.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
@@ -77,6 +200,14 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- Runs Gatling simulations from src/test/java via `mvn gatling:test`.
+            Not bound to the build lifecycle — invoked explicitly against a
+            running app (see loadtest docs). -->
+            <plugin>
+                <groupId>io.gatling</groupId>
+                <artifactId>gatling-maven-plugin</artifactId>
+                <version>${gatling-maven-plugin.version}</version>
             </plugin>
         </plugins>
     </build>

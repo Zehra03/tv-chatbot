@@ -1,0 +1,92 @@
+import { createSlice, isAnyOf, nanoid, type PayloadAction } from '@reduxjs/toolkit'
+import type { ChatMessage, ChatSession, PartialCriteria } from '@/types'
+import type { SendMessageResponse } from '@/api'
+import { guestSessionStarted, logout, sessionStarted } from '@/features/auth/authSlice'
+
+/**
+ * Sohbet UI state'i (docs/frontend-architecture.md §5): mesaj thread'i, aktif
+ * session id, chatbot'un kademeli doldurduğu arama kriterleri (slot-filling)
+ * ve yanıt bekleyen açıklayıcı soru. Sunucu çağrısının loading/error'u burada
+ * DEĞİL React Query'dedir (useSendMessage); burada yalnızca konuşma durumu yaşar.
+ */
+export interface ChatState {
+  sessionId: string | null
+  messages: ChatMessage[]
+  /** O ana dek biriken (eksik olabilen) arama kriterleri. */
+  accumulatedCriteria?: PartialCriteria
+  /** Asistanın yanıt beklediği açık soru; kriterler tamamlanınca temizlenir. */
+  pendingQuestion?: string
+  /** Aktif konuşmanın kimliği — her "yeni sohbet"/oturum-yükleme ile artar.
+   * useSendMessage bunu izleyip uçuştaki isteği (composer kilidini) sıfırlar ve
+   * bayat yanıtın yeni sohbete düşmesini engeller. */
+  epoch: number
+}
+
+const initialState: ChatState = {
+  sessionId: null,
+  messages: [],
+  epoch: 0,
+}
+
+const chatSlice = createSlice({
+  name: 'chat',
+  initialState,
+  reducers: {
+    /** Kullanıcı mesajını iyimser (istek beklenmeden) thread'e ekler. */
+    userMessageSent: {
+      reducer(state, action: PayloadAction<ChatMessage>) {
+        state.messages.push(action.payload)
+      },
+      prepare(content: string) {
+        return {
+          payload: {
+            id: nanoid(),
+            role: 'user',
+            content,
+            createdAt: new Date().toISOString(),
+          } satisfies ChatMessage,
+        }
+      },
+    },
+    /** Backend yanıtını işler: session'ı sabitler, yanıtı thread'e ekler,
+     * biriken kriterleri ve bekleyen soruyu günceller. Kriter içermeyen yanıt
+     * (ör. intent sorusu) o ana dek birikeni SİLMEZ. */
+    assistantReplied(state, action: PayloadAction<SendMessageResponse>) {
+      const { sessionId, reply, accumulatedCriteria, pendingQuestion } = action.payload
+      state.sessionId = sessionId
+      state.messages.push(reply)
+      if (accumulatedCriteria) state.accumulatedCriteria = accumulatedCriteria
+      state.pendingQuestion = pendingQuestion
+    },
+    /** Geçmişten seçilen oturumu olduğu gibi yükler (thread + kriterler + soru).
+     * epoch artar → önceki sohbetin uçuştaki isteği bu thread'e sızmaz. */
+    sessionLoaded(state, action: PayloadAction<ChatSession>) {
+      const { id, messages, accumulatedCriteria, pendingQuestion } = action.payload
+      state.sessionId = id
+      state.messages = messages
+      state.accumulatedCriteria = accumulatedCriteria
+      state.pendingQuestion = pendingQuestion
+      state.epoch += 1
+    },
+    /** Yeni sohbet — tüm konuşma durumunu sıfırlar; epoch artarak önceki
+     * sohbetin bekleyen isteğini geçersiz kılar (composer kilidi açılır). */
+    chatReset(state) {
+      return { ...initialState, epoch: state.epoch + 1 }
+    },
+  },
+  /**
+   * Kimlik sınırında konuşma durumunu sıfırla: çıkış (logout), giriş (sessionStarted)
+   * ve misafir başlangıcı (guestSessionStarted). Aksi halde bir hesabın thread'i, çıkış
+   * yapıp misafir/başka hesap olarak devam eden kullanıcıya sızar. epoch artar → önceki
+   * kimliğin uçuştaki isteği yeni oturuma düşmez.
+   */
+  extraReducers: (builder) => {
+    builder.addMatcher(isAnyOf(logout, sessionStarted, guestSessionStarted), (state) => ({
+      ...initialState,
+      epoch: state.epoch + 1,
+    }))
+  },
+})
+
+export const { userMessageSent, assistantReplied, sessionLoaded, chatReset } = chatSlice.actions
+export default chatSlice.reducer

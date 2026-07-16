@@ -1,0 +1,393 @@
+{
+  "info": {
+    "name": "PaxAssist API",
+    "description": "PaxAssist backend endpoint'leri (auth + chat + hotels + flights).\n\nKullanım:\n1. 'PaxAssist - Local' environment'ini seç (baseUrl = http://localhost:8081).\n2. Auth > Register (veya Login) isteğini çalıştır -> dönen JWT otomatik olarak {{token}} değişkenine yazılır ve diğer tüm istekler bunu Bearer olarak kullanır.\n3. Diğer klasörlerdeki istekleri çalıştır.\n\nNot: Public endpoint'ler /auth/register ve /auth/login. Geri kalan her şey Bearer token ister (USER/ADMIN).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081", "type": "string" },
+    { "key": "email", "value": "", "type": "string" },
+    { "key": "password", "value": "Passw0rd123", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "sessionId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Her koşuda benzersiz bir e-posta üret (duplicate register hatasını önler).",
+                  "// Aynı e-posta bir sonraki Login isteğinde de kullanılır.",
+                  "pm.collectionVariables.set('email', 'pax_' + Date.now() + '@example.com');",
+                  "if (!pm.collectionVariables.get('password')) {",
+                  "  pm.collectionVariables.set('password', 'Passw0rd123');",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.test('token dondu', () => pm.expect(b.token).to.be.a('string').and.not.empty);",
+                  "if (b.token) pm.collectionVariables.set('token', b.token);",
+                  "if (b.user && b.user.id) pm.collectionVariables.set('userId', b.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\",\n  \"name\": \"Postman Test\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "auth", "register" ]
+            },
+            "description": "Yeni kullanici kaydeder (public). 201 + { user, token } doner; token otomatik {{token}}'a yazilir."
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const b = pm.response.json();",
+                  "pm.test('token dondu', () => pm.expect(b.token).to.be.a('string').and.not.empty);",
+                  "if (b.token) pm.collectionVariables.set('token', b.token);",
+                  "if (b.user && b.user.id) pm.collectionVariables.set('userId', b.user.id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "auth", "login" ]
+            },
+            "description": "Var olan kullanici ile giris (public). Once Register calistir; ya da {{email}}/{{password}} degiskenlerini bilinen bir hesaba gore duzenle."
+          }
+        },
+        {
+          "name": "Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('kimlik dogru', () => pm.expect(pm.response.json()).to.have.property('email'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "auth", "me" ]
+            },
+            "description": "Gecerli token'in sahibini doner. Bearer {{token}} gerekir."
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 No Content', () => pm.response.to.have.status(204));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/logout",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "auth", "logout" ]
+            },
+            "description": "Stateless JWT: sunucuda bir sey iptal edilmez, 204 doner. Token'i istemci atar."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "description": "Chat orchestrator. NOT: Bu endpoint AI saglayicisina baglidir; gecerli bir AI anahtari / calisan Ollama yoksa 500 ('AI yanit uretemedi') doner.",
+      "item": [
+        {
+          "name": "Send message - yeni oturum",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "if (pm.response.code === 200) {",
+                  "  const b = pm.response.json();",
+                  "  if (b.sessionId) pm.collectionVariables.set('sessionId', b.sessionId);",
+                  "  pm.test('reply dondu', () => pm.expect(b).to.have.property('reply'));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Antalya'da 2 yetiskin icin 3 gece otel ariyorum\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "chat" ]
+            },
+            "description": "sessionId gonderilmez -> yeni oturum acilir. Donen sessionId otomatik {{sessionId}}'ye yazilir."
+          }
+        },
+        {
+          "name": "Send message - devam",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionId\": \"{{sessionId}}\",\n  \"message\": \"3 gece yerine 5 gece olsun\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "chat" ]
+            },
+            "description": "Ayni oturumu {{sessionId}} ile surdurur. Once 'yeni oturum' istegini calistir."
+          }
+        },
+        {
+          "name": "List sessions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "const arr = pm.response.json();",
+                  "pm.test('dizi dondu', () => pm.expect(arr).to.be.an('array'));",
+                  "if (Array.isArray(arr) && arr.length && arr[0].id) pm.collectionVariables.set('sessionId', arr[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/sessions",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "chat", "sessions" ]
+            },
+            "description": "Giris yapan kullanicinin oturum ozetlerini listeler. Ilk oturumun id'sini {{sessionId}}'ye yazar."
+          }
+        },
+        {
+          "name": "Get session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 veya 404', () => pm.expect([200,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/{{sessionId}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "chat", "{{sessionId}}" ]
+            },
+            "description": "Tek bir oturumun tam transkriptini doner. Bulunamazsa 404."
+          }
+        },
+        {
+          "name": "Delete session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('204 veya 404', () => pm.expect([204,404]).to.include(pm.response.code));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/{{sessionId}}",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "chat", "{{sessionId}}" ]
+            },
+            "description": "Oturumu siler (yalnizca sahibi). Basarili 204, yoksa 404."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hotels",
+      "item": [
+        {
+          "name": "Search",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"destination\": \"Antalya\",\n  \"checkIn\": \"2026-08-01\",\n  \"night\": 3,\n  \"adult\": 2,\n  \"childAges\": [],\n  \"nationality\": \"TR\",\n  \"currency\": \"TRY\",\n  \"culture\": \"tr-TR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/hotels/search",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "hotels", "search" ]
+            },
+            "description": "Otel aramasi. nationality/currency/culture/childAges bos birakilirsa sunucu TR/TRY/tr-TR/[] varsayar. Bearer {{token}} gerekir. NOT: Redis cache'e baglidir; Redis erisilemezse 500."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Flights",
+      "item": [
+        {
+          "name": "Search (one-way)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": \"IST\",\n  \"destination\": \"AYT\",\n  \"departDate\": \"2026-08-01\",\n  \"tripType\": \"ONE_WAY\",\n  \"passengers\": { \"adults\": 1, \"children\": 0, \"infants\": 0 },\n  \"currency\": \"TRY\",\n  \"nonstop\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/flights/search",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "flights", "search" ]
+            },
+            "description": "Tek yon ucus aramasi. departDate/returnDate bugun veya ileri bir tarih olmali (@FutureOrPresent). Bearer {{token}} gerekir. NOT: Redis cache'e baglidir; Redis erisilemezse 500."
+          }
+        },
+        {
+          "name": "Search (round-trip)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"origin\": \"IST\",\n  \"destination\": \"AYT\",\n  \"departDate\": \"2026-08-01\",\n  \"returnDate\": \"2026-08-08\",\n  \"tripType\": \"ROUND_TRIP\",\n  \"passengers\": { \"adults\": 2, \"children\": 1, \"infants\": 0 },\n  \"currency\": \"TRY\",\n  \"nonstop\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/flights/search",
+              "host": [ "{{baseUrl}}" ],
+              "path": [ "api", "v1", "flights", "search" ]
+            },
+            "description": "Gidis-donus ucus aramasi."
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,125 @@
+import { describe, expect, it } from 'vitest'
+import reducer, {
+  assistantReplied,
+  chatReset,
+  sessionLoaded,
+  userMessageSent,
+} from './chatSlice'
+import { guestSessionStarted, logout, sessionStarted } from '@/features/auth/authSlice'
+import type { SendMessageResponse } from '@/api'
+import type { ChatMessage, ChatSession } from '@/types'
+
+const reply = (over: Partial<SendMessageResponse> = {}): SendMessageResponse => ({
+  sessionId: 'sess-1',
+  reply: {
+    id: 'm-1',
+    role: 'assistant',
+    content: 'Hangi şehirde otel arıyorsunuz?',
+    createdAt: '2026-07-02T10:00:00Z',
+  } satisfies ChatMessage,
+  ...over,
+})
+
+describe('chatSlice', () => {
+  it('userMessageSent kullanıcı mesajını thread sonuna ekler', () => {
+    const state = reducer(undefined, userMessageSent('merhaba'))
+    expect(state.messages).toHaveLength(1)
+    expect(state.messages[0]).toMatchObject({ role: 'user', content: 'merhaba' })
+    expect(state.messages[0].id).toBeTruthy()
+    expect(state.messages[0].createdAt).toBeTruthy()
+  })
+
+  it('assistantReplied session id, yanıt, kriter ve bekleyen soruyu işler', () => {
+    const state = reducer(
+      undefined,
+      assistantReplied(
+        reply({
+          accumulatedCriteria: { intent: 'hotel', criteria: { destination: 'Antalya' } },
+          pendingQuestion: 'Giriş tarihi nedir?',
+        }),
+      ),
+    )
+    expect(state.sessionId).toBe('sess-1')
+    expect(state.messages).toHaveLength(1)
+    expect(state.accumulatedCriteria).toEqual({
+      intent: 'hotel',
+      criteria: { destination: 'Antalya' },
+    })
+    expect(state.pendingQuestion).toBe('Giriş tarihi nedir?')
+  })
+
+  it('kriter içermeyen yanıt (intent sorusu) birikmiş kriterleri silmez', () => {
+    let state = reducer(
+      undefined,
+      assistantReplied(
+        reply({ accumulatedCriteria: { intent: 'hotel', criteria: { destination: 'Antalya' } } }),
+      ),
+    )
+    state = reducer(state, assistantReplied(reply({ pendingQuestion: 'Kaç kişi?' })))
+    expect(state.accumulatedCriteria).toEqual({
+      intent: 'hotel',
+      criteria: { destination: 'Antalya' },
+    })
+    expect(state.pendingQuestion).toBe('Kaç kişi?')
+  })
+
+  it('kriterler tamamlanınca (soru gelmeyince) bekleyen soru temizlenir', () => {
+    let state = reducer(undefined, assistantReplied(reply({ pendingQuestion: 'Kaç kişi?' })))
+    state = reducer(state, assistantReplied(reply({ pendingQuestion: undefined })))
+    expect(state.pendingQuestion).toBeUndefined()
+  })
+
+  it('chatReset tüm konuşma durumunu sıfırlar (epoch artar)', () => {
+    let state = reducer(undefined, userMessageSent('merhaba'))
+    state = reducer(state, assistantReplied(reply({ pendingQuestion: 'Kaç kişi?' })))
+    state = reducer(state, chatReset())
+    expect(state).toEqual({ sessionId: null, messages: [], epoch: 1 })
+  })
+
+  it('yeni sohbet ve oturum yükleme epoch\'u artırır (bekleyen isteği geçersiz kılar)', () => {
+    // İlk mesaj uçuştayken (sessionId hâlâ null) yeni sohbet: epoch değişmeli ki
+    // useSendMessage composer kilidini açsın — sessionId aynı kaldığı için
+    // sıfırlamayı yalnızca sessionId'e bağlamak yetmez.
+    let state = reducer(undefined, userMessageSent('merhaba'))
+    expect(state.epoch).toBe(0)
+    state = reducer(state, chatReset())
+    expect(state.epoch).toBe(1)
+
+    const session: ChatSession = {
+      id: 'sess-2',
+      messages: [],
+      accumulatedCriteria: undefined,
+      pendingQuestion: undefined,
+    }
+    state = reducer(state, sessionLoaded(session))
+    expect(state.epoch).toBe(2)
+    expect(state.sessionId).toBe('sess-2')
+  })
+
+  it('logout konuşma durumunu sıfırlar — önceki hesabın thread\'i misafire sızmaz', () => {
+    let state = reducer(undefined, userMessageSent('gizli sohbet'))
+    state = reducer(state, assistantReplied(reply()))
+    expect(state.messages).toHaveLength(2)
+    state = reducer(state, logout())
+    expect(state.messages).toEqual([])
+    expect(state.sessionId).toBeNull()
+    expect(state.epoch).toBe(1)
+  })
+
+  it('misafir başlangıcı ve yeni giriş de konuşma durumunu sıfırlar', () => {
+    let state = reducer(undefined, userMessageSent('merhaba'))
+    state = reducer(state, guestSessionStarted())
+    expect(state.messages).toEqual([])
+
+    state = reducer(state, userMessageSent('misafir mesajı'))
+    state = reducer(
+      state,
+      sessionStarted({
+        user: { id: 'u-1', email: 'a@b.co', name: 'Ada' },
+        token: 't',
+        refreshToken: 'r',
+      }),
+    )
+    expect(state.messages).toEqual([])
+  })
+})

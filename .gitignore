@@ -27,8 +27,28 @@ frontend/.vite/
 # Playwright MCP ekran goruntusu / cikti artiklari (tasarim dongusu)
 .playwright-mcp/
 
+# Claude Code yerel ayar/oturum dosyalari (kisisel arac konfigurasyonu, commitlenmez)
+.claude/
+
+# Kok dizindeki gelistirme ekran goruntuleri (tasarim/QA artiklari, commitlenmez)
+/*.jpeg
+/*.jpg
+/*.png
+
+# Kok dizindeki ham API cevap dokumleri (TourVisio pricesearch vb. debug artiklari, commitlenmez)
+/ps.json
+
 # Test outputs
 coverage/
 
 # Docker
 postgres-data/
+
+# Personal Dev Files
+deniz_scope.md
+osman_scope.md
+zehra_scope.md
+berke_scope.md
+emre_scope.md
+berat_scope.md
+

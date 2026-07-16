@@ -1,0 +1,30 @@
+spring:
+  # Flyway is enabled repo-wide, but this lightweight context test boots against an empty CI
+  # Postgres with no schema management (ddl-auto=none below), so keep it off here. Reliable scalar
+  # guard (spring.autoconfigure.exclude is a list a later profile can replace). Real Flyway+validate
+  # coverage lives in ChatPersistencePostgresTest. PaxAssistApplicationTests only calls contextLoads().
+  flyway:
+    enabled: false
+  ai:
+    # No real chat model in this profile — AiConfig provides a mock ChatModel. 'none' keeps both the
+    # OpenAI(Gemini) and Ollama chat autoconfigs from creating a competing ChatModel bean.
+    model:
+      chat: none
+      embedding: none
+    ollama:
+      chat:
+        enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaChatAutoConfiguration
+      - org.springframework.ai.model.ollama.autoconfigure.OllamaEmbeddingAutoConfiguration
+  jpa:
+    hibernate:
+      ddl-auto: none
+
+app:
+  validator:
+    # Keep the validator client fully local in this hermetic profile: the default provider is now
+    # deepseek, whose ChatClient bean fails fast at startup when DEEPSEEK_API_KEY is unset (CI).
+    # Constructing the Ollama client needs no key and makes no network call at startup.
+    provider: ollama
