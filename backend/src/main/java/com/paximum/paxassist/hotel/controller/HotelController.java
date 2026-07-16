@@ -15,12 +15,15 @@ import com.paximum.paxassist.hotel.dto.HotelLocationDto;
 import com.paximum.paxassist.hotel.dto.HotelSearchApiRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 
+import jakarta.validation.Valid;
+
 /**
  * Frontend-facing hotel search. Accepts the frontend's {@code HotelSearchCriteria} and returns a
  * bare {@code HotelProduct[]} (frontend contract, {@code frontend/src/api/hotelApi.ts}). The
  * internal {@link HotelSearchService} keeps its status-envelope shape for the chat orchestrator;
- * this controller unwraps it. The frontend validates criteria before calling, so an incomplete
- * search simply yields an empty list.
+ * this controller unwraps it. Criteria are validated at this boundary (see
+ * {@link HotelSearchApiRequest}) — an invalid body is rejected with 400 before any provider call;
+ * a valid but resultless search yields an empty list.
  */
 @RestController
 @RequestMapping("/api/v1/hotels")
@@ -36,7 +39,7 @@ public class HotelController {
     }
 
     @PostMapping("/search")
-    public List<HotelProduct> search(@RequestBody HotelSearchApiRequest request) {
+    public List<HotelProduct> search(@Valid @RequestBody HotelSearchApiRequest request) {
         HotelSearchResponse response = hotelSearchService.searchHotels(request.toInternal());
         return toProducts(response.results());
     }

@@ -1,6 +1,7 @@
 package com.paximum.paxassist.hotel.controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,13 +19,16 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
+import com.paximum.paxassist.config.GlobalExceptionHandler;
 import com.paximum.paxassist.hotel.HotelProduct;
 import com.paximum.paxassist.hotel.HotelSearchService;
 import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.hasItem;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -55,7 +59,52 @@ class HotelControllerTest {
         ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
         mockMvc = MockMvcBuilders.standaloneSetup(hotelController)
                 .setMessageConverters(new MappingJackson2HttpMessageConverter(objectMapper))
+                .setControllerAdvice(new GlobalExceptionHandler())
                 .build();
+    }
+
+    /** BODY with one field replaced, so each validation test varies exactly one thing. */
+    private static String bodyWith(String field, String jsonValue) {
+        return BODY.replaceFirst("\"" + field + "\":(\\[[^]]*\\]|\"[^\"]*\"|[^,}]+)",
+                "\"" + field + "\":" + jsonValue);
+    }
+
+    private void expectRejected(String body, String expectedMessage) throws Exception {
+        mockMvc.perform(post("/api/v1/hotels/search")
+                        .contentType(MediaType.APPLICATION_JSON).content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("VALIDATION_ERROR"))
+                .andExpect(jsonPath("$.details.*").value(hasItem(expectedMessage)));
+        // The whole point of validating here: TourVisio is never asked a nonsensical question.
+        verifyNoInteractions(hotelSearchService);
+    }
+
+    @Test
+    void rejectsPastCheckIn() throws Exception {
+        String past = LocalDate.now().minusDays(1).toString();
+        expectRejected(bodyWith("checkIn", "\"" + past + "\""), "Geçmiş tarih seçilemez.");
+    }
+
+    @Test
+    void rejectsCheckOutBeforeCheckIn() throws Exception {
+        expectRejected(bodyWith("checkOut", "\"2026-07-30\""), // BODY checks in 2026-08-01
+                "Çıkış tarihi giriş tarihinden sonra olmalıdır.");
+    }
+
+    @Test
+    void rejectsSameDayCheckOut() throws Exception {
+        expectRejected(bodyWith("checkOut", "\"2026-08-01\""), // zero nights
+                "Çıkış tarihi giriş tarihinden sonra olmalıdır.");
+    }
+
+    @Test
+    void rejectsZeroAdults() throws Exception {
+        expectRejected(bodyWith("adults", "0"), "En az 1 yetişkin olmalıdır.");
+    }
+
+    @Test
+    void rejectsBlankDestination() throws Exception {
+        expectRejected(bodyWith("destination", "\"  \""), "Varış yeri zorunludur.");
     }
 
     @Test
