@@ -78,7 +78,7 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     await send(user, 'Antalya oteli istiyorum')
     expect(await screen.findByText('Giriş tarihi nedir? (örn. 2026-08-01)', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('Otel araması')).toBeTruthy()
-    expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
+    expect(screen.getByText('Nerede / Şehir: Antalya')).toBeTruthy()
   })
 
   it('belirsiz girdide seçenekli kart çıkar; "Otel ara"ya tıklamak şehri koruyarak otel akışını sürdürür', async () => {
@@ -97,7 +97,7 @@ describe('ChatPage (MSW ile uçtan uca)', () => {
     await user.click(otelAra)
     expect(await screen.findByText('Giriş tarihi nedir? (örn. 2026-08-01)', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('Otel araması')).toBeTruthy() // kriter rozeti (kart butonu değil)
-    expect(screen.getByText('Nereye: Antalya')).toBeTruthy()
+    expect(screen.getByText('Nerede / Şehir: Antalya')).toBeTruthy()
   })
 
   it('hızlı-eylem kartı ("Otel ara") doğal cümle balonu yazar ve otel akışını başlatır', async () => {

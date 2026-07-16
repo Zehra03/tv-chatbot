@@ -157,6 +157,43 @@ describe('HotelsPage (MSW ile)', () => {
     expect(screen.getByText('1 yetişkin, 1 oda')).toBeTruthy()
   })
 
+  it('çocuk sayısı değişince yaş select sayısı eşleşir, girilen yaşlar korunur', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(screen.getByLabelText('Misafir ve oda'))
+    // Çocuk 0 iken yaş bölümü hiç render edilmez.
+    expect(screen.queryByText(/Çocuk yaşları/)).toBeNull()
+
+    await user.click(screen.getByRole('button', { name: 'Çocuk sayısını artır' }))
+    await user.click(screen.getByRole('button', { name: 'Çocuk sayısını artır' }))
+    expect(screen.getByText('2 yetişkin, 2 çocuk, 1 oda')).toBeTruthy()
+
+    // childAges.length === childCount invariantı (types/search.ts); varsayılan 7.
+    const ages = () => screen.getAllByRole('combobox').filter((el) => el.tagName === 'SELECT')
+    expect(ages()).toHaveLength(2)
+    expect((screen.getByLabelText('1. çocuğun yaşı') as HTMLSelectElement).value).toBe('7')
+
+    await user.selectOptions(screen.getByLabelText('1. çocuğun yaşı'), '10')
+    expect((screen.getByLabelText('1. çocuğun yaşı') as HTMLSelectElement).value).toBe('10')
+
+    // Azaltma sondan kırpar → 1. çocuğun girilen yaşı korunur.
+    await user.click(screen.getByRole('button', { name: 'Çocuk sayısını azalt' }))
+    expect(ages()).toHaveLength(1)
+    expect((screen.getByLabelText('1. çocuğun yaşı') as HTMLSelectElement).value).toBe('10')
+
+    // Tekrar artırınca yeni çocuk varsayılana döner, eskisi bozulmaz.
+    await user.click(screen.getByRole('button', { name: 'Çocuk sayısını artır' }))
+    expect((screen.getByLabelText('1. çocuğun yaşı') as HTMLSelectElement).value).toBe('10')
+    expect((screen.getByLabelText('2. çocuğun yaşı') as HTMLSelectElement).value).toBe('7')
+
+    // Sıfıra dönünce bölüm tümden kalkar.
+    await user.click(screen.getByRole('button', { name: 'Çocuk sayısını azalt' }))
+    await user.click(screen.getByRole('button', { name: 'Çocuk sayısını azalt' }))
+    expect(screen.queryByText(/Çocuk yaşları/)).toBeNull()
+    expect(screen.getByText('2 yetişkin, 1 oda')).toBeTruthy()
+  })
+
   it('sunucu hatasında hata mesajı ve tekrar dene gösterir', async () => {
     server.use(
       http.post('/api/v1/hotels/search', () =>

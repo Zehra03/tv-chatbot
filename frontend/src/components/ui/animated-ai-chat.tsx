@@ -146,6 +146,11 @@ interface AnimatedAIChatProps {
     hero?: boolean;
 }
 
+/** Tek mesajın azami uzunluğu. */
+const MAX_LENGTH = 2000;
+/** Sayaç bu uzunluktan sonra görünür — sınıra yaklaşmadan gürültü yapmasın. */
+const COUNTER_VISIBLE_AT = 1800;
+
 export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: AnimatedAIChatProps = {}) {
     const [value, setValue] = useState("");
     const [isTyping, setIsTyping] = useState(false);
@@ -408,6 +413,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                 onKeyDown={handleKeyDown}
                                 aria-label="Mesaj"
                                 disabled={disabled}
+                                maxLength={MAX_LENGTH}
                                 placeholder={placeholder ?? "PaxAssist'e sor — otel, uçuş, tatil önerisi..."}
                                 containerClassName="w-full"
                                 className={cn(
@@ -425,6 +431,19 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                 }}
                                 showRing={false}
                             />
+                            {value.length >= COUNTER_VISIBLE_AT && (
+                                // aria-live=polite: sınıra yaklaşan görme engelli kullanıcı da
+                                // duysun; her tuşta değil, okuyucunun uygun bulduğu anda okunur.
+                                <p
+                                    aria-live="polite"
+                                    className={cn(
+                                        "px-4 pt-1 text-end text-xs tabular-nums",
+                                        value.length >= MAX_LENGTH ? "text-amber-300" : "text-white/40"
+                                    )}
+                                >
+                                    {value.length}/{MAX_LENGTH}
+                                </p>
+                            )}
                         </div>
 
                         <div className="p-4 border-t border-white/[0.05] flex items-center justify-between gap-4">
