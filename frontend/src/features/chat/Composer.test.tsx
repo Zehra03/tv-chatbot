@@ -57,4 +57,33 @@ describe('Composer', () => {
     render(<Composer onSend={vi.fn()} placeholder="Giriş tarihi nedir?" />)
     expect(screen.getByPlaceholderText('Giriş tarihi nedir?')).toBeTruthy()
   })
+
+  it('sayaç yalnız 1800 karakterden sonra görünür', async () => {
+    const user = userEvent.setup()
+    render(<Composer onSend={vi.fn()} />)
+    const input = screen.getByLabelText('Mesaj')
+
+    await user.click(input)
+    await user.paste('x'.repeat(1799))
+    expect(screen.queryByText(/\/2000$/)).toBeNull()
+
+    await user.paste('x')
+    expect(screen.getByText('1800/2000')).toBeTruthy()
+  })
+
+  it('2000 karakteri aşan girdiyi kırpar', async () => {
+    const user = userEvent.setup()
+    const onSend = vi.fn()
+    render(<Composer onSend={onSend} />)
+
+    const input = screen.getByLabelText('Mesaj') as HTMLInputElement
+    await user.click(input)
+    await user.paste('x'.repeat(2500))
+
+    expect(input.value.length).toBe(2000)
+    expect(screen.getByText('2000/2000')).toBeTruthy()
+
+    await user.click(screen.getByRole('button', { name: /gönder/i }))
+    expect(onSend).toHaveBeenCalledWith('x'.repeat(2000))
+  })
 })

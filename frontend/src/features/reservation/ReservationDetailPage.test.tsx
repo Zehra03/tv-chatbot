@@ -37,6 +37,7 @@ function renderPage(id: string, state?: { justBooked?: boolean }) {
         <MemoryRouter initialEntries={[{ pathname: `/reservations/${id}`, state }]}>
           <Routes>
             <Route path="/reservations/:id" element={<ReservationDetailPage />} />
+            <Route path="/reservations/:id/print" element={<div>VOUCHER STUB</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -104,6 +105,16 @@ describe('ReservationDetailPage (MSW ile)', () => {
 
     expect(await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.queryByRole('status')).toBeNull()
+  })
+
+  it('"PDF olarak indir" yazdırma voucher’ına götürür (iptal edilmiş kayıtta da)', async () => {
+    const user = userEvent.setup()
+    renderPage('1003')
+
+    expect(await screen.findByText('PAX-MOCK-1003', {}, { timeout: 3000 })).toBeTruthy()
+    await user.click(screen.getByRole('link', { name: 'PDF olarak indir' }))
+
+    expect(screen.getByText('VOUCHER STUB')).toBeTruthy()
   })
 
   it('bulunamayan rezervasyonda hata gösterir', async () => {

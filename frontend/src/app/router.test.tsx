@@ -4,6 +4,7 @@ import type { RouteObject } from 'react-router-dom'
 import { routes } from '@/app/router'
 import { Layout } from '@/components/Layout'
 import { RouteErrorPage } from '@/pages/RouteErrorPage'
+import { ReservationPrintPage } from '@/features/reservation/ReservationPrintPage'
 
 function elementType(el: React.ReactNode) {
   return isValidElement(el) ? (el as ReactElement).type : undefined
@@ -79,5 +80,57 @@ describe('misafir erişim yerleşimi', () => {
     expect(guardedPaths).toEqual(
       expect.arrayContaining(['/reservation/new', '/reservations', '/reservations/:id', '/profile']),
     )
+  })
+})
+
+/**
+ * Yazdırma voucher'ı YERLEŞİMİ: Layout'un DIŞINDA ama hesap-guard'ın ALTINDA.
+ * Layout'un altına taşımak (doğal görünen bir "diğer rezervasyon sayfaları gibi olsun"
+ * sadeleştirmesi) kâğıda header/nav'ı ve h-screen overflow-hidden kabuğunu sokar —
+ * voucher tek sayfaya kırpılır. Guard'ın dışına almak ise rezervasyonu misafire açar.
+ */
+describe('yazdırma voucher rotası yerleşimi', () => {
+  const root = routes[0]
+
+  const protectedWrapper = root.children!.find(
+    (r) => !r.path && !r.index && r.children,
+  ) as RouteObject
+
+  function printBranch() {
+    return protectedWrapper.children!.find((r) =>
+      r.children?.some((c) => c.path === '/reservations/:id/print'),
+    ) as RouteObject
+  }
+
+  it('voucher Layout kabuğunun dışında', () => {
+    const layoutRoute = protectedWrapper.children!.find(
+      (r) => elementType(r.element) === Layout,
+    ) as RouteObject
+    // Layout ağacının hiçbir yerinde print rotası olmamalı.
+    const insideLayout = JSON.stringify(
+      layoutRoute.children,
+      (k, v) => (k === 'element' || k === 'errorElement' ? undefined : v),
+    ).includes('/reservations/:id/print')
+    expect(insideLayout).toBe(false)
+
+    // …ama korumalı sarmalın altında, kendi dalında duruyor.
+    const branch = printBranch()
+    expect(branch).toBeTruthy()
+    expect(elementType(branch.children![0].element)).toBe(ReservationPrintPage)
+  })
+
+  it('voucher hesap gerektiren bir guard sarmalının altında (misafire kapalı)', () => {
+    const branch = printBranch()
+    // Guard, /reservations/:id ile aynı sarmal bileşeni (RequireAccount) olmalı.
+    const layoutRoute = protectedWrapper.children!.find(
+      (r) => elementType(r.element) === Layout,
+    ) as RouteObject
+    const innerBoundary = layoutRoute.children!.find((r) => r.errorElement) as RouteObject
+    const accountGuard = innerBoundary.children!.find(
+      (r) => !r.path && !r.index && r.children,
+    ) as RouteObject
+
+    expect(branch.element).toBeTruthy()
+    expect(elementType(branch.element)).toBe(elementType(accountGuard.element))
   })
 })

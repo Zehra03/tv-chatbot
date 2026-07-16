@@ -1,6 +1,9 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
@@ -175,5 +178,86 @@ class ResultFiltersTest {
         
         List<Object> result = ResultFilters.applyDirectFlight(List.of(direct, layover, hotel), false);
         assertThat(result).containsExactly(layover, hotel);
+    }
+
+    // ── applyDepartTimeRange ─────────────────────────────────────────────────
+
+    /** A flight departing at the given local hour in Europe/Istanbul (the zone the filter reads). */
+    private FlightProduct flightAt(String id, int istanbulHour) {
+        Instant departs = LocalDate.of(2026, 7, 20).atTime(istanbulHour, 0)
+                .atZone(ZoneId.of("Europe/Istanbul")).toInstant();
+        return FlightProduct.builder().id(id).departTime(departs).stops(0).build();
+    }
+
+    @Test
+    void nullOrUnknownBucket_returnsCardsUnchanged() {
+        List<Object> cards = List.of(flightAt("F1", 8));
+        assertThat(ResultFilters.applyDepartTimeRange(cards, null)).isSameAs(cards);
+        assertThat(ResultFilters.applyDepartTimeRange(cards, "  ")).isSameAs(cards);
+        assertThat(ResultFilters.applyDepartTimeRange(cards, "lunchtime")).isSameAs(cards);
+    }
+
+    @Test
+    void morningKeepsOnlyMorningFlights() {
+        FlightProduct morning = flightAt("F1", 8);    // 06-12
+        FlightProduct afternoon = flightAt("F2", 14);
+        HotelProduct hotel = hotel("H1", "100", "AI");
+
+        List<Object> result = ResultFilters.applyDepartTimeRange(List.of(morning, afternoon, hotel), "morning");
+        assertThat(result).containsExactly(morning, hotel); // hotels unaffected
+    }
+
+    @Test
+    void boundariesAreInclusiveFromExclusiveTo() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 6)), "morning")).hasSize(1);   // 06 in
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 12)), "morning")).isEmpty();    // 12 out
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 12)), "afternoon")).hasSize(1); // 12 in
+    }
+
+    @Test
+    void nightWrapsAroundMidnight() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 23)), "night")).hasSize(1); // late evening
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 3)), "night")).hasSize(1);  // small hours
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 12)), "night")).isEmpty();  // midday
+    }
+
+    @Test
+    void flightWithNoDepartTimeIsDroppedWhenBucketRequested() {
+        FlightProduct noTime = FlightProduct.builder().id("F1").stops(0).build();
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(noTime), "morning")).isEmpty();
+    }
+
+    @Test
+    void explicitRangeIsInclusiveOnBothBounds() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 9)), "10:00-14:00")).isEmpty();   // before
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 10)), "10:00-14:00")).hasSize(1); // from (in)
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 14)), "10:00-14:00")).hasSize(1); // to (in)
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 15)), "10:00-14:00")).isEmpty();  // after
+    }
+
+    @Test
+    void openEndedFromKeepsFlightsAtOrAfter() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 9)), "10:00-")).isEmpty();
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 10)), "10:00-")).hasSize(1);
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 20)), "10:00-")).hasSize(1);
+    }
+
+    @Test
+    void openEndedToKeepsFlightsAtOrBefore() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 14)), "-14:00")).hasSize(1);
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 15)), "-14:00")).isEmpty();
+    }
+
+    @Test
+    void explicitRangeAcceptsBareHours() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 12)), "10-14")).hasSize(1);
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 9)), "10-14")).isEmpty();
+    }
+
+    @Test
+    void explicitRangeCanWrapMidnight() {
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 23)), "22:00-02:00")).hasSize(1);
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 1)), "22:00-02:00")).hasSize(1);
+        assertThat(ResultFilters.applyDepartTimeRange(List.of(flightAt("F", 12)), "22:00-02:00")).isEmpty();
     }
 }

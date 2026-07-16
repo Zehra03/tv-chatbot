@@ -18,6 +18,7 @@ import { FlightsPage } from '@/features/flights/FlightsPage'
 import { ReservationFormPage } from '@/features/reservation/ReservationFormPage'
 import { ReservationsPage } from '@/features/reservation/ReservationsPage'
 import { ReservationDetailPage } from '@/features/reservation/ReservationDetailPage'
+import { ReservationPrintPage } from '@/features/reservation/ReservationPrintPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
 
 /**
@@ -123,6 +124,19 @@ export const routes: RouteObject[] = [
                   },
                 ],
               },
+            ],
+          },
+          {
+            // Yazdırma voucher'ı — bilinçli olarak Layout'un DIŞINDA, kardeş dalda.
+            // Kabuk (header + h-screen overflow-hidden + koyu gece-uçuşu yüzeyi)
+            // kâğıda taşınamaz; chrome'suz açılınca sayfa :root'un açık token'larını
+            // alır ve voucher beyaz zeminde koyu yazı olur. Hesap koruması detay
+            // sayfasıyla aynı: rezervasyonu yalnız kayıtlı kullanıcı basabilir.
+            // Sıralama derdi yok — react-router özgüllüğe göre eşler ve
+            // '/reservations/:id' iki segmentli yolu zaten tam eşleşmeyle sınırlıdır.
+            element: <RequireAccount />,
+            children: [
+              { path: '/reservations/:id/print', element: <ReservationPrintPage /> },
             ],
           },
         ],

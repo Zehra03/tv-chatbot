@@ -185,10 +185,18 @@ export function HotelsPage() {
                 <p className="text-xs font-medium text-brand-ice/70">
                   Çocuk yaşları (fiyatlama için)
                 </p>
-                <div className="mt-2 grid grid-cols-2 gap-2">
+                {/* auto-fit: panel daraldığında (küçük ekranda min() ile kısalır)
+                    iki sütun kendiliğinden tek sütuna iner — sabit grid-cols-2
+                    bu genişlikte taşıyordu. */}
+                <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(6.5rem,1fr))] gap-2">
                   {childAges.map((age, i) => (
-                    <label key={i} className="grid gap-1 text-xs text-brand-ice/70">
-                      {i + 1}. çocuğun yaşı
+                    <label
+                      key={i}
+                      className="grid min-w-0 grid-rows-[auto_auto] gap-1 text-start text-xs text-brand-ice/70"
+                    >
+                      {/* truncate: etiket sarmalanırsa o sütunun select'i komşusuna
+                          göre aşağı kayıyordu — tek satıra sabitleyip hizayı korur. */}
+                      <span className="truncate">{i + 1}. çocuğun yaşı</span>
                       <select
                         value={age}
                         onChange={(e) =>
@@ -196,10 +204,13 @@ export function HotelsPage() {
                             ages.map((a, j) => (j === i ? Number(e.target.value) : a)),
                           )
                         }
-                        className="h-9 rounded-md border border-white/15 bg-white/5 px-2 text-sm text-white [color-scheme:dark] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
+                        // bg-brand-navy opak olmalı: yarı saydam bir zeminde native
+                        // seçenek listesi panelin değil OS yüzeyinin üstünde
+                        // birleştiriliyor ve beyaz zemin + beyaz yazı çıkıyor.
+                        className="h-9 w-full min-w-0 rounded-md border border-white/15 bg-brand-navy px-2 text-sm text-white [color-scheme:dark] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
                       >
                         {Array.from({ length: 18 }, (_, y) => (
-                          <option key={y} value={y}>
+                          <option key={y} value={y} className="bg-brand-navy text-white">
                             {y}
                           </option>
                         ))}

@@ -8,6 +8,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.paximum.paxassist.ai.SlotCriteria;
 import com.paximum.paxassist.chat.dto.PartialCriteriaDto;
 import com.paximum.paxassist.chat.dto.ResultCardDto;
 import com.paximum.paxassist.flight.domain.FlightProduct;
@@ -18,6 +21,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChatViewMapperTest {
 
     private final ChatViewMapper mapper = new ChatViewMapper();
+
+    /**
+     * Builds the accumulated map the way production does — {@code SlotFillingService.accumulate}
+     * round-trips the whole record through {@code convertValue}, so EVERY field lands in the map,
+     * nulls included. Hand-written sparse maps do not reproduce that shape and let key-presence
+     * bugs through.
+     */
+    private static Map<String, Object> accumulatedOf(SlotCriteria criteria) {
+        return new ObjectMapper().convertValue(criteria, new TypeReference<Map<String, Object>>() {
+        });
+    }
 
     @Test
     void typesLiveProductsByRuntimeClass() {
@@ -76,6 +90,117 @@ class ChatViewMapperTest {
                 .containsEntry("destination", "LHR")
                 .containsEntry("departDate", "2026-08-01")
                 .doesNotContainKey("departureDate");
+    }
+
+    @Test
+    void infersHotelFromRealSlotShapeWhereEveryFlightKeyIsPresentButNull() {
+        // Regression: a pure hotel search, serialized exactly as the session stores it.
+        SlotCriteria hotelSearch = new SlotCriteria(
+                "Antalya", "2026-08-01", "2026-08-05", null, 1, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                2, 0, null, "TR", "EUR",
+                null, null, null);
+
+        Map<String, Object> accumulated = accumulatedOf(hotelSearch);
+        // The map really does carry the flight keys — that is what broke containsKey inference.
+        assertThat(accumulated).containsKey("origin").containsEntry("origin", null);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulated, null);
+
+        assertThat(criteria.intent()).isEqualTo("hotel");
+        assertThat(criteria.criteria())
+                .containsEntry("destination", "Antalya")
+                .containsEntry("checkIn", "2026-08-01")
+                .doesNotContainKeys("origin", "departDate");
+    }
+
+    @Test
+    void infersFlightFromRealSlotShapeWhereEveryHotelKeyIsPresentButNull() {
+        SlotCriteria flightSearch = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                "IST", "LHR", "2026-08-01", null, null, null, null, null, null,
+                1, 0, null, "TR", "EUR",
+                null, null, null);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(flightSearch), null);
+
+        assertThat(criteria.intent()).isEqualTo("flight");
+        assertThat(criteria.criteria())
+                .containsEntry("origin", "IST")
+                .containsEntry("departDate", "2026-08-01");
+    }
+
+    @Test
+    void doesNotInferFromSharedFieldsAlone() {
+        // adults/nationality/currency belong to both domains → no honest guess.
+        SlotCriteria sharedOnly = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                2, 0, null, "TR", "EUR",
+                null, null, null);
+
+        assertThat(mapper.toPartialCriteria(accumulatedOf(sharedOnly), null)).isNull();
+    }
+
+    /**
+     * The chat slot map counts flight passengers in adults/children, but the frontend's flight
+     * criteria carry a single `passengers`. Before the fold it read undefined and buildFlightDraft
+     * fell back to 1 — a 2-passenger chat search opened ONE traveller row in the reservation form.
+     */
+    @Test
+    void foldsFlightAdultsIntoASinglePassengerCount() {
+        SlotCriteria twoAdults = flightSlots(2, 0);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(twoAdults), "flight");
+
+        assertThat(criteria.criteria())
+                .containsEntry("passengers", 2)
+                .doesNotContainKeys("adults", "children");
+    }
+
+    @Test
+    void countsFlightChildrenAsPassengersToo() {
+        // FlightCriteriaMapper sends adults + children to the provider, so the offer is priced for
+        // 3 seats; the reservation form must open 3 rows or TourVisio rejects the pax mismatch.
+        SlotCriteria twoAdultsOneChild = flightSlots(2, 1);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(twoAdultsOneChild), "flight");
+
+        assertThat(criteria.criteria()).containsEntry("passengers", 3);
+    }
+
+    @Test
+    void leavesHotelAdultsAndChildrenAlone() {
+        // The hotel draft needs the breakdown (adult rows + child rows with ages) — fold flight only.
+        SlotCriteria hotelSearch = new SlotCriteria(
+                "Antalya", "2026-08-01", "2026-08-05", null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                2, 1, List.of(7), "TR", "EUR",
+                null, null, null);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(hotelSearch), "hotel");
+
+        assertThat(criteria.criteria())
+                .containsEntry("adults", 2)
+                .containsEntry("children", 1)
+                .doesNotContainKey("passengers");
+    }
+
+    @Test
+    void omitsPassengersWhenTheFlightSearchHasNoCountYet() {
+        SlotCriteria noCount = flightSlots(null, null);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(noCount), "flight");
+
+        assertThat(criteria.criteria()).doesNotContainKey("passengers");
+    }
+
+    private static SlotCriteria flightSlots(Integer adults, Integer children) {
+        return new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                "IST", "LHR", "2026-08-01", null, null, null, null, null, null,
+                adults, children, null, "TR", "EUR",
+                null, null, null);
     }
 
     @Test

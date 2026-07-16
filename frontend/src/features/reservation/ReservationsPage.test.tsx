@@ -39,6 +39,7 @@ function renderPage() {
           <Routes>
             <Route path="/reservations" element={<ReservationsPage />} />
             <Route path="/reservations/:id" element={<div>DETAY STUB</div>} />
+            <Route path="/reservations/:id/print" element={<div>VOUCHER STUB</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -75,6 +76,19 @@ describe('ReservationsPage (MSW ile)', () => {
     // Detay gerçek bir bağlantıdır (yeni sekmede açılabilir, link semantiği).
     await user.click(screen.getAllByRole('link', { name: 'Detay' })[0])
     expect(await screen.findByText('DETAY STUB')).toBeTruthy()
+  })
+
+  it('her satırdaki PDF düğmesi o rezervasyonun voucher’ına gider', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })
+    // İkon düğme — erişilebilir adı rezervasyon kodunu taşır ki ekran okuyucuda
+    // üç satırın düğmeleri birbirinden ayırt edilebilsin.
+    await user.click(
+      screen.getByRole('link', { name: 'PAX-MOCK-1002 özetini PDF olarak indir' }),
+    )
+    expect(await screen.findByText('VOUCHER STUB')).toBeTruthy()
   })
 
   it('API JSON yerine HTML dönerse çökmeden hata durumunu gösterir', async () => {

@@ -24,8 +24,8 @@ spring:
 
   ai:
     # Spring AI 1.0 model selection: main chat + intent extraction run on the OpenAI-compatible
-    # Gemini endpoint; embeddings off. The Validator keeps its OWN Ollama client (validator/config),
-    # which reads OLLAMA_BASE_URL directly and is unaffected by this selection.
+    # Gemini endpoint; embeddings off. The Validator builds its OWN ChatClient (validator/config)
+    # from app.validator.provider — DeepSeek by default — and is unaffected by this selection.
     #
     # PaxAssist only uses the CHAT model. The OpenAI starter also auto-configures audio-speech,
     # audio-transcription, image and moderation models with matchIfMissing=true, and each of those
@@ -53,7 +53,8 @@ spring:
         options:
           model: ${AI_PROVIDER_MODEL:gemini-flash-latest}
           temperature: 0.0
-    # Consumed only by the Validator via OLLAMA_BASE_URL; ollama chat
+    # Read only on the Validator's ollama branch (VALIDATOR_PROVIDER=ollama), which today means the
+    # hermetic mock/mock-ai/loadtest profiles; unused on the default deepseek provider. Ollama chat
     # autoconfig is off because spring.ai.model.chat=openai.
     ollama:
       base-url: ${OLLAMA_BASE_URL:http://localhost:11434}

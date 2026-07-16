@@ -147,6 +147,23 @@ public record PreviewReservationCommand(
     }
 
     /**
+     * Cross-field rule: a non-adult traveller must carry an age or a birth date. TourVisio requires a
+     * date of birth for children/infants — a null one is rejected mid-transaction with
+     * {@code ParameterCanNotBeNull}, i.e. only AFTER confirm once the preview has been consumed. The
+     * request mapper derives the DOB from the age, so at least one of the two must be present. Adults are
+     * exempt: their booking already works without a DOB. Age is otherwise optional (see the field).
+     */
+    @AssertTrue(message = "Çocuk/bebek yolcular için yaş veya doğum tarihi gereklidir")
+    public boolean isNonAdultTravellerDatable() {
+        if (travellers == null) {
+            return true;
+        }
+        return travellers.stream()
+                .filter(t -> t != null && t.passengerType() != null && t.passengerType() != PassengerType.ADULT)
+                .allMatch(t -> t.age() != null || t.birthDate() != null);
+    }
+
+    /**
      * Cross-field rule: an INFANT is an airline fare type (a lap infant on an adult's ticket), so a
      * booking without a flight cannot carry one. Hotels have no infant type — they price children from
      * their exact age — so an under-2 in a hotel-only booking is booked as a CHILD.

@@ -76,19 +76,87 @@ public class ChatViewMapper {
                 criteria.put(key, entry.getValue());
             }
         }
+        if ("flight".equals(intent)) {
+            foldFlightPassengers(criteria);
+        }
         return criteria.isEmpty() ? null : new PartialCriteriaDto(intent, criteria);
     }
 
-    /** Best-effort domain guess from the persisted criteria keys (used when GET has no live domain). */
-    private String inferDomain(Map<String, Object> accumulated) {
-        if (accumulated.containsKey("origin") || accumulated.containsKey("departureDate")) {
-            return "flight";
+    /**
+     * Collapses the slot map's {@code adults}/{@code children} pair into the single {@code passengers}
+     * count the frontend's flight criteria carry ({@code FlightSearchCriteria} in
+     * {@code frontend/src/types/search.ts} has no adults/children — the flight search form posts one
+     * number). Their SUM is the right value: {@code FlightCriteriaMapper} sends both to the provider,
+     * so the returned offer is priced for that many seats.
+     *
+     * <p>Without this fold the frontend read {@code passengers} as undefined and
+     * {@code buildFlightDraft} fell back to 1, so a 2-passenger chat search opened ONE traveller row
+     * in the reservation form — which TourVisio rejects for not matching the offer's pax. The search
+     * itself was always correct; only this view of the criteria was wrong.
+     *
+     * <p>{@code childAges} is dropped for the same reason (no such field on the flight type). Note the
+     * reservation form types every flight traveller row as an adult — a pre-existing limit of the
+     * flight booking model (the REST path always posts {@code children: 0}); what matters to TourVisio
+     * is that the row COUNT matches the offer.
+     */
+    private void foldFlightPassengers(Map<String, Object> criteria) {
+        Integer adults = asCount(criteria.remove("adults"));
+        Integer children = asCount(criteria.remove("children"));
+        criteria.remove("childAges");
+        if (adults == null && children == null) {
+            return;
         }
-        if (accumulated.containsKey("location") || accumulated.containsKey("checkIn")
-                || accumulated.containsKey("checkOut") || accumulated.containsKey("rooms")) {
+        int total = (adults == null ? 0 : adults) + (children == null ? 0 : children);
+        if (total > 0) {
+            criteria.put("passengers", total);
+        }
+    }
+
+    /** Slot values survive a jsonb round-trip on GET, so a count can come back as any {@link Number}. */
+    private Integer asCount(Object value) {
+        return (value instanceof Number number) ? number.intValue() : null;
+    }
+
+    /** SlotCriteria fields that only a hotel search fills. */
+    private static final List<String> HOTEL_SIGNALS = List.of(
+            "location", "checkIn", "checkOut", "nights", "rooms", "stars", "maxStars", "boardType",
+            "features", "hotelMaxPrice");
+
+    /** SlotCriteria fields that only a flight search fills. */
+    private static final List<String> FLIGHT_SIGNALS = List.of(
+            "origin", "destination", "departureDate", "returnDate", "cabinClass", "flightMaxPrice",
+            "directFlight", "airline", "departTimeRange");
+
+    /**
+     * Best-effort domain guess from the persisted criteria (used when GET has no live domain).
+     *
+     * <p>Weighs FILLED values, not key presence: {@code SlotFillingService.accumulate} stores the
+     * whole {@code SlotCriteria} record via {@code convertValue}, and the record carries no
+     * {@code @JsonInclude(NON_NULL)} — so every one of its fields is present in the map, null ones
+     * included. A {@code containsKey} test therefore matched on every session and typed pure hotel
+     * searches as "flight". Shared fields (adults, currency, …) are deliberately not signals.
+     * A tie means genuinely mixed state → null, so the caller shows no chips rather than a wrong one.
+     */
+    private String inferDomain(Map<String, Object> accumulated) {
+        int hotel = countFilled(accumulated, HOTEL_SIGNALS);
+        int flight = countFilled(accumulated, FLIGHT_SIGNALS);
+        if (hotel > flight) {
             return "hotel";
         }
+        if (flight > hotel) {
+            return "flight";
+        }
         return null;
+    }
+
+    private int countFilled(Map<String, Object> accumulated, List<String> keys) {
+        int filled = 0;
+        for (String key : keys) {
+            if (isFilled(accumulated.get(key))) {
+                filled++;
+            }
+        }
+        return filled;
     }
 
     /**

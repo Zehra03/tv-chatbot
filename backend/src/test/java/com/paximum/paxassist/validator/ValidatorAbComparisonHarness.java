@@ -37,10 +37,12 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   - Scenario A (validator off)  : main LLM latency + cost only.
  *   - Scenario B (validator on)   : main LLM latency + cost, PLUS validator latency + cost.
  *
- * Not part of the normal `mvn test` run — gated behind -DrunValidatorAbHarness=true because it
- * makes 50 real LLM calls against a locally running Ollama (both the main model and the validator
- * model must be pulled) and takes minutes. Requires the full Spring context (same DB/Redis
- * prerequisites as the rest of the suite) so it exercises the exact same beans production does.
+ * Not part of the normal `mvn test` run — gated behind -DrunValidatorAbHarness=true because it makes
+ * 50 real LLM calls (main model + validator model) and takes minutes. It runs whatever provider the
+ * active config selects: by default that is Gemini for the main chat and DeepSeek for the validator
+ * (needs GEMINI_API_KEY + DEEPSEEK_API_KEY), i.e. real API cost per run — see the pricing knobs below.
+ * Requires the full Spring context (same DB/Redis prerequisites as the rest of the suite) so it
+ * exercises the exact same beans production does.
  *
  * Run with:
  *   mvn test -Dtest=ValidatorAbComparisonHarness -DrunValidatorAbHarness=true
@@ -49,8 +51,10 @@ import static org.assertj.core.api.Assertions.assertThat;
  * confirm current pricing at ai.google.dev/pricing before treating the $ columns as authoritative.
  * Override via -DmainLlmPromptPricePer1kUsd=... -DmainLlmCompletionPricePer1kUsd=... if it has
  * changed. Token counts are printed regardless, so cost can always be recomputed with the right
- * price. The validator's own model is local (Ollama) and has no marginal API cost, so its $ column
- * is always 0 — only its latency adds overhead.
+ * price. The validator's $ column defaults to 0 — correct only for a local (no-marginal-cost)
+ * validator provider. On the default DeepSeek validator, pass its real prices via
+ * -DvalidatorPromptPricePer1kUsd / -DvalidatorCompletionPricePer1kUsd (see the constants below),
+ * otherwise Scenario B understates the validator's cost as free.
  */
 @SpringBootTest
 @EnabledIfSystemProperty(named = "runValidatorAbHarness", matches = "true")
@@ -60,8 +64,9 @@ class ValidatorAbComparisonHarness {
             Double.parseDouble(System.getProperty("mainLlmPromptPricePer1kUsd", "0.000075"));
     private static final double MAIN_LLM_COMPLETION_PRICE_PER_1K_USD =
             Double.parseDouble(System.getProperty("mainLlmCompletionPricePer1kUsd", "0.0003"));
-    // Default 0 = local Ollama (no marginal API cost). For cloud validator runs pass the provider's
-    // real prices, e.g. DeepSeek v4-flash: -DvalidatorPromptPricePer1kUsd=0.00014
+    // Default 0 assumes a local validator (no marginal API cost) — NOT the default deepseek provider.
+    // For cloud validator runs pass the provider's real prices, e.g. DeepSeek v4-flash:
+    // -DvalidatorPromptPricePer1kUsd=0.00014
     // -DvalidatorCompletionPricePer1kUsd=0.00028 (cache-miss list prices — effective cost is lower
     // because the repeated system prompt hits DeepSeek's context cache at ~1/50th the price).
     private static final double VALIDATOR_PROMPT_PRICE_PER_1K_USD =
