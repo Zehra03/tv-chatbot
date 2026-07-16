@@ -59,15 +59,17 @@ public class FlightSearchHandler implements IntentHandler {
             context.session().setActiveDomain("FLIGHT");
         }
         
-        SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
+        SlotCriteria unnormalizedMerged = slotFilling.peekMerge(context.session(), context.criteria());
 
         // Deterministic guard over the newly extracted criteria to catch past dates and
         // invalid
         // numeric values before they are lost to normalizer logic.
-        Optional<String> invalidSlot = slotGuard.checkInvalidSlots(context.criteria());
+        Optional<String> invalidSlot = slotGuard.checkInvalidSlots(unnormalizedMerged);
         if (invalidSlot.isPresent()) {
             return OrchestrationResult.clarify(invalidSlot.get(), "flight");
         }
+
+        SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
         FlightSearchCriteria criteria = mapper.toCriteria(merged);
         FlightSearchOutcome outcome = flightSearchService.search(criteria);

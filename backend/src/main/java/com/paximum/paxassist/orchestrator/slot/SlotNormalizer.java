@@ -48,10 +48,9 @@ public class SlotNormalizer {
                 checkOutStr = checkOut.toString();
             } else if (checkOut != null) {
                 if (!checkOut.isAfter(checkIn)) {
-                    // Invalid checkOut date, reset to 1 night
-                    nights = 1;
-                    checkOut = checkIn.plusDays(1);
-                    checkOutStr = checkOut.toString();
+                    // Invalid checkOut date, clear it so it can be handled by guards or clarification
+                    checkOut = null;
+                    checkOutStr = null;
                 } else {
                     // Valid checkOut, compute nights
                     nights = (int) ChronoUnit.DAYS.between(checkIn, checkOut);
@@ -76,8 +75,8 @@ public class SlotNormalizer {
 
         if (returnDate != null && departureDate != null && returnDate.isBefore(departureDate)) {
             // Return date cannot be before departure date
-            returnDate = departureDate.plusDays(1);
-            returnDateStr = returnDate.toString();
+            returnDate = null;
+            returnDateStr = null;
         }
 
         // 3. Numeric Limits

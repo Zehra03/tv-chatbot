@@ -36,6 +36,16 @@ public class SlotFillingService {
     }
 
     /**
+     * Merges the incoming criteria with the session's accumulated criteria,
+     * but does NOT normalize or persist the state. Returns the raw merged result
+     * for pre-validation purposes.
+     */
+    public SlotCriteria peekMerge(ChatSession session, SlotCriteria incoming) {
+        SlotCriteria previous = fromMap(session.getAccumulatedCriteria());
+        return slotMerger.merge(previous, incoming);
+    }
+
+    /**
      * Merges {@code incoming} into the session's accumulated criteria, persists the merged
      * state back onto the session, and returns the merged, typed criteria.
      */

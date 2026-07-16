@@ -62,14 +62,16 @@ public class HotelSearchHandler implements IntentHandler {
             context.session().setActiveDomain("HOTEL");
         }
         
-        SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
+        SlotCriteria unnormalizedMerged = slotFilling.peekMerge(context.session(), context.criteria());
 
         // Deterministic guard over the newly extracted criteria to catch past dates and invalid 
         // numeric values before they are lost to normalizer logic.
-        Optional<String> invalidSlot = slotGuard.checkInvalidSlots(context.criteria());
+        Optional<String> invalidSlot = slotGuard.checkInvalidSlots(unnormalizedMerged);
         if (invalidSlot.isPresent()) {
             return OrchestrationResult.clarify(invalidSlot.get(), "hotel");
         }
+
+        SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
         HotelSearchRequest request = mapper.toRequest(merged);
         HotelSearchResponse response = hotelSearchService.searchHotels(request);
