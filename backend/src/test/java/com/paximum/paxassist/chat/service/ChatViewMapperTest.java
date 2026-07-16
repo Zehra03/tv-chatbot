@@ -8,6 +8,9 @@ import java.util.Map;
 
 import org.junit.jupiter.api.Test;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.paximum.paxassist.ai.SlotCriteria;
 import com.paximum.paxassist.chat.dto.PartialCriteriaDto;
 import com.paximum.paxassist.chat.dto.ResultCardDto;
 import com.paximum.paxassist.flight.domain.FlightProduct;
@@ -18,6 +21,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ChatViewMapperTest {
 
     private final ChatViewMapper mapper = new ChatViewMapper();
+
+    /**
+     * Builds the accumulated map the way production does — {@code SlotFillingService.accumulate}
+     * round-trips the whole record through {@code convertValue}, so EVERY field lands in the map,
+     * nulls included. Hand-written sparse maps do not reproduce that shape and let key-presence
+     * bugs through.
+     */
+    private static Map<String, Object> accumulatedOf(SlotCriteria criteria) {
+        return new ObjectMapper().convertValue(criteria, new TypeReference<Map<String, Object>>() {
+        });
+    }
 
     @Test
     void typesLiveProductsByRuntimeClass() {
@@ -76,6 +90,56 @@ class ChatViewMapperTest {
                 .containsEntry("destination", "LHR")
                 .containsEntry("departDate", "2026-08-01")
                 .doesNotContainKey("departureDate");
+    }
+
+    @Test
+    void infersHotelFromRealSlotShapeWhereEveryFlightKeyIsPresentButNull() {
+        // Regression: a pure hotel search, serialized exactly as the session stores it.
+        SlotCriteria hotelSearch = new SlotCriteria(
+                "Antalya", "2026-08-01", "2026-08-05", null, 1, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                2, 0, null, "TR", "EUR",
+                null, null, null);
+
+        Map<String, Object> accumulated = accumulatedOf(hotelSearch);
+        // The map really does carry the flight keys — that is what broke containsKey inference.
+        assertThat(accumulated).containsKey("origin").containsEntry("origin", null);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulated, null);
+
+        assertThat(criteria.intent()).isEqualTo("hotel");
+        assertThat(criteria.criteria())
+                .containsEntry("destination", "Antalya")
+                .containsEntry("checkIn", "2026-08-01")
+                .doesNotContainKeys("origin", "departDate");
+    }
+
+    @Test
+    void infersFlightFromRealSlotShapeWhereEveryHotelKeyIsPresentButNull() {
+        SlotCriteria flightSearch = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                "IST", "LHR", "2026-08-01", null, null, null, null, null, null,
+                1, 0, null, "TR", "EUR",
+                null, null, null);
+
+        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(flightSearch), null);
+
+        assertThat(criteria.intent()).isEqualTo("flight");
+        assertThat(criteria.criteria())
+                .containsEntry("origin", "IST")
+                .containsEntry("departDate", "2026-08-01");
+    }
+
+    @Test
+    void doesNotInferFromSharedFieldsAlone() {
+        // adults/nationality/currency belong to both domains → no honest guess.
+        SlotCriteria sharedOnly = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null,
+                2, 0, null, "TR", "EUR",
+                null, null, null);
+
+        assertThat(mapper.toPartialCriteria(accumulatedOf(sharedOnly), null)).isNull();
     }
 
     @Test

@@ -79,16 +79,46 @@ public class ChatViewMapper {
         return criteria.isEmpty() ? null : new PartialCriteriaDto(intent, criteria);
     }
 
-    /** Best-effort domain guess from the persisted criteria keys (used when GET has no live domain). */
+    /** SlotCriteria fields that only a hotel search fills. */
+    private static final List<String> HOTEL_SIGNALS = List.of(
+            "location", "checkIn", "checkOut", "nights", "rooms", "stars", "maxStars", "boardType",
+            "features", "hotelMaxPrice");
+
+    /** SlotCriteria fields that only a flight search fills. */
+    private static final List<String> FLIGHT_SIGNALS = List.of(
+            "origin", "destination", "departureDate", "returnDate", "cabinClass", "flightMaxPrice",
+            "directFlight", "airline", "departTimeRange");
+
+    /**
+     * Best-effort domain guess from the persisted criteria (used when GET has no live domain).
+     *
+     * <p>Weighs FILLED values, not key presence: {@code SlotFillingService.accumulate} stores the
+     * whole {@code SlotCriteria} record via {@code convertValue}, and the record carries no
+     * {@code @JsonInclude(NON_NULL)} — so every one of its fields is present in the map, null ones
+     * included. A {@code containsKey} test therefore matched on every session and typed pure hotel
+     * searches as "flight". Shared fields (adults, currency, …) are deliberately not signals.
+     * A tie means genuinely mixed state → null, so the caller shows no chips rather than a wrong one.
+     */
     private String inferDomain(Map<String, Object> accumulated) {
-        if (accumulated.containsKey("origin") || accumulated.containsKey("departureDate")) {
-            return "flight";
-        }
-        if (accumulated.containsKey("location") || accumulated.containsKey("checkIn")
-                || accumulated.containsKey("checkOut") || accumulated.containsKey("rooms")) {
+        int hotel = countFilled(accumulated, HOTEL_SIGNALS);
+        int flight = countFilled(accumulated, FLIGHT_SIGNALS);
+        if (hotel > flight) {
             return "hotel";
         }
+        if (flight > hotel) {
+            return "flight";
+        }
         return null;
+    }
+
+    private int countFilled(Map<String, Object> accumulated, List<String> keys) {
+        int filled = 0;
+        for (String key : keys) {
+            if (isFilled(accumulated.get(key))) {
+                filled++;
+            }
+        }
+        return filled;
     }
 
     /**
