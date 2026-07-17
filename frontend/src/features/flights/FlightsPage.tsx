@@ -186,12 +186,14 @@ export function FlightsPage() {
               onChange={(v) => setTripType(v as TripType)}
             />
             {/* Sonuç filtre çubuğuyla aynı uiSlice alanına yazar — ikisi senkron kalır. */}
-            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+            {/* Hero'nun lacivert örtüsü üstünde — renkler temadan bağımsız beyaz
+                (bkz. components/SearchHero). */}
+            <label className="flex items-center gap-2 text-sm font-medium text-white">
               <input
                 type="checkbox"
                 checked={filters.nonstopOnly}
                 onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
-                className="h-4 w-4 rounded border-foreground/30 accent-brand-teal"
+                className="h-4 w-4 rounded border-white/30 accent-brand-teal [color-scheme:dark]"
               />
               Direkt uçuşlar
             </label>
@@ -220,7 +222,7 @@ export function FlightsPage() {
               type="button"
               onClick={swapPlaces}
               aria-label="Kalkış ve varış yerlerini değiştir"
-              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-foreground/20 bg-foreground/10 text-foreground backdrop-blur-sm transition-colors hover:bg-foreground/20 sm:flex"
+              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 sm:flex"
             >
               <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -287,8 +289,10 @@ export function FlightsPage() {
               fieldClassName={cn('w-32', heroFieldClass)}
               align="right"
             />
-            {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
-            <Button type="submit" className="h-12">
+            {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
+                text-white: Button'ın default varyantı text-foreground'dur; hero'nun
+                lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}
+            <Button type="submit" className="h-12 text-white">
               Ara
             </Button>
           </div>

@@ -240,8 +240,10 @@ export function HotelsPage() {
               </div>
             )}
           </PeoplePicker>
-          {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
-          <Button type="submit" className="h-12">
+          {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
+              text-white: Button'ın default varyantı text-foreground'dur; hero'nun
+              lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}
+          <Button type="submit" className="h-12 text-white">
             Ara
           </Button>
 

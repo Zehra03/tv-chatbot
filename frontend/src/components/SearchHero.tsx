@@ -43,7 +43,12 @@ export function SearchHero({ image, title, subtitle, children }: SearchHeroProps
         aria-hidden="true"
         className="absolute inset-0 rounded-3xl bg-gradient-to-r from-brand-navy/90 via-brand-navy/60 to-brand-navy/30"
       />
-      <div className="relative p-5 sm:p-8 lg:p-10">
+      {/* text-white: örtü her temada lacivert, dolayısıyla İÇERİĞİN TAMAMI koyu
+          zemin üstünde. Alan etiketleri (ui/label) kendi rengini taşımaz, buradan
+          miras alır — bu satır olmadan açık temada Layout'un `text-foreground`'unu
+          (siyah) miras alıp lacivert örtüde okunmaz oluyorlardı. Kendi rengini
+          belirleyen çocuklar (heroFieldClass'lı alanlar, .pax-popover'lar) etkilenmez. */}
+      <div className="relative p-5 text-white sm:p-8 lg:p-10">
         <SplitText
           text={title}
           tag="h1"
