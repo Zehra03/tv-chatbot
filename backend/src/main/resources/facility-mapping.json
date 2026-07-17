@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "description": "Single source of truth mapping TourVisio hotel-level facility ids/names to filterable feature groups. Read by the hotel module (id/name -> group label) and available to the AI Intention module (user keyword -> group label). Keep this the ONLY facility grouping in the codebase.",
+    "warning": "The facility id/name set below was derived from a single sample hotel (GetProductInfo, hotel id 14). The real TourVisio dataset almost certainly contains more facility ids (66+ and gaps). Consumers MUST treat any unmapped id/name as simply ungrouped -- never throw on an unknown facility.",
+    "pricesearchFacilityNote": "Observed against the live test service: pricesearch CAN return per-hotel facilities[] in some environments (contradicts the original 'no facilities in pricesearch' assumption). If that holds generally, search-screen facility filtering may not need per-hotel GetProductInfo and the N+1 concern should be re-evaluated. Out of scope for the hotel-details card -- track as a separate card.",
+    "keywordsAreLowercase": true,
+    "facilityNamesMatchCaseInsensitively": true
+  },
+  "pool": {
+    "keywords": ["havuz", "havuzlu", "pool", "yüzme havuzu", "yüzme", "kapalı havuz", "açık havuz"],
+    "facilityIds": [17, 18, 36, 47, 63],
+    "facilityNames": ["Indoor Pool", "Outdoor Pool", "Kids Pool", "Pool", "Warn Pool"]
+  },
+  "aquapark": {
+    "keywords": ["kaydırak", "kaydıraklı", "su kaydırağı", "aquapark", "aqua park", "su parkı", "water slide", "water slides"],
+    "facilityIds": [64],
+    "facilityNames": ["Water Slides"]
+  },
+  "kids": {
+    "keywords": ["çocuk", "cocuk", "çocuklu", "çocuk kulübü", "çocuk dostu", "mini club", "kids club", "kids", "aile"],
+    "facilityIds": [35, 36],
+    "facilityNames": ["Kids Club", "Kids Pool"]
+  },
+  "pet_friendly": {
+    "keywords": ["evcil hayvan", "evcil", "pet", "pet friendly", "köpek", "kedi", "köpeğimle", "kedimle"],
+    "facilityIds": [46],
+    "facilityNames": ["Pets Allowed"]
+  },
+  "spa_wellness": {
+    "keywords": ["spa", "wellness", "sauna", "hamam", "türk hamamı", "masaj", "jakuzi", "jacuzzi", "kaplıca"],
+    "facilityIds": [34, 40, 53, 60],
+    "facilityNames": ["Jakuzzi", "Massage Center", "Sauna", "Turkish Bath"]
+  },
+  "sports": {
+    "keywords": ["spor", "fitness", "gym", "spor salonu", "tenis", "golf", "dalış", "dalis", "squash", "masa tenisi", "su sporları", "su sporu", "sport"],
+    "facilityIds": [22, 26, 28, 29, 30, 32, 56, 57, 58, 59, 65],
+    "facilityNames": ["Diving", "Fitness Center", "Golf", "Golf Course", "GYM", "Healthy Equipment", "Sport Equipment", "Squash", "Table Tennis", "tenniS pLAY courT", "Water Sport"]
+  },
+  "beach": {
+    "keywords": ["plaj", "sahil", "kumsal", "özel plaj", "deniz kenarı", "beach"],
+    "facilityIds": [8, 25, 48, 52],
+    "facilityNames": ["Beach Hotel", "Fine Pebble Beach", "Private Beach", "Sand Beach"]
+  },
+  "business": {
+    "keywords": ["iş", "business", "toplantı", "konferans", "konferans salonu", "internet", "internet cafe", "toplantı salonu"],
+    "facilityIds": [12, 19, 33],
+    "facilityNames": ["Business Center", "Conference Hall", "Internet Cafe"]
+  },
+  "dining_bar": {
+    "keywords": ["restoran", "restaurant", "bar", "yemek", "snack", "snack bar", "mini bar", "büfe"],
+    "facilityIds": [7, 41, 51, 55],
+    "facilityNames": ["Bar", "Mini Bar", "Restaurant", "Snack Bar"]
+  }
+}
