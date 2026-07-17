@@ -128,7 +128,7 @@ public class IntentExtractionService {
           (adults: -2 / adults: 0). Do not fix the sign, do not omit it, do not substitute a
           "reasonable" number. Validation and correction happen downstream, not here.
           This applies to dates too: if the user states an impossible date ("32 temmuz", "30 şubat"),
-          do NOT leave it null — extract it literally as YYYY-MM-DD (e.g. "2026-07-32", "2026-02-30").
+          do NOT leave it null — write exactly "INVALID" into the date field.
         - CONTINUATION (stickiness): if the history has an ongoing hotel/flight search AND the user
           is only answering a missing slot of THAT SAME search (nights, date, city, guest count, a
           feature), keep the SAME intent (do not drop to OTHER) and write the new value.
@@ -338,6 +338,9 @@ public class IntentExtractionService {
 
         Mesaj: "Merhaba"
         Çıktı: {"intent":"OTHER","criteria":null}
+
+        Mesaj: "32 temmuz uçuş arıyorum"
+        Çıktı: {"intent":"FLIGHT","criteria":{"departureDate":"INVALID"}}
 
         Mesaj: "Antalya"
         Çıktı: {"intent":"AMBIGUOUS","criteria":null}
