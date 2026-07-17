@@ -40,13 +40,13 @@ const roundTrip: FlightProduct = {
   price: 3817,
 }
 
-function renderCard(product: FlightProduct) {
+function renderCard(product: FlightProduct, compact = false) {
   const store = configureStore({ reducer: { reservationDraft: reservationDraftReducer } })
   render(
     <Provider store={store}>
       <MemoryRouter initialEntries={['/flights']}>
         <Routes>
-          <Route path="/flights" element={<FlightCard product={product} />} />
+          <Route path="/flights" element={<FlightCard product={product} compact={compact} />} />
           <Route path="/reservation/new" element={<div>REZERVASYON FORMU STUB</div>} />
         </Routes>
       </MemoryRouter>
@@ -80,12 +80,40 @@ describe('FlightCard', () => {
     expect(screen.getByText('gidiş-dönüş toplamı')).toBeTruthy()
   })
 
+  /** Ne aldığı ilk bakışta okunmalı — bacak satırlarından çıkarmak zorunda kalmamalı. */
+  it('gidiş-dönüş olduğunu rozetle belirtir', () => {
+    renderCard(roundTrip)
+
+    expect(screen.getByText('Gidiş-dönüş · tek bilet')).toBeTruthy()
+  })
+
+  it('dar (chat) kartta da gidiş-dönüş olduğunu belirtir', () => {
+    renderCard(roundTrip, true)
+
+    expect(screen.getByText('Gidiş-dönüş')).toBeTruthy()
+    expect(screen.getByText('toplam')).toBeTruthy()
+  })
+
   it('tek yönde bacak etiketi ve toplam notu çıkarmaz', () => {
     renderCard(oneWay)
 
     expect(screen.queryByText('Gidiş')).toBeNull()
     expect(screen.queryByText('Dönüş')).toBeNull()
     expect(screen.queryByText('gidiş-dönüş toplamı')).toBeNull()
+  })
+
+  /**
+   * Chat kartları ürünü domain nesnesinden serileştiriyor ve `tripType` taşımıyor (REST'teki
+   * FlightProductApiDto'ya özgü bir alan). Kart o etiketi şart koşarsa, dönüş verisi elinde
+   * olduğu hâlde chat panelinde tek bacak gösterir — canlıda böyle oldu.
+   */
+  it('tripType alanı olmayan (chat) kartta da iki bacağı gösterir', () => {
+    const { tripType: _omitted, ...chatCard } = roundTrip
+    renderCard(chatCard as FlightProduct)
+
+    expect(screen.getByText('Gidiş')).toBeTruthy()
+    expect(screen.getByText('Dönüş')).toBeTruthy()
+    expect(screen.getByText('gidiş-dönüş toplamı')).toBeTruthy()
   })
 
   /**
