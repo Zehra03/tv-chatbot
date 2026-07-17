@@ -148,7 +148,11 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
             onChange={setConfirmPassword}
           />
           {error && (
-            <p role="alert" className="text-xs text-destructive">
+            // red-500 (#EF4444) = açık --destructive'in tam karşılığı; görünüm birebir
+            // korunur. Bu modal <body>'ye portal olur ve artık <html>'deki `.dark`ı
+            // görür — `text-destructive` koyu temada #7F1D1D'ye düşüp lacivert cam
+            // üstünde okunmaz olurdu. (Bkz. LoginPage'deki aynı not.)
+            <p role="alert" className="text-xs text-red-500">
               {error}
             </p>
           )}

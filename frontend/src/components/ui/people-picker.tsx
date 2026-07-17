@@ -98,7 +98,7 @@ export function PeoplePicker({
               // w-[min(...)]: dar ekranda sabit 18rem viewport'u taşıyordu.
               // max-h + overflow: çocuk yaşları açıldığında (6 çocuk → 3 sıra
               // select) panel ekran dışına uzamak yerine kendi içinde kayar.
-              'absolute top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-brand-navy/95 p-4 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md',
+              'pax-popover absolute top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain rounded-xl p-4',
               // Mantıksal konum: dir="rtl" altında panel karşı kenara hizalanır.
               align === 'right' ? 'end-0' : 'start-0',
             )}

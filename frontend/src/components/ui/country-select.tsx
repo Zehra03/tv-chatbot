@@ -183,7 +183,7 @@ export function CountrySelect({
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: -5, scale: 0.95, filter: 'blur(10px)' }}
             transition={{ duration: 0.25, type: 'spring', bounce: 0.15 }}
-            className="absolute left-0 top-full z-50 mt-2 w-max min-w-full max-w-[20rem] rounded-xl border border-white/15 bg-brand-navy/95 p-1 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+            className="pax-popover absolute left-0 top-full z-50 mt-2 w-max min-w-full max-w-[20rem] rounded-xl p-1"
           >
             <div className="relative">
               <Search

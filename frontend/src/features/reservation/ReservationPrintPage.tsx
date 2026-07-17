@@ -131,7 +131,12 @@ export function ReservationPrintPage() {
   }, [ready])
 
   return (
-    <div className="min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
+    // theme-light: voucher HER ZAMAN açık — kâğıt beyazdır, tema tercihi geçmez.
+    // Bu sayfa bilinçli olarak Layout'un dışında yaşıyor ki açık token'ları alsın
+    // (bkz. app/router.tsx). Ama `.dark` artık <html>'de (app/theme.tsx), yani
+    // buraya da MİRAS kalır: koyu temada "Yazdır" düğmesi (Button default =
+    // text-foreground → neredeyse beyaz) beyaz kâğıtta görünmez olurdu.
+    <div className="theme-light min-h-screen bg-slate-100 py-8 print:bg-white print:py-0">
       {/* Ekran kabuğu — kâğıda basılmaz. */}
       <div className="print-hide mx-auto mb-6 flex max-w-[210mm] items-center justify-between gap-3 px-4">
         <Button asChild variant="ghost" size="sm" className="-ml-2">

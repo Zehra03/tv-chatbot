@@ -352,7 +352,12 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 />
 
                 {shownError && (
-                  <p role="alert" className="text-xs text-destructive">
+                  // red-500 (#EF4444) = açık temanın --destructive'inin TAM karşılığı —
+                  // bugünkü görünüm birebir korunur. `text-destructive` artık kullanılamaz:
+                  // bu sayfa lacivert ama <html>'den `.dark`ı miras alıyor (app/theme.tsx),
+                  // koyu --destructive ise #7F1D1D'ye düşüp lacivert üstünde okunmuyor.
+                  // Kabuk içindeki aynı sorunun yerleşik çözümü: text-red-400.
+                  <p role="alert" className="text-xs text-red-500">
                     {shownError}
                   </p>
                 )}
@@ -397,7 +402,8 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 </div>
 
                 {shownError && (
-                  <p role="alert" className="text-xs text-destructive">
+                  // red-500: yukarıdaki kayıt formundaki hata satırıyla aynı gerekçe.
+                  <p role="alert" className="text-xs text-red-500">
                     {shownError}
                   </p>
                 )}

@@ -20,7 +20,8 @@ const CALENDAR_STYLE = {
   // Aralık ucu: teal daire üzerinde lacivert gün — koyu zeminde en net kontrast.
   '--rdp-range_start-color': BRAND.navy,
   '--rdp-range_end-color': BRAND.navy,
-  '--rdp-range_middle-color': '#ffffff',
+  // Panel metniyle aynı renk — .pax-popover'ın tema-duyarlı ön planı.
+  '--rdp-range_middle-color': 'var(--pax-popover-fg)',
   '--rdp-today-color': BRAND.ice,
   // Varsayılan 44px hücreler popover için hantal — bir tık kompakt.
   '--rdp-day-height': '2.4rem',
@@ -40,11 +41,16 @@ const ENDPOINTS_ONLY_STYLE = {
   '--rdp-range_end-background': 'none',
 } as CSSProperties
 
-/** Takvim popover kabuğu — koyu cam panel (alan grubunun altına açılır).
+/** Takvim popover kabuğu — cam panel (alan grubunun altına açılır).
  * Yatay hizayı (left-0 / right-0) kullanan bileşen ekler: form sağ kenara
- * yakınsa left-0 iki aylık paneli viewport dışına taşırır. */
+ * yakınsa left-0 iki aylık paneli viewport dışına taşırır.
+ *
+ * Yüzey (kenar/zemin/metin/blur) .pax-popover reçetesinden — 4 açılır panelin
+ * ortak, tema-duyarlı zemini. `shadow-2xl` KASITLI olarak kalıyor: takvim
+ * diğer üçünün 0_0_20px gölgesini değil bunu kullanıyor ve utility katmanı
+ * reçetenin box-shadow'unu ezer. */
 export const calendarPopoverClass =
-  'absolute top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-2xl border border-white/15 bg-brand-navy/95 p-3 text-white shadow-2xl backdrop-blur-md'
+  'pax-popover absolute top-full z-50 mt-2 w-max max-w-[calc(100vw-2rem)] rounded-2xl p-3 shadow-2xl'
 
 type CalendarProps = DayPickerProps & {
   /** true → aralık arası vurgulanmaz, yalnızca seçilen iki tarih işaretlenir. */

@@ -1,14 +1,15 @@
 import { useState } from 'react'
-import { NavLink, useLocation, useMatches, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, UserRound, X } from 'lucide-react'
 import { AnimatedOutlet } from '@/components/AnimatedOutlet'
 import { GooeyNav } from '@/components/GooeyNav'
 import { Logo } from '@/components/Logo'
 import { NightSkyBackground } from '@/components/NightSkyBackground'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { zoneFromMatches, type Zone } from '@/app/zones'
+import { useTheme } from '@/app/theme'
 import { logout } from '@/features/auth/authSlice'
 import { cn } from '@/lib/utils'
 
@@ -16,9 +17,11 @@ import { cn } from '@/lib/utils'
  * ve içerik alanı. İçerik <AnimatedOutlet /> ile buraya render edilir.
  * Responsive: md+ satır içi navigasyon; mobilde hamburger ile açılan panel.
  *
- * Bölge mekanizması: rotanın `handle.zone` işaretine göre yüzey koyu (ai) ya da
- * açık (controlled) boyanır; 700ms renk geçişi "bu adımda AI devre dışı"
- * anlatısının görsel karşılığıdır. */
+ * Yüzey rengi KULLANICI TEMASINDAN gelir (app/theme.tsx), rotadan değil. Önceden
+ * rotanın `handle.zone` işareti boyardı ("AI bölgesi koyu, kontrollü bölge açık");
+ * tüm rotalar 'ai' işaretlenip anlatı AiOffBanner'a taşınınca o mekanizma tek
+ * renge çökmüştü. Aşağıdaki `dark ? … : …` üçlülerinin açık dalı o tasarımdan
+ * kalan sağlam koddur — artık ölü değil, açık temanın ta kendisi. */
 const NAV = [
   { to: '/chat', label: 'Sohbet' },
   { to: '/hotels', label: 'Oteller' },
@@ -26,11 +29,11 @@ const NAV = [
   { to: '/reservations', label: 'Rezervasyonlar' },
 ]
 
-/** Mobil panel nav: her iki bölgede de pill (dikey listede alt çizgi okunmaz). */
+/** Mobil panel nav: her iki temada da pill (dikey listede alt çizgi okunmaz). */
 const mobileNavLinkClass =
-  (zone: Zone) =>
+  (dark: boolean) =>
   ({ isActive }: { isActive: boolean }) =>
-    zone === 'ai'
+    dark
       ? cn(
           'rounded-md px-3 py-2 text-sm font-medium transition-colors',
           isActive ? 'bg-white/10 text-white' : 'text-brand-ice/60 hover:text-white',
@@ -47,11 +50,10 @@ export function Layout() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const matches = useMatches()
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const zone = zoneFromMatches(matches)
-  const dark = zone === 'ai'
+  const { resolvedTheme } = useTheme()
+  const dark = resolvedTheme === 'dark'
 
   // Chat, viewport'a oturan bir "uygulama" görünümü: geniş dikey oluk (py-8)
   // yüksekliği çalar ve panel/thread'i fold'un altına itebilir. Bu rotada oluğu
@@ -80,12 +82,20 @@ export function Layout() {
         // "boş kaydırılabilir alan" olarak sızamaz. h-[100dvh] mobilde dinamik
         // araç çubuğuna da uyar; header + main flex sütununu paylaşır.
         'flex h-screen flex-col overflow-hidden transition-colors duration-700 supports-[height:100dvh]:h-[100dvh]',
-        // 'dark' sınıfı semantik token'ları (bg-card, muted-foreground, border…)
-        // koyu palete çevirir — token'la yazılmış sayfalar otomatik okunur kalır.
-        dark ? 'dark bg-brand-navy text-white' : 'bg-background text-foreground',
+        // 'dark' sınıfı ARTIK BURADA DEĞİL — <html>'e taşındı (app/theme.tsx), çünkü
+        // <body>'ye portal olan katmanlar (ui/modal, chat/ResultsPanel, sonner) bu
+        // div'in altında değil ve sınıf burada kalsaydı temayı göremezlerdi.
+        //
+        // Kabuğun boyası (brand-navy/text-white) şimdilik elle duruyor: koyu
+        // --background slate, --foreground ise #F8FAFC — token'a geçmek görünümü
+        // oynatırdı. Token'lar Gece Uçuşu paletine ayarlanınca burası
+        // `bg-background text-foreground`a sadeleşecek.
+        dark ? 'bg-brand-navy text-white' : 'bg-background text-foreground',
       )}
     >
-      {/* Gece uçuşu arka planı — yalnızca AI bölgesinde, yumuşak giriş/çıkışla. */}
+      {/* Gece uçuşu arka planı — yalnızca koyu temada, yumuşak giriş/çıkışla.
+          Açık temanın "gündüz göğü" karşılığı boyama fazında gelecek; şimdilik
+          açık tema düz `bg-background` üstünde durur. */}
       <AnimatePresence>
         {dark && (
           <motion.div
@@ -131,6 +141,8 @@ export function Layout() {
             />
           </div>
           <div className="flex items-center gap-3">
+            {/* Tema seçici — masaüstünde satır içi; mobilde hamburger panelinde. */}
+            <ThemeToggle className="hidden md:flex" />
             {/* Kullanıcı adı → profil sayfası. */}
             {user && (
               <NavLink
@@ -180,12 +192,24 @@ export function Layout() {
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className={mobileNavLinkClass(zone)}
+                  className={mobileNavLinkClass(dark)}
                   onClick={() => setMenuOpen(false)}
                 >
                   {item.label}
                 </NavLink>
               ))}
+              {/* Tema seçici — mobil panelde kendi satırında. */}
+              <div
+                className={cn(
+                  'mt-2 flex items-center justify-between gap-2 border-t px-3 pt-3',
+                  dark && 'border-white/10',
+                )}
+              >
+                <span className={cn('text-sm', dark ? 'text-brand-ice/70' : 'text-muted-foreground')}>
+                  Tema
+                </span>
+                <ThemeToggle />
+              </div>
               <div
                 className={cn(
                   'mt-2 flex items-center justify-between gap-2 border-t pt-3',

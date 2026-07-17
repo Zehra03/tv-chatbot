@@ -37,7 +37,11 @@ export default function Design() {
   const [demoInput, setDemoInput] = useState('')
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    // theme-light: playground'un gövdesi HER ZAMAN açık kalır ki açık swatch'ların
+    // ve token örneklerinin anlamı olsun (`.dark` artık <html>'de — app/theme.tsx).
+    // Aşağıdaki "Gece Uçuşu" bölümü kendi `dark` sarmalıyla koyuyu geri getirir:
+    // CSS değişkenleri kalıtımla akar, en yakın ata kazanır.
+    <div className="theme-light min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="container flex items-center justify-between py-4">
           <Logo height={40} />

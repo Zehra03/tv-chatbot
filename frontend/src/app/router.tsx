@@ -6,7 +6,6 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
-import type { ZoneHandle } from '@/app/zones'
 import { Layout } from '@/components/Layout'
 import LoginPage from '@/features/auth/LoginPage'
 import LandingPage from '@/pages/LandingPage'
@@ -77,24 +76,17 @@ export const routes: RouteObject[] = [
                 children: [
                   // '/' artık herkese açık LandingPage'in — korumalı index
                   // yönlendirmesi kaldırıldı ki iki rota aynı yolu yarıştırmasın.
-                  // Bölge işaretleri (src/app/zones.ts): sahibin kararıyla TÜM rotalar
-                  // koyu gece uçuşu yüzeyinde ('ai'). "AI devre dışı" anlatısı artık
-                  // yüzey rengiyle değil AiOffBanner ile verilir; 'controlled' mekanizması
-                  // ileride gerekirse duruyor.
                   {
                     path: '/chat',
                     element: <ChatPage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
                     path: '/hotels',
                     element: <HotelsPage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
                     path: '/flights',
                     element: <FlightsPage />,
-                    handle: { zone: 'ai' } satisfies ZoneHandle,
                   },
                   {
                     // Hesap gerektiren sayfalar: misafir buraya giremez, /login'e düşer.
@@ -103,22 +95,18 @@ export const routes: RouteObject[] = [
                       {
                         path: '/reservation/new',
                         element: <ReservationFormPage />,
-                        handle: { zone: 'ai' } satisfies ZoneHandle,
                       },
                       {
                         path: '/reservations',
                         element: <ReservationsPage />,
-                        handle: { zone: 'ai' } satisfies ZoneHandle,
                       },
                       {
                         path: '/reservations/:id',
                         element: <ReservationDetailPage />,
-                        handle: { zone: 'ai' } satisfies ZoneHandle,
                       },
                       {
                         path: '/profile',
                         element: <ProfilePage />,
-                        handle: { zone: 'ai' } satisfies ZoneHandle,
                       },
                     ],
                   },
@@ -127,10 +115,11 @@ export const routes: RouteObject[] = [
             ],
           },
           {
-            // Yazdırma voucher'ı — bilinçli olarak Layout'un DIŞINDA, kardeş dalda.
-            // Kabuk (header + h-screen overflow-hidden + koyu gece-uçuşu yüzeyi)
-            // kâğıda taşınamaz; chrome'suz açılınca sayfa :root'un açık token'larını
-            // alır ve voucher beyaz zeminde koyu yazı olur. Hesap koruması detay
+            // Yazdırma voucher'ı — bilinçli olarak Layout'un DIŞINDA, kardeş dalda:
+            // kabuk (header + h-screen overflow-hidden + gece-uçuşu yüzeyi) kâğıda
+            // taşınamaz. Voucher'ın açık kalmasını artık Layout'un yokluğu DEĞİL,
+            // sayfanın kendi `theme-light` sınıfı sağlar — `.dark` <html>'de yaşıyor
+            // (app/theme.tsx) ve buraya da miras kalırdı. Hesap koruması detay
             // sayfasıyla aynı: rezervasyonu yalnız kayıtlı kullanıcı basabilir.
             // Sıralama derdi yok — react-router özgüllüğe göre eşler ve
             // '/reservations/:id' iki segmentli yolu zaten tam eşleşmeyle sınırlıdır.

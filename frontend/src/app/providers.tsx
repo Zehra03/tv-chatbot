@@ -7,6 +7,7 @@ import { Toaster } from 'sonner'
 import { authApi, TOKENS_REFRESHED_EVENT, UNAUTHORIZED_EVENT } from '@/api'
 import { useAppDispatch } from '@/app/hooks'
 import { LiquidGlassFilter } from '@/components/ui/button'
+import { ThemeProvider, useTheme } from '@/app/theme'
 import { store, type RootState } from '@/app/store'
 import { router } from '@/app/router'
 import { logout, tokensRefreshed, userRefreshed } from '@/features/auth/authSlice'
@@ -71,18 +72,30 @@ function SessionManager() {
   return null
 }
 
+/**
+ * Toaster <body>'ye portal olur, yani <html>'deki `.dark` sınıfını CSS ile değil
+ * yalnızca kendi `theme` prop'uyla görür — bu yüzden ThemeProvider'ın içinde,
+ * ayrı bir bileşen olarak okunur.
+ */
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme()
+  // Marka toast'ları — inline role="alert" mesajlarının yerine değil, yanına.
+  return <Toaster richColors position="top-center" theme={resolvedTheme} />
+}
+
 export function Providers() {
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <MotionConfig reducedMotion="user">
-          <SessionManager />
-          {/* Liquid glass butonların kırılım filtresi — tüm sayfalar için tek tanım. */}
-          <LiquidGlassFilter />
-          <RouterProvider router={router} />
-          {/* Marka toast'ları — inline role="alert" mesajlarının yerine değil, yanına. */}
-          <Toaster richColors position="top-center" />
-        </MotionConfig>
+        <ThemeProvider>
+          <MotionConfig reducedMotion="user">
+            <SessionManager />
+            {/* Liquid glass butonların kırılım filtresi — tüm sayfalar için tek tanım. */}
+            <LiquidGlassFilter />
+            <RouterProvider router={router} />
+            <ThemedToaster />
+          </MotionConfig>
+        </ThemeProvider>
       </QueryClientProvider>
     </Provider>
   )
