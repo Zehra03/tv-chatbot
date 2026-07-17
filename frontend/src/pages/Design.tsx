@@ -22,6 +22,17 @@ const SWATCHES: { name: string; className: string; text?: string }[] = [
   { name: 'card', className: 'bg-card border', text: 'text-card-foreground' },
 ]
 
+// Sabit marka kimliği paleti (tema değiştirmez). CTA turuncusunun yazısı DAİMA lacivert
+// (beyaz turuncuda 2.84:1, AA'yı geçmez; lacivert 5.5:1).
+const BRAND_SWATCHES: { name: string; className: string; text: string }[] = [
+  { name: 'navy #00243F', className: 'bg-brand-navy', text: 'text-white' },
+  { name: 'blue #004E89', className: 'bg-brand-blue', text: 'text-white' },
+  { name: 'steel #1A659E', className: 'bg-brand-steel', text: 'text-white' },
+  { name: 'orange / cta #FF6B35', className: 'bg-brand-orange', text: 'text-brand-navy' },
+  { name: 'peach #F7C59F', className: 'bg-brand-peach', text: 'text-brand-navy' },
+  { name: 'cream #EFEFD0', className: 'bg-brand-cream', text: 'text-brand-navy' },
+]
+
 function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-4">
@@ -44,7 +55,10 @@ export default function Design() {
     <div className="theme-light min-h-screen bg-background text-foreground">
       <header className="border-b">
         <div className="container flex items-center justify-between py-4">
-          <Logo height={40} />
+          {/* variant="light": playground gövdesi HER ZAMAN açık (theme-light), ama
+              o sınıf yalnız CSS değişkenlerini çevirir — `dark:` varyantı hâlâ
+              <html>.dark'a bakar, yani 'auto' burada yanlış varyantı seçerdi. */}
+          <Logo height={28} variant="light" />
           <a href="#login" className="text-sm font-medium text-primary hover:underline">
             Login ekranı →
           </a>
@@ -52,11 +66,11 @@ export default function Design() {
       </header>
 
       <main className="container space-y-12 py-10">
-        <Section title="Resmî logo (logo.png — olduğu gibi)">
+        <Section title="Resmî logo (logo-wordmark.png — ikonsuz wordmark)">
           <div className="flex flex-wrap items-end gap-8">
-            {[40, 72, 140, 220].map((h) => (
+            {[20, 28, 44, 72].map((h) => (
               <div key={h} className="flex flex-col items-center gap-2">
-                <Logo height={h} />
+                <Logo height={h} variant="light" />
                 <span className="text-xs text-muted-foreground">{h}px</span>
               </div>
             ))}
@@ -69,6 +83,19 @@ export default function Design() {
               <div
                 key={s.name}
                 className={`flex h-20 items-end rounded-lg p-2 ${s.className} ${s.text ?? ''}`}
+              >
+                <span className="text-xs font-medium">{s.name}</span>
+              </div>
+            ))}
+          </div>
+          <p className="mt-4 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            Marka paleti (sabit)
+          </p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-6">
+            {BRAND_SWATCHES.map((s) => (
+              <div
+                key={s.name}
+                className={`flex h-20 items-end rounded-lg p-2 ${s.className} ${s.text}`}
               >
                 <span className="text-xs font-medium">{s.name}</span>
               </div>
@@ -90,30 +117,30 @@ export default function Design() {
           </div>
         </Section>
 
-        <Section title="Gece Uçuşu — koyu yüzey (AI bölgesi)">
-          {/* 'dark': Layout AI bölgesinde token'ları koyuya çevirir; playground
-              aynı koşulda render etsin ki buton/kart önizlemeleri gerçeğe uysun. */}
-          <div className="dark space-y-8 rounded-3xl bg-brand-navy p-8">
+        <Section title="Koyu tema — ikincil yüzey önizlemesi">
+          {/* 'dark': token'ları koyuya çevirir; playground koyu temayı da önizlesin
+              ki buton/kart görünümleri gerçeğe uysun (koyu artık ikincil tema). */}
+          <div className="dark space-y-8 rounded-3xl bg-background p-8">
             <div className="space-y-1">
-              <h3 className="text-2xl font-bold tracking-tight text-gradient-brand">
-                Gece uçuşuna hoş geldin
+              <h3 className="text-2xl font-bold tracking-tight text-primary">
+                Koyu temaya hoş geldin
               </h3>
               <p className="text-sm text-muted-foreground">
-                Chat ve arama sonuçları bu yüzeyi kullanır; rezervasyon bilinçli olarak açık kalır.
+                Chat ve arama sonuçları bu yüzeyi de destekler; açık tema varsayılandır.
               </p>
             </div>
 
             <div className="glass-card max-w-md p-5">
-              <p className="text-sm font-semibold text-foreground">.glass-card reçetesi</p>
-              <p className="mt-1 text-xs text-foreground/70">
-                rounded-2xl · border-foreground/15 · bg-foreground/10 · backdrop-blur-md
+              <p className="text-sm font-semibold text-foreground">.glass-card reçetesi (düz)</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                rounded-2xl · border · bg-card · shadow-soft — cam/blur yok
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="glass-chip text-muted-foreground">Antalya</span>
-              <span className="glass-chip text-muted-foreground">2 misafir</span>
-              <span className="glass-chip border-brand-teal/40 bg-brand-teal/15 text-foreground">
+              <span className="glass-chip">Antalya</span>
+              <span className="glass-chip">2 misafir</span>
+              <span className="glass-chip border-primary/30 bg-primary/10 text-primary">
                 otel araması
               </span>
             </div>
@@ -127,23 +154,9 @@ export default function Design() {
               />
             </div>
 
+            {/* Düz buton varyantları — birincil (turuncu cta) + nötr/ikincil. */}
             <div className="flex flex-wrap items-center gap-3">
-              <button
-                type="button"
-                className="bg-white px-6 py-3 text-sm font-bold uppercase tracking-widest text-brand-navy transition-all duration-300 hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
-              >
-                Birincil eylem
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-brand-ice/30 bg-foreground/5 px-6 py-3 text-sm font-semibold text-muted-foreground transition-all duration-300 hover:border-brand-teal hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
-              >
-                İkincil eylem
-              </button>
-            </div>
-
-            {/* Ortak Button — koyu yüzeyde liquid glass variant önizlemesi. */}
-            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="cta">Ara</Button>
               <Button>Rezervasyona git</Button>
               <Button variant="secondary">Otelleri filtrele</Button>
               <Button variant="outline">Daha fazla göster</Button>
@@ -152,7 +165,7 @@ export default function Design() {
             </div>
 
             {/* Koyu drop zone — Magic/shadcn üretimi bileşenler önce buraya. */}
-            <div className="rounded-xl border border-dashed border-foreground/20 p-8">
+            <div className="rounded-xl border border-dashed border-border p-8">
               <p className="text-center text-sm text-muted-foreground">
                 Koyu yüzey drop zone — üretilen bileşeni buraya koy, screenshot al, kritik et.
               </p>
@@ -167,6 +180,7 @@ export default function Design() {
               sonra Playwright ile screenshot al ve referansla karşılaştır.
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3">
+              <Button variant="cta">Ara</Button>
               <Button>Rezervasyona git</Button>
               <Button variant="secondary">Otelleri filtrele</Button>
               <Button variant="outline">Daha fazla göster</Button>
@@ -174,20 +188,15 @@ export default function Design() {
               <Button variant="destructive">Sil</Button>
             </div>
 
-            {/* Hero arka planı — statik CSS gradyan (eski WebGL DarkVeil kaldırıldı). */}
-            <div className="relative h-80 overflow-hidden rounded-xl border">
-              <div className="absolute inset-0 bg-gradient-to-b from-[#1a1040] via-brand-navy to-brand-navy" />
-              <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,theme(colors.brand.teal/12%),transparent_70%)]" />
-              {/* dark: koyu görsel üstündeki buton/metin token'ları koyu bölgeyle uysun. */}
-              <div className="dark absolute inset-0 flex flex-col items-center justify-center gap-2">
-                <p className="text-3xl font-semibold text-foreground">Gece uçuşuna hazır mısın?</p>
-                <p className="text-sm text-foreground/70">Statik gradyan hero — hafif ve akıcı</p>
-                <Button className="mt-2">Uçuş ara</Button>
-              </div>
+            {/* Düz açık hero önizlemesi — dolu yüzey + yumuşak gölge, gradyan/WebGL yok. */}
+            <div className="relative flex h-80 flex-col items-center justify-center gap-2 overflow-hidden rounded-xl border bg-card shadow-soft">
+              <p className="text-3xl font-semibold text-foreground">Tatiline hazır mısın?</p>
+              <p className="text-sm text-muted-foreground">Düz, hafif ve akıcı hero</p>
+              <Button variant="cta" className="mt-2">Uçuş ara</Button>
             </div>
 
             {/* Deneme: 21st.dev Animated AI Chat (jatin-yadav05) — chat arayüzü adayı */}
-            <div className="h-[640px] overflow-hidden rounded-3xl bg-brand-navy">
+            <div className="h-[640px] overflow-hidden rounded-3xl border bg-card">
               <AnimatedAIChat />
             </div>
           </div>

@@ -74,8 +74,23 @@ export function setGuestId(guestId: string | null) {
   guestIdValue = guestId
 }
 
+/**
+ * Sunucu bağlantıyı kabul edip yanıtı hiç göndermezse (TourVisio asılı, container kilitli, VPN
+ * yanıt ortasında düşmüş) axios varsayılanı SONSUZA kadar bekler (`timeout: 0`) — promise hiç
+ * settle olmaz, React Query `isFetching`te kalır ve kullanıcı hiç bitmeyen bir spinner görür;
+ * hata ekranına asla düşemez. Zaman aşımı `status: null` üretir, yani apiErrorMessage'ın
+ * "Sunucuya ulaşılamadı" dalına girer.
+ *
+ * Tek ve cömert bir değer: buradaki uçların HEPSİ TourVisio ya da AI'a vekillik ediyor, aralarında
+ * belirgin "hızlı" bir uç yok. Daha sıkı bir sınır, gerçek bir aramayı/booking'i haksız yere
+ * kesme riski taşır; amaç gecikmeyi ayarlamak değil, sonsuz askıyı sınırlamak. Uç bazında
+ * ayarlama gerçek gecikme verisiyle yapılmalı.
+ */
+const REQUEST_TIMEOUT_MS = 60_000
+
 export const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
+  timeout: REQUEST_TIMEOUT_MS,
   headers: { 'Content-Type': 'application/json' },
 })
 

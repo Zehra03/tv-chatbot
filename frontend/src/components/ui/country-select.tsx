@@ -160,7 +160,7 @@ export function CountrySelect({
         aria-describedby={ariaDescribedBy}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-foreground/15 bg-foreground/5 px-3 text-sm text-foreground shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal aria-[invalid=true]:border-red-400/70',
+          'flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-soft transition-colors hover:border-primary/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring aria-[invalid=true]:border-destructive',
           !selected && 'text-foreground/40',
           className,
         )}
@@ -198,7 +198,7 @@ export function CountrySelect({
                 aria-label="Ülke ara"
                 aria-controls={listboxId}
                 placeholder="Ülke ya da kod ara…"
-                className="mb-1 w-full rounded-lg border border-foreground/10 bg-foreground/5 py-2 pl-8 pr-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-brand-teal/60 focus:outline-none"
+                className="mb-1 w-full rounded-lg border border-border bg-muted py-2 pl-8 pr-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60 focus:outline-none"
               />
             </div>
 
@@ -226,14 +226,14 @@ export function CountrySelect({
                       className={cn(
                         'flex w-full shrink-0 items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
                         index === activeIndex
-                          ? 'bg-foreground/10 text-foreground'
+                          ? 'bg-muted text-foreground'
                           : 'text-muted-foreground hover:text-foreground',
                       )}
                     >
                       <span className="truncate">{country.name}</span>
                       <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                         {variant === 'dial' ? `+${country.dial}` : country.code}
-                        {isSelected && <Check className="h-4 w-4 text-brand-teal" aria-hidden />}
+                        {isSelected && <Check className="h-4 w-4 text-primary" aria-hidden />}
                       </span>
                     </button>
                   )

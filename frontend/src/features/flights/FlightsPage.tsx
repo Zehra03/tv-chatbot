@@ -197,7 +197,7 @@ export function FlightsPage() {
                 type="checkbox"
                 checked={filters.nonstopOnly}
                 onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
-                className="h-4 w-4 rounded border-white/30 accent-brand-teal [color-scheme:dark]"
+                className="h-4 w-4 rounded border-white/30 accent-brand-steel [color-scheme:dark]"
               />
               Direkt uçuşlar
             </label>
@@ -226,7 +226,7 @@ export function FlightsPage() {
               type="button"
               onClick={swapPlaces}
               aria-label="Kalkış ve varış yerlerini değiştir"
-              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 sm:flex"
+              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 sm:flex"
             >
               <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -296,7 +296,7 @@ export function FlightsPage() {
             {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
                 text-white: Button'ın default varyantı text-foreground'dur; hero'nun
                 lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}
-            <Button type="submit" className="h-12 text-white">
+            <Button type="submit" variant="cta" className="h-12">
               Ara
             </Button>
           </div>
@@ -305,7 +305,7 @@ export function FlightsPage() {
           {formError && (
             <p
               role="alert"
-              className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm font-medium text-red-100"
+              className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive-emphasis"
             >
               {formError}
             </p>

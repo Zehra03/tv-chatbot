@@ -8,9 +8,9 @@ import { Logo } from '@/components/Logo'
 import { SkyBackground } from '@/components/NightSkyBackground'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { useAppSelector } from '@/app/hooks'
 import { useTheme } from '@/app/theme'
-import { logout } from '@/features/auth/authSlice'
+import { useLogout } from '@/features/auth/useLogout'
 import { cn } from '@/lib/utils'
 
 /** Korumalı sayfaların ortak çatısı: üst bar (logo + navigasyon + kullanıcı/çıkış)
@@ -23,9 +23,9 @@ import { cn } from '@/lib/utils'
  * renge çöktü ve kaldırıldı.
  *
  * Kabuk artık tema dalı taşımıyor — renkler token'dan geliyor ve ikisini de doğru
- * veriyor. Tek istisna logo halo'su: public/logo.png'nin harfleri LACİVERT, yani
- * doğası gereği bir AÇIK tema varlığı; koyu yüzeyde okunması için arkasına beyaz
- * halo konur, açık temada halo gereksizdir (bkz. aşağıdaki `dark &&`). */
+ * veriyor. Logo da istisna değil: eskiden lacivert harfleri koyu yüzeyde okunur
+ * kılmak için arkasına beyaz halo konurdu; artık Logo'nun kendi koyu varyantı
+ * (beyaz harfli kaynak) var, halo kaldırıldı. */
 const NAV = [
   { to: '/chat', label: 'Sohbet' },
   { to: '/hotels', label: 'Oteller' },
@@ -37,21 +37,19 @@ const NAV = [
  *  Renkler token'dan geldiği için tema dalı gerekmiyor. */
 const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
   cn(
-    'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
     isActive
-      ? 'bg-foreground/10 text-foreground'
+      ? 'bg-primary/10 text-primary'
       : 'text-muted-foreground hover:text-foreground',
   )
 
 export function Layout() {
   const user = useAppSelector((s) => s.auth.user)
-  const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
 
   const { resolvedTheme } = useTheme()
-  const dark = resolvedTheme === 'dark'
 
   // Chat, viewport'a oturan bir "uygulama" görünümü: geniş dikey oluk (py-8)
   // yüksekliği çalar ve panel/thread'i fold'un altına itebilir. Bu rotada oluğu
@@ -67,10 +65,7 @@ export function Layout() {
       : location.pathname.startsWith(item.to),
   )
 
-  const handleLogout = () => {
-    dispatch(logout())
-    navigate('/login', { replace: true })
-  }
+  const handleLogout = useLogout()
 
   return (
     <div
@@ -109,24 +104,16 @@ export function Layout() {
         className={cn(
           // Kabuğun sabit üst satırı — flex sütununda küçülmez (shrink-0); sticky
           // yerine gerçek akış elemanı, çünkü main artık tek kaydırma kabı.
-          // Yarı saydam + blur: altındaki gökyüzü sızsın. Renkler token'dan, yani
-          // iki temada da doğru (koyu --background = navy, açık = beyaz).
-          'relative z-40 shrink-0 border-b border-foreground/10 bg-background/70 backdrop-blur-md transition-colors duration-700',
+          // Düz (flat): dolu zemin + alt kenarlık, cam/blur yok. Renkler token'dan.
+          'relative z-40 shrink-0 border-b border-border bg-background transition-colors duration-700',
         )}
       >
         {/* Bar tam genişlik (container sınırı yok) — h-24; ChatPage 10rem hesabı buna bağlı. */}
         <div className="relative flex h-24 w-full items-center justify-between gap-4 px-4 sm:px-8">
           <NavLink to="/" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
-            {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
-            <span className="relative inline-block">
-              {dark && (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 -m-1 rounded-full bg-foreground/35 blur-md"
-                />
-              )}
-              <Logo height={88} className="relative" />
-            </span>
+            {/* Halo YOK: Logo 'auto' varyantla koyu zeminde beyaz harfli kaynağa
+                geçiyor, okunurluk artık görselin kendisinden geliyor. */}
+            <Logo height={34} />
           </NavLink>
           {/* Masaüstü navigasyonu — barın gerçek ortasında (mutlak konum, logo ve
               sağ eylemlerden bağımsız); mobilde gizli, hamburger paneline taşınır. */}
@@ -159,7 +146,7 @@ export function Layout() {
             <Button
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground md:hidden"
+              className="text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
               aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((o) => !o)}
@@ -172,7 +159,7 @@ export function Layout() {
         {/* Mobil panel — overlay olarak açılır (header shrink-0 yüksekliği
             sabit kalır, kabuk düzeni bozulmaz); linke tıklayınca kapanır. */}
         {menuOpen && (
-          <div className="absolute inset-x-0 top-full z-50 border-b border-t border-foreground/10 bg-background/95 shadow-md backdrop-blur-md md:hidden">
+          <div className="absolute inset-x-0 top-full z-50 border-b border-t border-border bg-background shadow-soft md:hidden">
             <nav className="flex flex-col gap-1 px-4 py-3 sm:px-8">
               {NAV.map((item) => (
                 <NavLink
@@ -185,22 +172,17 @@ export function Layout() {
                 </NavLink>
               ))}
               {/* Tema seçici — mobil panelde kendi satırında. */}
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-foreground/10 px-3 pt-3">
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border px-3 pt-3">
                 <span className="text-sm text-muted-foreground">Tema</span>
                 <ThemeToggle />
               </div>
-              <div className="mt-2 flex items-center justify-between gap-2 border-t border-foreground/10 pt-3">
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
                 {/* Kullanıcı adı → profil sayfası (panel kapanır). */}
                 {user && (
                   <NavLink
                     to="/profile"
                     onClick={() => setMenuOpen(false)}
-                    className={cn(
-                      'flex min-w-0 items-center gap-1.5 truncate px-3 text-sm transition-colors',
-                      dark
-                        ? 'text-muted-foreground hover:text-foreground'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
+                    className="flex min-w-0 items-center gap-1.5 truncate px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <UserRound className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="truncate">{user.name ?? user.email}</span>

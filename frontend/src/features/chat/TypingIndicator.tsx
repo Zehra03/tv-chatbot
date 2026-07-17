@@ -16,7 +16,7 @@ export function TypingIndicator({ searching = false }: { searching?: boolean }) 
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="h-1.5 w-1.5 animate-bounce rounded-full bg-brand-ice/80 motion-reduce:animate-none"
+          className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground/80 motion-reduce:animate-none"
           style={{ animationDelay: `${i * 0.15}s` }}
         />
       ))}
@@ -28,7 +28,7 @@ export function TypingIndicator({ searching = false }: { searching?: boolean }) 
       <div role="status" className="flex justify-start">
         <div className="glass-card flex items-center gap-2 rounded-bl-md px-4 py-3">
           <Search
-            className="h-4 w-4 shrink-0 animate-pulse text-brand-teal motion-reduce:animate-none"
+            className="h-4 w-4 shrink-0 animate-pulse text-primary motion-reduce:animate-none"
             aria-hidden="true"
           />
           {/* Görünür metin → role="status" ekran okuyucuya kendisi duyurur (sr-only gereksiz). */}

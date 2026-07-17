@@ -15,14 +15,14 @@ import { cn } from '@/lib/utils'
  * verilir — inline stil her zaman kazanır.
  */
 const CALENDAR_STYLE = {
-  '--rdp-accent-color': BRAND.teal,
-  '--rdp-accent-background-color': `rgba(${rgbTriplet(BRAND.teal)}, 0.16)`,
+  '--rdp-accent-color': BRAND.steel,
+  '--rdp-accent-background-color': `rgba(${rgbTriplet(BRAND.steel)}, 0.16)`,
   // Aralık ucu: teal daire üzerinde lacivert gün — koyu zeminde en net kontrast.
   '--rdp-range_start-color': BRAND.navy,
   '--rdp-range_end-color': BRAND.navy,
   // Panel metniyle aynı renk — .pax-popover'ın tema-duyarlı ön planı.
   '--rdp-range_middle-color': 'var(--pax-popover-fg)',
-  '--rdp-today-color': BRAND.ice,
+  '--rdp-today-color': BRAND.cream,
   // Varsayılan 44px hücreler popover için hantal — bir tık kompakt.
   '--rdp-day-height': '2.4rem',
   '--rdp-day-width': '2.4rem',

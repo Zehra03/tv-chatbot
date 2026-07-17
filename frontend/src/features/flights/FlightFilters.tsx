@@ -25,7 +25,7 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
           type="checkbox"
           checked={filters.nonstopOnly}
           onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
-          className="h-4 w-4 rounded border-foreground/30 accent-brand-teal"
+          className="h-4 w-4 rounded border-border accent-primary"
         />
         Yalnızca direkt
       </label>
@@ -67,7 +67,7 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         type="button"
         variant="ghost"
         size="sm"
-        className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+        className="text-muted-foreground hover:bg-muted hover:text-foreground"
         onClick={() => dispatch(flightFiltersReset())}
       >
         Temizle

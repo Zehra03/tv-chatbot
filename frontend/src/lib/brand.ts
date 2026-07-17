@@ -7,11 +7,12 @@
  * her zaman `brand-*` Tailwind sınıflarını tercih edin.
  */
 export const BRAND = {
-  navy: '#0B234A',
-  blue: '#2E8FFF',
-  teal: '#17D6C3',
-  iris: '#8B8CFF',
-  ice: '#A9E9FF',
+  navy: '#00243F',
+  blue: '#004E89',
+  steel: '#1A659E',
+  orange: '#FF6B35',
+  peach: '#F7C59F',
+  cream: '#EFEFD0',
 } as const
 
 /** '#RRGGBB' → 'r, g, b' (BackgroundGradientAnimation renk API'si). */

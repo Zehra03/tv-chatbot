@@ -48,19 +48,14 @@ function renderPage() {
 }
 
 describe('ReservationsPage (MSW ile)', () => {
-  it('fixture rezervasyonlarını sütunlarıyla listeler', async () => {
+  it('fixture rezervasyonlarını kartlarıyla listeler', async () => {
     renderPage()
 
     expect(await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })).toBeTruthy()
     expect(screen.getByText('PAX-MOCK-1002')).toBeTruthy()
     expect(screen.getByText('PAX-MOCK-1003')).toBeTruthy()
 
-    // Sütun başlıkları.
-    for (const col of ['No', 'Tip', 'Tarih', 'Misafir', 'Toplam', 'Durum']) {
-      expect(screen.getByRole('columnheader', { name: col })).toBeTruthy()
-    }
-
-    // Satır içerikleri: tip, misafir, durum etiketi.
+    // Kart içerikleri: tip etiketi, misafir, durum etiketi.
     expect(screen.getAllByText('Otel').length).toBeGreaterThanOrEqual(2)
     expect(screen.getByText('Ayşe Mock')).toBeTruthy()
     expect(screen.getByText('Onaylandı')).toBeTruthy()
@@ -68,13 +63,13 @@ describe('ReservationsPage (MSW ile)', () => {
     expect(screen.getByText('İptal edildi')).toBeTruthy()
   })
 
-  it('Detay bağlantısı ilgili rezervasyonun detayına gider', async () => {
+  it('kart bağlantısı ilgili rezervasyonun detayına gider', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await screen.findByText('PAX-MOCK-1001', {}, { timeout: 3000 })
-    // Detay gerçek bir bağlantıdır (yeni sekmede açılabilir, link semantiği).
-    await user.click(screen.getAllByRole('link', { name: 'Detay' })[0])
+    // Kartın tamamı detaya bağlıdır (stretched-link); erişilebilir adı rezervasyon kodu.
+    await user.click(screen.getByRole('link', { name: 'PAX-MOCK-1001' }))
     expect(await screen.findByText('DETAY STUB')).toBeTruthy()
   })
 

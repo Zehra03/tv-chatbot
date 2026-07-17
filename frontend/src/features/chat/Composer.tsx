@@ -35,27 +35,23 @@ export function Composer({ onSend, disabled, placeholder }: ComposerProps) {
     // items-start: sayaç belirince input sütunu uzar, Gönder input hizasında kalsın.
     <form onSubmit={handleSubmit} className="flex items-start gap-2">
       <div className="flex-1">
-        {/* glow-group: odakta input altındaki teal çizgi 0→%100 genişler (index.css). */}
-        <div className="glow-group relative">
-          <Input
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder={placeholder ?? 'Mesajınızı yazın…'}
-            disabled={disabled}
-            maxLength={MAX_LENGTH}
-            aria-label="Mesaj"
-            autoComplete="off"
-            className="h-11 rounded-xl border-foreground/15 bg-foreground/5 text-foreground placeholder:text-foreground/40 focus-visible:ring-brand-teal"
-          />
-          <div className="input-glow-bar" aria-hidden="true"></div>
-        </div>
+        <Input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder={placeholder ?? 'Mesajınızı yazın…'}
+          disabled={disabled}
+          maxLength={MAX_LENGTH}
+          aria-label="Mesaj"
+          autoComplete="off"
+          className="h-11 rounded-xl border-input bg-background text-foreground placeholder:text-muted-foreground"
+        />
         {showCounter && (
           // aria-live=polite: sınıra yaklaşan görme engelli kullanıcı da duysun;
           // her tuşta değil, okuyucunun uygun bulduğu anda seslendirilir.
           <p
             aria-live="polite"
             className={`mt-1 text-end text-xs tabular-nums ${
-              text.length >= MAX_LENGTH ? 'text-amber-300' : 'text-muted-foreground'
+              text.length >= MAX_LENGTH ? 'text-destructive-emphasis' : 'text-muted-foreground'
             }`}
           >
             {text.length}/{MAX_LENGTH}

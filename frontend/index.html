@@ -7,26 +7,26 @@
       // temayla çizilip sonra kullanıcının tercihine atlar (FOUC). Bu yüzden
       // senkron ve <head>'in başında — stil sayfalarından da önce.
       //
-      // src/app/theme.tsx ile AYNI sözleşme: anahtar 'pax-theme', varsayılan 'dark'.
-      // İKİSİ BİRLİKTE DEĞİŞİR — boyama fazları bitince ikisi de 'system' olacak.
+      // src/app/theme.tsx ile AYNI sözleşme: anahtar 'pax-theme', varsayılan 'light'.
+      // İKİSİ BİRLİKTE DEĞİŞİR.
       ;(function () {
         try {
           var s = localStorage.getItem('pax-theme')
-          var t = s === 'light' || s === 'dark' || s === 'system' ? s : 'dark'
+          var t = s === 'light' || s === 'dark' || s === 'system' ? s : 'light'
           var dark =
             t === 'dark' ||
             (t === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches)
           if (dark) document.documentElement.classList.add('dark')
         } catch (e) {
-          // storage/matchMedia erişilemiyorsa varsayılana (koyu) düş.
-          document.documentElement.classList.add('dark')
+          // storage/matchMedia erişilemiyorsa varsayılana (açık) düş — sınıf eklenmez.
         }
       })()
     </script>
     <link rel="icon" type="image/png" href="/logo.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- brand-navy; tarayıcı çubuğu gece uçuşu yüzeyiyle bütünleşir (HTML — tailwind theme() erişilemez). -->
-    <meta name="theme-color" content="#0B234A" />
+    <!-- Açık tema varsayılan beyaz kanvas; tarayıcı çubuğu açık yüzeyle bütünleşir.
+         src/app/theme.tsx THEME_COLOR.light ile aynı (ThemeProvider koyuda #00243F'e günceller). -->
+    <meta name="theme-color" content="#FFFFFF" />
     <meta
       name="description"
       content="PaxAssist — TourVisio API ile AI destekli otel ve uçuş arama ve kontrollü rezervasyon asistanı."

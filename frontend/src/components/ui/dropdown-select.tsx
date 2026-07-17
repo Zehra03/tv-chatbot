@@ -72,7 +72,7 @@ export function DropdownSelect({
         // temada siyaha dönerdi. Zemin/kenar token'lı kalır (sayfa yüzeyi için
         // doğru); hero örneği bunları className ile ezer — heroFieldClass deseni.
         className={cn(
-          'flex h-9 items-center justify-between gap-2 rounded-xl border border-foreground/15 bg-foreground/5 px-3 text-sm shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal',
+          'flex h-9 items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 text-sm shadow-soft transition-colors hover:border-primary/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
           className,
         )}
       >
@@ -119,12 +119,12 @@ export function DropdownSelect({
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
                     selected
-                      ? 'bg-foreground/10 text-foreground'
-                      : 'text-muted-foreground hover:bg-foreground/10 hover:text-foreground',
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                   )}
                 >
                   <span className="truncate">{option.label}</span>
-                  {selected && <Check className="h-4 w-4 shrink-0 text-brand-teal" aria-hidden />}
+                  {selected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
                 </motion.button>
               )
             })}

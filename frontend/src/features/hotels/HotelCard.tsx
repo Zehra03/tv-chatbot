@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ImageOff, MapPin, Star } from 'lucide-react'
+import { ImageOff, MapPin, Sparkles, Star } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AnimatedPrice } from '@/components/ui/animated-price'
@@ -23,11 +23,14 @@ export function HotelCard({
   product,
   criteria,
   compact = false,
+  recommended = false,
 }: {
   product: HotelProduct
   /** Arama kriteri — otel snapshot'ının check-in/out, oda/kişi alanlarını doldurur (booking için şart). */
   criteria?: Partial<HotelSearchCriteria>
   compact?: boolean
+  /** Listedeki en uygun fiyat (müsait olanlar arasında) — peach vurgu + "En uygun" rozeti. */
+  recommended?: boolean
 }) {
   const select = useSelectProduct()
   const [imageFailed, setImageFailed] = useState(false)
@@ -47,7 +50,8 @@ export function HotelCard({
       // kalır; düğme tıklaması stopPropagation ile kartın onClick'ini ikiye katlamaz.
       <div
         className={cn(
-          'glass-card flex items-center gap-3 p-3 transition-all duration-300 hover:border-brand-teal/60',
+          'glass-card flex items-center gap-3 p-3 transition-all duration-300 hover:border-primary/60 hover:shadow-soft',
+          recommended && 'border-brand-peach/60 ring-1 ring-brand-peach/30',
           canSelect && 'cursor-pointer',
         )}
         onClick={canSelect ? onSelect : undefined}
@@ -63,7 +67,7 @@ export function HotelCard({
         ) : (
           <div
             aria-hidden
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-foreground/5 text-foreground/30"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground/30"
           >
             <ImageOff className="h-5 w-5" />
           </div>
@@ -73,12 +77,18 @@ export function HotelCard({
           <p className="mt-0.5 flex items-center gap-1 text-[11px] text-foreground/70">
             <MapPin className="h-3 w-3 shrink-0" aria-hidden />
             <span className="truncate">{product.region}</span>
-            <Star className="ml-1 h-3 w-3 shrink-0 fill-brand-teal text-brand-teal" aria-hidden />
+            <Star className="ml-1 h-3 w-3 shrink-0 fill-primary text-primary" aria-hidden />
             {product.stars}
             <span className="sr-only"> yıldız</span>
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge variant="glass" className="px-1.5 py-0 text-[10px]">
+            {recommended && (
+              <Badge variant="promo" className="gap-1 px-1.5 py-0 text-[10px]">
+                <Sparkles className="h-2.5 w-2.5" aria-hidden />
+                En uygun
+              </Badge>
+            )}
+            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
               {product.boardType}
             </Badge>
             {!product.availability && (
@@ -95,6 +105,7 @@ export function HotelCard({
             className="text-base font-bold text-foreground"
           />
           <Button
+            variant="cta"
             size="sm"
             disabled={!canSelect}
             className="h-7 rounded-full px-3 text-xs"
@@ -115,7 +126,8 @@ export function HotelCard({
     // Tüm kart tıklanabilir (fare); Seç klavye/ekran-okuyucu yolu olarak kalır.
     <div
       className={cn(
-        'glass-card flex flex-col gap-3 p-5 transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)] sm:flex-row sm:items-center sm:justify-between sm:gap-4',
+        'glass-card flex flex-col gap-3 p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-soft sm:flex-row sm:items-center sm:justify-between sm:gap-4',
+        recommended && 'border-brand-peach/60 ring-1 ring-brand-peach/30',
         canSelect && 'cursor-pointer',
       )}
       onClick={canSelect ? onSelect : undefined}
@@ -132,7 +144,7 @@ export function HotelCard({
         ) : (
           <div
             aria-hidden
-            className="flex h-40 w-full shrink-0 items-center justify-center rounded-xl bg-foreground/5 text-foreground/30 sm:h-24 sm:w-32"
+            className="flex h-40 w-full shrink-0 items-center justify-center rounded-xl bg-muted text-foreground/30 sm:h-24 sm:w-32"
           >
             <ImageOff className="h-6 w-6" />
           </div>
@@ -144,12 +156,18 @@ export function HotelCard({
           </p>
           <p className="mt-0.5 truncate text-lg font-semibold text-foreground">{product.hotelName}</p>
           <p className="mt-1 flex items-center gap-1 text-xs text-foreground/70">
-            <Star className="h-3.5 w-3.5 fill-brand-teal text-brand-teal" aria-hidden />
+            <Star className="h-3.5 w-3.5 fill-primary text-primary" aria-hidden />
             {product.stars}
             <span className="sr-only"> yıldız</span>
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge variant="glass">{product.boardType}</Badge>
+            {recommended && (
+              <Badge variant="promo" className="gap-1">
+                <Sparkles className="h-3 w-3" aria-hidden />
+                En uygun fiyat
+              </Badge>
+            )}
+            <Badge variant="secondary">{product.boardType}</Badge>
             {!product.availability && <Badge variant="destructive">Müsait değil</Badge>}
           </div>
         </div>
@@ -162,6 +180,7 @@ export function HotelCard({
           className="text-xl font-bold text-foreground"
         />
         <Button
+          variant="cta"
           size="sm"
           disabled={!canSelect}
           className="rounded-full px-5"

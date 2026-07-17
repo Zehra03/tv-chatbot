@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { motion, type Variants } from 'framer-motion'
 import { toast } from 'sonner'
 import { CalendarCheck, LogOut, Mail, MessagesSquare, Pencil, UserRound } from 'lucide-react'
@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button'
 import { SplitText } from '@/components/SplitText'
 import { authApi, type ApiError } from '@/api'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { logout, userRefreshed } from '@/features/auth/authSlice'
+import { userRefreshed } from '@/features/auth/authSlice'
+import { useLogout } from '@/features/auth/useLogout'
 import { useReservations } from '@/features/reservation/useReservations'
 
 /** Kaba e-posta biçim denetimi — backend @Email / MSW handler paritesi. */
@@ -40,8 +41,9 @@ const itemVariants: Variants = {
 export function ProfilePage() {
   const user = useAppSelector((s) => s.auth.user)
   const dispatch = useAppDispatch()
-  const navigate = useNavigate()
   const reservations = useReservations()
+  // Aşağıdaki `if (!user) return null` erken dönüşünden ÖNCE çağrılmalı (rules-of-hooks).
+  const handleLogout = useLogout()
 
   // E-posta satır-içi düzenleme durumu (yalnızca üye oturumunda kullanılır).
   const [editingEmail, setEditingEmail] = useState(false)
@@ -97,11 +99,6 @@ export function ProfilePage() {
     .slice(0, 2)
     .join('')
 
-  const handleLogout = () => {
-    dispatch(logout())
-    navigate('/login', { replace: true })
-  }
-
   return (
     <motion.div
       variants={listVariants}
@@ -120,7 +117,7 @@ export function ProfilePage() {
         />
         <div
           aria-hidden="true"
-          className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
+          className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-steel"
         />
         <p className="mt-2 text-sm text-muted-foreground">
           Hesap bilgileriniz ve hızlı bağlantılar.
@@ -128,11 +125,11 @@ export function ProfilePage() {
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
+        <Card className="glass-card border-border bg-card text-foreground">
           <CardHeader className="flex-row items-center gap-4 space-y-0">
             <div
               aria-hidden="true"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-teal text-xl font-bold text-foreground ring-4 ring-foreground/15"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-steel text-xl font-bold text-white ring-4 ring-border"
             >
               {initials}
             </div>
@@ -150,7 +147,7 @@ export function ProfilePage() {
               <div className="flex items-start gap-3">
                 <span
                   aria-hidden="true"
-                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
+                  className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                 >
                   <Mail className="h-4 w-4" />
                 </span>
@@ -173,10 +170,10 @@ export function ProfilePage() {
                             cancelEditEmail()
                           }
                         }}
-                        className="w-full rounded-md border border-foreground/20 bg-foreground/10 px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-teal focus:outline-none focus:ring-1 focus:ring-brand-teal disabled:opacity-60"
+                        className="w-full rounded-md border border-border bg-muted px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-60"
                       />
                       {emailError && (
-                        <p role="alert" className="text-xs text-destructive">
+                        <p role="alert" className="text-xs text-destructive-emphasis">
                           {emailError}
                         </p>
                       )}
@@ -185,7 +182,7 @@ export function ProfilePage() {
                           type="button"
                           onClick={() => void saveEmail()}
                           disabled={savingEmail}
-                          className="inline-flex items-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-3 py-1.5 text-xs font-semibold text-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {savingEmail ? 'Kaydediliyor…' : 'Kaydet'}
                         </button>
@@ -193,7 +190,7 @@ export function ProfilePage() {
                           type="button"
                           onClick={cancelEditEmail}
                           disabled={savingEmail}
-                          className="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60"
+                          className="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60"
                         >
                           İptal
                         </button>
@@ -208,7 +205,7 @@ export function ProfilePage() {
                           type="button"
                           onClick={startEditEmail}
                           aria-label="E-postayı düzenle"
-                          className="shrink-0 text-muted-foreground transition-colors hover:text-brand-teal focus-visible:text-brand-teal focus-visible:outline-none"
+                          className="shrink-0 text-muted-foreground transition-colors hover:text-primary focus-visible:text-primary focus-visible:outline-none"
                         >
                           <Pencil className="h-3.5 w-3.5" aria-hidden />
                         </button>
@@ -220,7 +217,7 @@ export function ProfilePage() {
               <div className="flex items-center gap-3">
                 <span
                   aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary"
                 >
                   <UserRound className="h-4 w-4" />
                 </span>
@@ -235,12 +232,12 @@ export function ProfilePage() {
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2">
-        <Card className="glass-card h-full border-foreground/15 bg-foreground/10 text-foreground transition-all hover:border-brand-teal/40 hover:bg-foreground/[0.14]">
+        <Card className="glass-card h-full border-border bg-card text-foreground transition-all hover:border-primary/40 hover:bg-muted">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
                 aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-teal text-foreground shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-steel text-white shadow-sm"
               >
                 <CalendarCheck className="h-4 w-4" />
               </span>
@@ -248,7 +245,7 @@ export function ProfilePage() {
             </CardTitle>
             <CardDescription className="text-muted-foreground">
               {reservations.data ? (
-                <span className="font-semibold text-brand-teal">
+                <span className="font-semibold text-primary">
                   {reservations.data.length} rezervasyon
                 </span>
               ) : (
@@ -267,12 +264,12 @@ export function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card h-full border-foreground/15 bg-foreground/10 text-foreground transition-all hover:border-brand-teal/40 hover:bg-foreground/[0.14]">
+        <Card className="glass-card h-full border-border bg-card text-foreground transition-all hover:border-primary/40 hover:bg-muted">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
                 aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-teal text-foreground shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-steel text-white shadow-sm"
               >
                 <MessagesSquare className="h-4 w-4" />
               </span>

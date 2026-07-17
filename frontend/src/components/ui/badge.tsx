@@ -11,10 +11,17 @@ const badgeVariants = cva(
         secondary: 'border-transparent bg-secondary text-secondary-foreground',
         destructive: 'border-transparent bg-destructive text-destructive-foreground',
         outline: 'text-foreground',
-        // Gece uçuşu (koyu AI bölgesi) varyantları — cam chip + teal vurgulu intent.
-        glass: 'border-foreground/20 bg-foreground/10 text-muted-foreground backdrop-blur-sm',
-        glassAccent:
-          'border-brand-teal/40 bg-brand-teal/15 text-foreground shadow-[0_0_12px_theme(colors.brand.teal/30%)] backdrop-blur-sm',
+        // Durum rozetleri (rezervasyon/sonuç) — hue tint + okunur foreground yazı
+        // (AA: #22C55E/#F59E0B yazı olarak açık zeminde geçmez; renk tek gösterge değil,
+        // metin etiketi taşır).
+        success: 'border-transparent bg-success/15 text-foreground',
+        warning: 'border-transparent bg-warning/15 text-foreground',
+        // Yumuşak turuncu (peach) vurgu — "en uygun/önerilen" kart etiketi (palette
+        // Soft Accent). Lacivert yazı: peach beyaz yazıyla AA geçmez, lacivert geçer.
+        promo: 'border-transparent bg-brand-peach text-brand-navy',
+        // Düz nötr / mavi-vurgulu chip (eski cam varyantların düz karşılığı).
+        glass: 'border-border bg-secondary text-secondary-foreground',
+        glassAccent: 'border-primary/30 bg-primary/10 text-primary',
       },
     },
     defaultVariants: { variant: 'default' },

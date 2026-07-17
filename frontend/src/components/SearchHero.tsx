@@ -59,9 +59,9 @@ export function SearchHero({ image, title, subtitle, children }: SearchHeroProps
         />
         <div
           aria-hidden="true"
-          className="mt-2 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
+          className="mt-2 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-steel"
         />
-        {subtitle && <p className="mt-2 max-w-2xl text-sm text-brand-ice/80">{subtitle}</p>}
+        {subtitle && <p className="mt-2 max-w-2xl text-sm text-brand-cream/80">{subtitle}</p>}
         <div className="mt-6">{children}</div>
       </div>
     </motion.section>

@@ -58,7 +58,15 @@ export interface FlightProduct {
   destinationCity?: string | null
   departTime: IsoDateTime
   arriveTime: IsoDateTime | null
-  tripType: TripType
+  /**
+   * OPSİYONEL — tel üzerindeki gerçeğe uyar: `/flights/search` bunu doldurur
+   * (FlightProductApiDto), ama chat sonuç kartları ürünü domain nesnesinden serileştirdiğinden
+   * alanı TAŞIMAZ. Zorunlu tiplenmişken tsc "hep var" diyordu ve `product.tripType ===
+   * 'round_trip'` yazan her yeni okuyucu chat kartlarında sessizce false alıyordu — gidiş-dönüş
+   * tek yön gibi render oluyordu (bkz. FlightCard'ın `!!returnDepartTime` çözümü ve
+   * buildFlightDraft'ın yedek zinciri). Okurken daima yedeğe düşün.
+   */
+  tripType?: TripType
   /** round_trip iken dolu; one_way'de null. */
   returnDepartTime?: IsoDateTime | null
   returnArriveTime?: IsoDateTime | null

@@ -11,6 +11,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
+import { CHILD_MAX_AGE, CHILD_MIN_AGE } from '@/features/reservation/reservationFormSchema'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { hotelFiltersChanged } from '@/features/ui/uiSlice'
@@ -186,7 +187,16 @@ export function HotelsPage() {
             summary={guestSummary}
             rows={[
               { key: 'adults', label: 'Yetişkin', hint: '18 yaş ve üzeri', value: adults, min: 1, max: MAX_PARTY_SIZE },
-              { key: 'children', label: 'Çocuk', hint: '0–17 yaş', value: childCount, min: 0, max: 6 },
+              {
+                key: 'children',
+                label: 'Çocuk',
+                // İpucu de şemayla aynı kaynaktan: '0–17' yazmak seçilemeyen (ve rezerve
+                // edilemeyen) bir yaşı davet ediyordu.
+                hint: `${CHILD_MIN_AGE}–${CHILD_MAX_AGE} yaş`,
+                value: childCount,
+                min: 0,
+                max: 6,
+              },
               { key: 'rooms', label: 'Oda', hint: 'Her odada en az bir yetişkin', value: rooms, min: 1, max: maxRooms },
             ]}
             onRowChange={(key, value) => {
@@ -197,7 +207,7 @@ export function HotelsPage() {
             fieldClassName={cn('w-56', heroFieldClass)}
           >
             {childCount > 0 && (
-              <div className="mt-4 border-t border-foreground/10 pt-3">
+              <div className="mt-4 border-t border-border pt-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   Çocuk yaşları (fiyatlama için)
                 </p>
@@ -226,13 +236,21 @@ export function HotelsPage() {
                         // temayı izliyor. color-scheme artık :root/.dark'tan miras:
                         // sabit [color-scheme:dark] açık temada native listeyi
                         // zorla koyu render ediyordu.
-                        className="h-9 w-full min-w-0 rounded-md border border-foreground/15 bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
+                        className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
-                        {Array.from({ length: 18 }, (_, y) => (
-                          <option key={y} value={y} className="bg-background text-foreground">
-                            {y}
-                          </option>
-                        ))}
+                        {/* Aralık şemayla TEK kaynaktan gelir (CHILD_MIN_AGE–CHILD_MAX_AGE).
+                            Eskiden 0'dan başlıyordu: 0–2 seçen kullanıcı aramayı yapabiliyor
+                            ama rezervasyon formunu ASLA gönderemiyordu (şema 3–17 istiyor,
+                            yolcu satırı teklifin pax'ına sabit olduğu için silinemiyor).
+                            Otelde 0–2 zaten geçersiz — INFANT yalnız uçuş ücret tipi. */}
+                        {Array.from({ length: CHILD_MAX_AGE - CHILD_MIN_AGE + 1 }, (_, i) => {
+                          const y = CHILD_MIN_AGE + i
+                          return (
+                            <option key={y} value={y} className="bg-background text-foreground">
+                              {y}
+                            </option>
+                          )
+                        })}
                       </select>
                     </label>
                   ))}
@@ -243,7 +261,7 @@ export function HotelsPage() {
           {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
               text-white: Button'ın default varyantı text-foreground'dur; hero'nun
               lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}
-          <Button type="submit" className="h-12 text-white">
+          <Button type="submit" variant="cta" className="h-12">
             Ara
           </Button>
 
@@ -252,7 +270,7 @@ export function HotelsPage() {
           {formError && (
             <p
               role="alert"
-              className="w-full rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm font-medium text-red-100"
+              className="w-full rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive-emphasis"
             >
               {formError}
             </p>

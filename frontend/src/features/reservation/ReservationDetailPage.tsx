@@ -1,10 +1,22 @@
 import { useMemo, useState } from 'react'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { Link, useLocation, useParams } from 'react-router-dom'
-import { ArrowLeft, CheckCircle2, FileDown, Hotel, Plane } from 'lucide-react'
+import {
+  ArrowLeft,
+  BedDouble,
+  CheckCircle2,
+  FileDown,
+  Globe,
+  Hotel,
+  MapPin,
+  Plane,
+  Users,
+} from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { DropdownSelect } from '@/components/ui/dropdown-select'
+import { StarRating } from '@/components/ui/star-rating'
 import { Spinner } from '@/components/ui/spinner'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
@@ -28,39 +40,127 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-/** Rezerve edilmiş otel snapshot'ı. */
-function HotelBlock({ hotel }: { hotel: NonNullable<ReservationDetail['hotel']> }) {
+/** Küçük bilgi çipi — ikon + değer (doluluk/uyruk gibi tekil olgular). */
+function InfoChip({ icon: Icon, children }: { icon: typeof Hotel; children: React.ReactNode }) {
   return (
-    <div>
-      <h2 className="mb-2 flex items-center gap-2 font-semibold">
-        <Hotel className="h-4 w-4 text-brand-teal" aria-hidden /> Otel
+    <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground">
+      <Icon className="h-3.5 w-3.5 text-muted-foreground" aria-hidden />
+      {children}
+    </span>
+  )
+}
+
+/** Pansiyon kodu → okunur etiket (bilinmeyen kod ham gösterilir; veri uydurulmaz). */
+const BOARD_TYPE_LABELS: Record<string, string> = {
+  RO: 'Sadece oda',
+  BB: 'Oda + kahvaltı',
+  HB: 'Yarım pansiyon',
+  FB: 'Tam pansiyon',
+  AI: 'Her şey dahil',
+  UAI: 'Ultra her şey dahil',
+}
+function boardLabel(code?: string | null): string | null {
+  if (!code) return null
+  return BOARD_TYPE_LABELS[code.toUpperCase()] ?? code
+}
+
+/** İki tarih arası gece sayısı (checkOut − checkIn); en az 1. */
+function nightsBetween(checkIn: string, checkOut: string): number {
+  const ms = new Date(checkOut).getTime() - new Date(checkIn).getTime()
+  return Number.isFinite(ms) ? Math.max(1, Math.round(ms / 86_400_000)) : 1
+}
+
+/** Otel/uçuş snapshot'ı için ortak bölüm kabı — tutarlı görsel dil. */
+function ProductSection({
+  icon: Icon,
+  title,
+  children,
+}: {
+  icon: typeof Hotel
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-3">
+      <h2 className="flex items-center gap-2 font-semibold">
+        <Icon className="h-4 w-4 text-primary" aria-hidden /> {title}
       </h2>
-      <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
-        <Field label="Otel">
-          {hotel.hotelName}
-          {hotel.stars ? ` · ${hotel.stars}★` : ''}
-        </Field>
-        {hotel.region && <Field label="Bölge">{hotel.region}</Field>}
-        {hotel.boardType && <Field label="Pansiyon">{hotel.boardType}</Field>}
-        <Field label="Giriş / çıkış">
-          {formatDate(hotel.checkIn)} — {formatDate(hotel.checkOut)}
-        </Field>
-        <Field label="Oda / kişi">
-          {hotel.rooms} oda · {hotel.adults} yetişkin
-          {hotel.children ? ` · ${hotel.children} çocuk` : ''}
-        </Field>
-      </dl>
-    </div>
+      <div className="space-y-4 rounded-xl border border-border bg-muted/40 p-4">{children}</div>
+    </section>
+  )
+}
+
+/** Rezerve edilmiş otel snapshot'ı — zengin detay: sınıf, konaklama süresi, doluluk. */
+function HotelBlock({ hotel }: { hotel: NonNullable<ReservationDetail['hotel']> }) {
+  const nights = nightsBetween(hotel.checkIn, hotel.checkOut)
+  const board = boardLabel(hotel.boardType)
+  return (
+    <ProductSection icon={Hotel} title="Otel">
+      {/* Başlık: ad + yıldız sınıfı + bölge + pansiyon */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-base font-semibold text-foreground">{hotel.hotelName}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+            {hotel.stars ? <StarRating count={hotel.stars} /> : null}
+            {hotel.region && (
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" aria-hidden />
+                {hotel.region}
+              </span>
+            )}
+          </div>
+        </div>
+        {board && (
+          <Badge variant="secondary" className="shrink-0" title={hotel.boardType ?? undefined}>
+            {board}
+          </Badge>
+        )}
+      </div>
+
+      {/* Konaklama şeridi: giriş → gece → çıkış */}
+      <div className="flex items-stretch gap-3 rounded-lg border border-border bg-card p-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Giriş
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-foreground">{formatDate(hotel.checkIn)}</p>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center gap-1 px-2">
+          <span className="whitespace-nowrap rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">
+            {nights} gece
+          </span>
+          <span className="h-px w-full bg-border" aria-hidden />
+        </div>
+        <div className="min-w-0 text-right">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            Çıkış
+          </p>
+          <p className="mt-0.5 text-sm font-semibold text-foreground">{formatDate(hotel.checkOut)}</p>
+        </div>
+      </div>
+
+      {/* Doluluk + uyruk + otel fiyatı */}
+      <div className="flex flex-wrap items-center gap-2">
+        <InfoChip icon={BedDouble}>{hotel.rooms} oda</InfoChip>
+        <InfoChip icon={Users}>
+          {hotel.adults} yetişkin{hotel.children ? ` · ${hotel.children} çocuk` : ''}
+        </InfoChip>
+        {hotel.nationality && <InfoChip icon={Globe}>{hotel.nationality}</InfoChip>}
+        <span className="ml-auto text-sm">
+          <span className="text-muted-foreground">Otel:</span>{' '}
+          <span className="font-semibold text-foreground">
+            {formatPrice(hotel.price, hotel.currency)}
+          </span>
+        </span>
+      </div>
+    </ProductSection>
   )
 }
 
 /** Rezerve edilmiş uçuş snapshot'ı. */
 function FlightBlock({ flight }: { flight: NonNullable<ReservationDetail['flight']> }) {
   return (
-    <div>
-      <h2 className="mb-2 flex items-center gap-2 font-semibold">
-        <Plane className="h-4 w-4 text-brand-teal" aria-hidden /> Uçuş
-      </h2>
+    <ProductSection icon={Plane} title="Uçuş">
       <dl className="grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2">
         <Field label="Rota">
           {flight.origin} → {flight.destination}
@@ -77,7 +177,7 @@ function FlightBlock({ flight }: { flight: NonNullable<ReservationDetail['flight
         </Field>
         <Field label="Yolcu">{flight.passengerCount}</Field>
       </dl>
-    </div>
+    </ProductSection>
   )
 }
 
@@ -134,14 +234,14 @@ function CancelSection({ reservation }: { reservation: ReservationDetail }) {
           type="checkbox"
           checked={confirmed}
           onChange={(e) => setConfirmed(e.target.checked)}
-          className="mt-0.5 h-5 w-5 rounded border-foreground/30 accent-destructive"
+          className="mt-0.5 h-5 w-5 rounded border-border accent-destructive"
         />
         Bu rezervasyonu iptal etmek istediğimi onaylıyorum.
       </label>
 
       {cancel.isError && (
-        <p role="alert" className="text-sm text-red-400">
-          {cancel.error.message}
+        <p role="alert" className="text-sm text-destructive-emphasis">
+          {apiErrorMessage(cancel.error)}
         </p>
       )}
 
@@ -184,7 +284,7 @@ export function ReservationDetailPage() {
           asChild
           variant="ghost"
           size="sm"
-          className="-ml-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+          className="-ml-2 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
           <Link to="/reservations">
             <ArrowLeft className="h-4 w-4" />
@@ -200,7 +300,7 @@ export function ReservationDetailPage() {
             asChild
             size="sm"
             variant="outline"
-            className="border-foreground/15 bg-foreground/5 text-muted-foreground transition-colors hover:border-brand-teal hover:bg-foreground/10 hover:text-foreground"
+            className="border-border bg-muted text-muted-foreground transition-colors hover:border-primary hover:bg-muted hover:text-foreground"
           >
             <Link to={`/reservations/${data.id}/print`}>
               <FileDown className="h-4 w-4" />
@@ -213,9 +313,9 @@ export function ReservationDetailPage() {
       {justBooked && (
         <div
           role="status"
-          className="flex items-start gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/10 p-4 text-foreground"
+          className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-foreground"
         >
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-teal" aria-hidden />
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
           <div>
             <p className="font-semibold">Rezervasyonunuz alındı</p>
             <p className="text-sm text-muted-foreground">
@@ -229,11 +329,11 @@ export function ReservationDetailPage() {
       {isFetching && !data && <LoadingState label="Yükleniyor…" />}
 
       {isError && !isFetching && (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
+        <ErrorState message={apiErrorMessage(error)} onRetry={() => refetch()} />
       )}
 
       {data && (
-        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
+        <Card className="glass-card border-border bg-card text-foreground">
           <CardHeader className="flex-row items-center justify-between space-y-0 gap-3">
             <CardTitle className="min-w-0 break-all font-mono">{data.reservationNumber}</CardTitle>
             <Badge className="shrink-0" variant={reservationStatusVariant(data.status)}>
@@ -264,7 +364,7 @@ export function ReservationDetailPage() {
                   {data.passengers.map((p, i) => (
                     <li
                       key={`${p.firstName}-${p.lastName}-${i}`}
-                      className="rounded-lg border border-foreground/10 bg-foreground/5 p-3 text-sm"
+                      className="rounded-lg border border-border bg-muted p-3 text-sm"
                     >
                       <p className="font-medium">
                         {p.firstName} {p.lastName}

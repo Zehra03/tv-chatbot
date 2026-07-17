@@ -116,19 +116,28 @@ export function PeoplePicker({
                       aria-label={`${row.label} sayısını azalt`}
                       disabled={row.value <= row.min}
                       onClick={() => onRowChange(row.key, row.value - 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/20 text-foreground transition-colors hover:bg-foreground/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent"
                     >
                       <Minus className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <span className="w-5 text-center text-sm font-semibold tabular-nums text-foreground">
+                    {/* Canlı bölge: +/- düğmelerinin ADI var ama basınca odak düğmede kaldığı
+                        için değişen SAYI hiç duyurulmuyordu — ekran okuyucu kullanıcısı "artır"a
+                        basıp mutlak sessizlik duyuyor, kaçta olduğunu ya da sınıra dayandığını
+                        bilemiyordu. sr-only etiket hangi satırın değiştiğini söyler. */}
+                    <span
+                      aria-live="polite"
+                      aria-atomic="true"
+                      className="w-5 text-center text-sm font-semibold tabular-nums text-foreground"
+                    >
                       {row.value}
+                      <span className="sr-only"> {row.label}</span>
                     </span>
                     <button
                       type="button"
                       aria-label={`${row.label} sayısını artır`}
                       disabled={row.value >= row.max}
                       onClick={() => onRowChange(row.key, row.value + 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/20 text-foreground transition-colors hover:bg-foreground/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent"
                     >
                       <Plus className="h-4 w-4" aria-hidden="true" />
                     </button>

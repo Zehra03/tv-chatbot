@@ -108,8 +108,10 @@ describe('FlightCard', () => {
    * olduğu hâlde chat panelinde tek bacak gösterir — canlıda böyle oldu.
    */
   it('tripType alanı olmayan (chat) kartta da iki bacağı gösterir', () => {
-    const { tripType: _omitted, ...chatCard } = roundTrip
-    renderCard(chatCard as FlightProduct)
+    // `tripType` artık opsiyonel tiplendiği için alan gerçekten yokmuş gibi modellenebiliyor —
+    // eskiden destructure ile atılıp `as FlightProduct` ile geri zorlanıyordu.
+    const chatCard: FlightProduct = { ...roundTrip, tripType: undefined }
+    renderCard(chatCard)
 
     expect(screen.getByText('Gidiş')).toBeTruthy()
     expect(screen.getByText('Dönüş')).toBeTruthy()

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { motion } from 'framer-motion'
-import { FileDown, Hotel, Plane } from 'lucide-react'
+import { ChevronRight, FileDown, Hotel, Plane } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { EmptyState } from '@/components/EmptyState'
@@ -43,17 +44,18 @@ export function ReservationsPage() {
         />
         <div
           aria-hidden="true"
-          className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
+          className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-steel"
         />
         <p className="mt-2 text-sm text-muted-foreground">
-          Geçmiş ve bekleyen rezervasyonlarınız.
+          Geçmiş ve bekleyen rezervasyonlarınız
+          {data && data.length > 0 ? ` · ${data.length} kayıt` : ''}.
         </p>
       </motion.div>
 
       {isFetching && !data && <LoadingState label="Yükleniyor…" />}
 
       {isError && !isFetching && (
-        <ErrorState message={error.message} onRetry={() => refetch()} />
+        <ErrorState message={apiErrorMessage(error)} onRetry={() => refetch()} />
       )}
 
       {data && data.length === 0 && (
@@ -67,93 +69,82 @@ export function ReservationsPage() {
       )}
 
       {data && data.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, ease: 'easeOut', delay: 0.08 }}
-          className="glass-card overflow-x-auto"
-        >
-          <table className="w-full text-sm text-foreground">
-            <thead>
-              <tr className="border-b border-foreground/10 bg-foreground/5 text-left">
-                <th scope="col" className="p-3 font-semibold">No</th>
-                <th scope="col" className="p-3 font-semibold">Tip</th>
-                <th scope="col" className="p-3 font-semibold">Tarih</th>
-                <th scope="col" className="p-3 font-semibold">Misafir</th>
-                <th scope="col" className="p-3 font-semibold">Toplam</th>
-                <th scope="col" className="p-3 font-semibold">Durum</th>
-                {/* relative: sr-only (absolute) hücre içinde kalsın, dokümanı genişletmesin. */}
-                <th scope="col" className="relative p-3">
-                  <span className="sr-only">İşlemler</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((r, i) => (
-                <motion.tr
-                  key={r.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25, ease: 'easeOut', delay: 0.15 + i * 0.06 }}
-                  className="border-b border-foreground/10 transition-colors even:bg-foreground/5 last:border-0 hover:bg-brand-teal/10"
-                >
-                  <td className="p-3 font-mono font-medium">{r.reservationNumber}</td>
-                  <td className="p-3">
-                    <span className="inline-flex items-center gap-2">
-                      <span
-                        aria-hidden="true"
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal"
+        // Tablo yerine kart listesi: mobilde satır sütunlara sıkışmaz, her kayıt
+        // taranabilir bir kart. Kart tümüyle detaya bağlı (stretched-link); PDF
+        // eylemi bağlantının ÜSTÜNDE (z-10) ayrı erişilebilir düğme kalır.
+        <ul className="space-y-3">
+          {data.map((r, i) => (
+            <motion.li
+              key={r.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.25, ease: 'easeOut', delay: 0.12 + i * 0.06 }}
+            >
+              <article className="glass-card relative flex flex-col gap-3 p-4 transition-all duration-300 hover:border-primary/40 hover:shadow-soft sm:flex-row sm:items-center sm:gap-4">
+                <div className="flex min-w-0 flex-1 items-center gap-3">
+                  <span
+                    aria-hidden="true"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"
+                  >
+                    {r.productType === 'flight' ? (
+                      <Plane className="h-5 w-5" />
+                    ) : (
+                      <Hotel className="h-5 w-5" />
+                    )}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        to={`/reservations/${r.id}`}
+                        className="rounded font-mono text-sm font-semibold text-foreground transition-colors after:absolute after:inset-0 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                       >
-                        {r.productType === 'flight' ? (
-                          <Plane className="h-3.5 w-3.5" />
-                        ) : (
-                          <Hotel className="h-3.5 w-3.5" />
-                        )}
-                      </span>
-                      {RESERVATION_PRODUCT_TYPE_LABELS[r.productType]}
-                    </span>
-                  </td>
-                  <td className="p-3">{formatDate(r.reservationDate)}</td>
-                  <td className="p-3">{r.leadGuestName ?? '—'}</td>
-                  <td className="p-3 font-semibold">{formatPrice(r.totalAmount, r.currency)}</td>
-                  <td className="p-3">
-                    <Badge variant={reservationStatusVariant(r.status)}>
-                      {RESERVATION_STATUS_LABELS[r.status]}
-                    </Badge>
-                  </td>
-                  <td className="p-3">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button
-                        asChild
-                        size="sm"
-                        variant="outline"
-                        className="border-foreground/15 bg-foreground/5 text-muted-foreground transition-colors hover:border-brand-teal hover:bg-foreground/10 hover:text-foreground"
-                      >
-                        <Link to={`/reservations/${r.id}`}>Detay</Link>
-                      </Button>
-                      {/* İkon düğme: satır zaten 6 sütun geniş, metinli ikinci eylem
-                          taşırıyordu. Voucher rotası özeti kendi çeker — liste
-                          satırında yolcu/otel verisi yok. */}
-                      <Button
-                        asChild
-                        size="icon"
-                        variant="outline"
-                        className="h-8 w-8 border-foreground/15 bg-foreground/5 text-muted-foreground transition-colors hover:border-brand-teal hover:bg-foreground/10 hover:text-foreground"
-                      >
-                        <Link
-                          to={`/reservations/${r.id}/print`}
-                          aria-label={`${r.reservationNumber} özetini PDF olarak indir`}
-                        >
-                          <FileDown className="h-4 w-4" />
-                        </Link>
-                      </Button>
+                        {r.reservationNumber}
+                      </Link>
+                      <Badge variant={reservationStatusVariant(r.status)}>
+                        {RESERVATION_STATUS_LABELS[r.status]}
+                      </Badge>
                     </div>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
-        </motion.div>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+                      <span>{RESERVATION_PRODUCT_TYPE_LABELS[r.productType]}</span>
+                      <span aria-hidden>·</span>
+                      <span>{formatDate(r.reservationDate)}</span>
+                      {r.leadGuestName && (
+                        <>
+                          <span aria-hidden>·</span>
+                          <span className="text-foreground/80">{r.leadGuestName}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between gap-3 sm:justify-end">
+                  <p className="text-base font-bold text-foreground">
+                    {formatPrice(r.totalAmount, r.currency)}
+                  </p>
+                  <div className="relative z-10 flex shrink-0 items-center gap-1.5">
+                    {/* İkon düğme — erişilebilir adı rezervasyon kodunu taşır ki
+                        ekran okuyucuda satırlar ayırt edilebilsin. */}
+                    <Button
+                      asChild
+                      size="icon"
+                      variant="outline"
+                      className="h-8 w-8 border-border bg-muted text-muted-foreground transition-colors hover:border-primary hover:text-foreground"
+                    >
+                      <Link
+                        to={`/reservations/${r.id}/print`}
+                        aria-label={`${r.reservationNumber} özetini PDF olarak indir`}
+                      >
+                        <FileDown className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground" aria-hidden />
+                  </div>
+                </div>
+              </article>
+            </motion.li>
+          ))}
+        </ul>
       )}
     </div>
   )

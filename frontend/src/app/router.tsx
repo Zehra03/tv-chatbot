@@ -21,13 +21,23 @@ import { ReservationPrintPage } from '@/features/reservation/ReservationPrintPag
 import { ProfilePage } from '@/features/profile/ProfilePage'
 
 /**
- * Korumalı rota sarmalı — state'te mock kullanıcı yoksa /login'e yönlendirir
+ * Korumalı rota sarmalı — hiç oturum yoksa /login'e yönlendirir
  * (docs/frontend-architecture.md §3). Provider içinde render edildiği için
  * useAppSelector güvenle çalışır.
+ *
+ * DIŞ bekçi olduğundan, soğuk açılan bir derin bağlantıda (yer imi, paylaşılan link)
+ * RequireAccount'tan ÖNCE çalışır — istenen adresi taşımazsa giriş sonrası herkes /chat'e
+ * düşer. Bu yüzden RequireAccount ile aynı `from` sözleşmesini kullanır; LoginPage.goToApp
+ * ikisini de aynı şekilde okur. `search` de taşınır: /hotels gibi sayfalar kriterlerini
+ * query'de tutuyor, yalnız pathname dönmek kullanıcıyı boş bir aramaya bırakırdı.
  */
 function ProtectedRoute() {
   const user = useAppSelector((s) => s.auth.user)
-  return user ? <Outlet /> : <Navigate to="/login" replace />
+  const location = useLocation()
+  if (user) return <Outlet />
+  return (
+    <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />
+  )
 }
 
 /**
@@ -44,7 +54,7 @@ function RequireAccount() {
     <Navigate
       to="/login"
       replace
-      state={{ reason: 'account-required', from: location.pathname }}
+      state={{ reason: 'account-required', from: `${location.pathname}${location.search}` }}
     />
   )
 }

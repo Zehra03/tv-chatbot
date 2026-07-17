@@ -17,10 +17,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MIN_PASSWORD = 8
 
 const primaryButton =
-  'inline-flex items-center justify-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-4 py-2.5 text-sm font-semibold text-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60'
+  'inline-flex items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-60'
 
 const ghostButton =
-  'inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60'
+  'inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-60'
 
 interface ForgotPasswordModalProps {
   open: boolean
@@ -90,7 +90,7 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
     <button
       type="button"
       onClick={() => setShowPassword((v) => !v)}
-      className="absolute right-0 top-2 text-muted-foreground transition-colors hover:text-brand-teal"
+      className="absolute right-0 top-2 text-muted-foreground transition-colors hover:text-primary"
       aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
     >
       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -105,13 +105,13 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
       // Yüzey token'dan: koyuda navy/95 + beyaz yazı (eskisiyle birebir aynı),
       // açıkta beyaz/95 + koyu yazı. Sabit bg-brand-navy bırakılsaydı açık temada
       // lacivert kutu üstünde siyah yazı olurdu.
-      className="border-foreground/15 bg-popover/95 text-popover-foreground backdrop-blur-lg"
+      className="border-border bg-popover/95 text-popover-foreground"
     >
       {done ? (
         <div className="space-y-4 text-center">
           <div
             aria-hidden="true"
-            className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-teal/15 text-brand-teal"
+            className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary"
           >
             <CheckCircle2 className="h-6 w-6" />
           </div>
@@ -151,11 +151,9 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
             onChange={setConfirmPassword}
           />
           {error && (
-            // red-500 (#EF4444) = açık --destructive'in tam karşılığı; görünüm birebir
-            // korunur. Bu modal <body>'ye portal olur ve artık <html>'deki `.dark`ı
-            // görür — `text-destructive` koyu temada #7F1D1D'ye düşüp lacivert cam
-            // üstünde okunmaz olurdu. (Bkz. LoginPage'deki aynı not.)
-            <p role="alert" className="text-xs text-red-500">
+            // Modal yüzeyi artık tema-duyarlı (bg-popover), bu yüzden okunur hata YAZISI
+            // token'ı: `destructive-emphasis` iki temada da AA geçer.
+            <p role="alert" className="text-xs text-destructive-emphasis">
               {error}
             </p>
           )}

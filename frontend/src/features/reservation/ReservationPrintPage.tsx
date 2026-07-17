@@ -6,6 +6,7 @@ import { Logo } from '@/components/Logo'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { useReservation } from '@/features/reservation/useReservation'
+import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import {
   RESERVATION_PRODUCT_TYPE_LABELS,
   RESERVATION_STATUS_LABELS,
@@ -161,7 +162,7 @@ export function ReservationPrintPage() {
 
       {isError && !isFetching && (
         <div className="print-hide mx-auto max-w-[210mm] px-4">
-          <ErrorState message={error.message} onRetry={() => refetch()} />
+          <ErrorState message={apiErrorMessage(error)} onRetry={() => refetch()} />
         </div>
       )}
 
@@ -170,7 +171,10 @@ export function ReservationPrintPage() {
         <article className="print-sheet mx-auto max-w-[210mm] bg-white p-10 text-slate-800 shadow-sm print:p-0 print:shadow-none">
           <header className="flex items-start justify-between gap-6 border-b-2 border-brand-navy pb-4">
             <div>
-              <Logo height={44} />
+              {/* variant="light" ŞART: sayfa beyaz kâğıda basılıyor (bg-white),
+                  kullanıcının teması koyu olsa bile. 'auto' <html>.dark'ı izler
+                  ve beyaz kâğıda beyaz harf basardı. */}
+              <Logo height={26} variant="light" />
               <p className="mt-2 text-lg font-bold text-brand-navy">Rezervasyon Özeti</p>
             </div>
             <div className="text-right">

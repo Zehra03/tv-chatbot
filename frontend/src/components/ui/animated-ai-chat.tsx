@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useTransition } from "react";
+import { useEffect, useId, useRef, useCallback, useTransition } from "react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
@@ -108,7 +108,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
         
         {showRing && isFocused && (
           <motion.span 
-            className="absolute inset-0 rounded-md pointer-events-none ring-2 ring-offset-0 ring-violet-500/30"
+            className="absolute inset-0 rounded-md pointer-events-none ring-2 ring-offset-0 ring-primary/30"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -118,7 +118,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
 
         {props.onChange && (
           <div 
-            className="absolute bottom-2 right-2 opacity-0 w-2 h-2 bg-violet-500 rounded-full"
+            className="absolute bottom-2 right-2 opacity-0 w-2 h-2 bg-primary rounded-full"
             style={{
               animation: 'none',
             }}
@@ -159,10 +159,12 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
     const [showCommandPalette, setShowCommandPalette] = useState(false);
     const [, setRecentCommand] = useState<string | null>(null);
     const { textareaRef, adjustHeight } = useAutoResizeTextarea({
-        minHeight: 60,
+        minHeight: 44,
         maxHeight: 200,
     });
     const commandPaletteRef = useRef<HTMLDivElement>(null);
+    /** listbox ↔ textarea bağı (aria-controls / aria-activedescendant) için kararlı id. */
+    const commandPaletteId = useId();
 
     // Komut listesi (label/prefix/action) tek kaynaktan gelir; resolveCommand ile
     // aynı veriyi paylaşır ki render edilen kart ile gönderilen intent hiç ayrışmasın.
@@ -229,10 +231,21 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                     prev > 0 ? prev - 1 : commandSuggestions.length - 1
                 );
             } else if (e.key === 'Tab' || e.key === 'Enter') {
-                e.preventDefault();
+                // Enter/Tab YALNIZCA gerçek bir seçim varken yakalanır. Eskiden koşulsuz
+                // preventDefault ediliyordu: eşleşen komut yokken (ör. "/merhaba" → palet
+                // açık ama activeSuggestion -1) Enter hiçbir şey yapmadan yutuluyor,
+                // mesaj klavyeyle GÖNDERİLEMİYOR ve kullanıcı hiçbir geri bildirim almıyordu.
                 if (activeSuggestion >= 0) {
+                    e.preventDefault();
                     selectCommandSuggestion(activeSuggestion);
+                } else if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    setShowCommandPalette(false);
+                    if (value.trim()) {
+                        handleSendMessage();
+                    }
                 }
+                // Seçim yokken Tab varsayılanına bırakılır — odak normal şekilde ilerlesin.
             } else if (e.key === 'Escape') {
                 e.preventDefault();
                 setShowCommandPalette(false);
@@ -334,7 +347,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     transition={{ delay: 0.2, duration: 0.5 }}
                                     className="inline-block"
                                 >
-                                    <h1 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground/90 to-foreground/40 pb-1">
+                                    <h1 className="text-3xl font-medium tracking-tight text-foreground pb-1">
                                         Bugün nereye gidiyoruz?
                                     </h1>
                                     <motion.div
@@ -358,37 +371,45 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
 
                     <motion.div
                         layout
-                        className="relative backdrop-blur-xl bg-foreground/[0.02] rounded-2xl border border-foreground/[0.05] shadow-2xl"
+                        className="relative bg-card rounded-2xl border border-border shadow-soft"
                         initial={{ scale: 0.98 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.1, layout: { duration: 0.35, ease: "easeOut" } }}
                     >
                         <AnimatePresence>
                             {showCommandPalette && (
-                                <motion.div 
+                                <motion.div
                                     ref={commandPaletteRef}
-                                    className="absolute left-4 right-4 bottom-full mb-2 backdrop-blur-xl bg-black/90 rounded-lg z-50 shadow-lg border border-foreground/10 overflow-hidden"
+                                    className="absolute left-4 right-4 bottom-full mb-2 bg-popover rounded-lg z-50 shadow-soft-lg border border-border overflow-hidden"
                                     initial={{ opacity: 0, y: 5 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 5 }}
                                     transition={{ duration: 0.15 }}
                                 >
-                                    <div className="py-1 bg-black/95">
+                                    {/* WAI-ARIA combobox deseni — LocationAutocomplete ile aynı.
+                                        Eskiden satırlar rolsüz, tıklama-only div'lerdi: ok tuşları
+                                        `activeSuggestion`ı değiştiriyordu ama bu yalnız bir arka plan
+                                        rengiydi; ekran okuyucu ne listeyi ne de aktif seçeneği
+                                        duyuruyordu. */}
+                                    <div className="py-1 bg-popover" role="listbox" id={commandPaletteId} aria-label="Sohbet komutları">
                                         {commandSuggestions.map((suggestion, index) => (
                                             <motion.div
                                                 key={suggestion.prefix}
+                                                id={`${commandPaletteId}-opt-${index}`}
+                                                role="option"
+                                                aria-selected={activeSuggestion === index}
                                                 className={cn(
                                                     "flex items-center gap-2 px-3 py-2 text-xs transition-colors cursor-pointer",
-                                                    activeSuggestion === index 
-                                                        ? "bg-foreground/10 text-foreground" 
-                                                        : "text-foreground/70 hover:bg-foreground/5"
+                                                    activeSuggestion === index
+                                                        ? "bg-accent text-accent-foreground"
+                                                        : "text-muted-foreground hover:bg-accent"
                                                 )}
                                                 onClick={() => selectCommandSuggestion(index)}
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 transition={{ delay: index * 0.03 }}
                                             >
-                                                <div className="w-5 h-5 flex items-center justify-center text-foreground/60">
+                                                <div className="w-5 h-5 flex items-center justify-center text-foreground/60" aria-hidden>
                                                     {COMMAND_ICONS[suggestion.prefix]}
                                                 </div>
                                                 <div className="font-medium">{suggestion.label}</div>
@@ -402,7 +423,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                             )}
                         </AnimatePresence>
 
-                        <div className="p-4">
+                        <div className="p-2">
                             <Textarea
                                 ref={textareaRef}
                                 value={value}
@@ -412,19 +433,31 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                 }}
                                 onKeyDown={handleKeyDown}
                                 aria-label="Mesaj"
+                                // Palet açıkken alan bir combobox gibi davranır: ok tuşlarıyla
+                                // gezilen seçenek aria-activedescendant ile duyurulur (odak
+                                // textarea'da kalır, WAI-ARIA combobox deseni).
+                                role="combobox"
+                                aria-expanded={showCommandPalette}
+                                aria-controls={commandPaletteId}
+                                aria-autocomplete="list"
+                                aria-activedescendant={
+                                    showCommandPalette && activeSuggestion >= 0
+                                        ? `${commandPaletteId}-opt-${activeSuggestion}`
+                                        : undefined
+                                }
                                 disabled={disabled}
                                 maxLength={MAX_LENGTH}
                                 placeholder={placeholder ?? "PaxAssist'e sor — otel, uçuş, tatil önerisi..."}
                                 containerClassName="w-full"
                                 className={cn(
-                                    "w-full px-4 py-3",
+                                    "w-full px-4 py-2",
                                     "resize-none",
                                     "bg-transparent",
                                     "border-none",
                                     "text-foreground/90 text-sm",
                                     "focus:outline-none",
                                     "placeholder:text-foreground/20",
-                                    "min-h-[60px]"
+                                    "min-h-[44px]"
                                 )}
                                 style={{
                                     overflow: "hidden",
@@ -438,7 +471,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     aria-live="polite"
                                     className={cn(
                                         "px-4 pt-1 text-end text-xs tabular-nums",
-                                        value.length >= MAX_LENGTH ? "text-amber-300" : "text-foreground/40"
+                                        value.length >= MAX_LENGTH ? "text-destructive-emphasis" : "text-foreground/40"
                                     )}
                                 >
                                     {value.length}/{MAX_LENGTH}
@@ -446,11 +479,18 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                             )}
                         </div>
 
-                        <div className="p-4 border-t border-foreground/[0.05] flex items-center justify-between gap-4">
+                        <div className="px-3 py-2 border-t border-border flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
+                                {/* İkon-only: erişilebilir isim OLMADAN ekran okuyucuya yalnız
+                                    "button" diye duyuluyordu — komut paletini (/otel, /ucus,
+                                    /rezervasyon, /oneri) açtığı hiç anlaşılmıyordu. */}
                                 <motion.button
                                     type="button"
                                     data-command-button
+                                    aria-label="Komutlar"
+                                    aria-haspopup="listbox"
+                                    aria-expanded={showCommandPalette}
+                                    aria-controls={commandPaletteId}
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setShowCommandPalette(prev => !prev);
@@ -458,12 +498,12 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     whileTap={{ scale: 0.94 }}
                                     className={cn(
                                         "p-2 text-foreground/40 hover:text-foreground/90 rounded-lg transition-colors relative group",
-                                        showCommandPalette && "bg-foreground/10 text-foreground/90"
+                                        showCommandPalette && "bg-muted text-foreground/90"
                                     )}
                                 >
-                                    <Command className="w-4 h-4" />
+                                    <Command className="w-4 h-4" aria-hidden />
                                     <motion.span
-                                        className="absolute inset-0 bg-foreground/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute inset-0 bg-accent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                         layoutId="button-highlight"
                                     />
                                 </motion.button>
@@ -482,7 +522,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     // açıkta lacivert/beyaz) — token'lardan.
                                     value.trim()
                                         ? "bg-foreground text-background shadow-lg shadow-foreground/10"
-                                        : "bg-foreground/[0.05] text-foreground/40"
+                                        : "bg-muted text-foreground/40"
                                 )}
                             >
                                 {isTyping || disabled ? (
@@ -509,7 +549,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                         type="button"
                                         onClick={() => runCommand(suggestion.prefix)}
                                         disabled={disabled}
-                                        className="flex items-center gap-2 px-3 py-2 bg-foreground/[0.02] hover:bg-foreground/[0.05] rounded-lg text-sm text-foreground/60 hover:text-foreground/90 transition-all relative group disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-2 px-3 py-2 bg-muted hover:bg-accent rounded-lg text-sm text-foreground/60 hover:text-foreground/90 transition-all relative group disabled:opacity-50 disabled:cursor-not-allowed"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
@@ -517,7 +557,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                         {COMMAND_ICONS[suggestion.prefix]}
                                         <span>{suggestion.label}</span>
                                         <motion.div
-                                            className="absolute inset-0 border border-foreground/[0.05] rounded-lg"
+                                            className="absolute inset-0 border border-border rounded-lg"
                                             initial={false}
                                             animate={{
                                                 opacity: [0, 1],
@@ -539,13 +579,13 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
             <AnimatePresence>
                 {isTyping && (
                     <motion.div 
-                        className="fixed bottom-8 mx-auto transform -translate-x-1/2 backdrop-blur-2xl bg-foreground/[0.02] rounded-full px-4 py-2 shadow-lg border border-foreground/[0.05]"
+                        className="fixed bottom-8 mx-auto transform -translate-x-1/2 bg-card rounded-full px-4 py-2 shadow-soft border border-border"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-7 rounded-full bg-foreground/[0.05] flex items-center justify-center text-center">
+                            <div className="w-8 h-7 rounded-full bg-muted flex items-center justify-center text-center">
                                 <span className="text-xs font-medium text-foreground/90 mb-0.5">Pax</span>
                             </div>
                             <div className="flex items-center gap-2 text-sm text-foreground/70">

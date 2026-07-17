@@ -1,10 +1,11 @@
-import { Plane } from 'lucide-react'
+import { Plane, Sparkles } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { AnimatedPrice } from '@/components/ui/animated-price'
 import { useSelectProduct } from '@/features/reservation/useSelectProduct'
 import { buildFlightDraft } from '@/features/reservation/buildDraft'
 import { formatDateTime } from '@/utils/format'
+import { cn } from '@/lib/utils'
 import type { FlightProduct, FlightSearchCriteria } from '@/types'
 
 /**
@@ -99,11 +100,14 @@ export function FlightCard({
   product,
   criteria,
   compact = false,
+  recommended = false,
 }: {
   product: FlightProduct
   /** Arama kriteri — uçuş snapshot'ının yolcu sayısını doldurur (yoksa 1). */
   criteria?: Partial<FlightSearchCriteria>
   compact?: boolean
+  /** Listedeki en uygun fiyat — yumuşak peach vurgu + "En uygun" rozeti alır. */
+  recommended?: boolean
 }) {
   const select = useSelectProduct()
 
@@ -123,15 +127,24 @@ export function FlightCard({
       // Tüm kart tıklanabilir (fare); Seç düğmesi klavye/ekran-okuyucu yolu olarak
       // kalır ve stopPropagation ile kartın onClick'ini ikiye katlamaz.
       <div
-        className="glass-card cursor-pointer p-3 transition-all duration-300 hover:border-brand-teal/60"
+        className={cn(
+          'glass-card cursor-pointer p-3 transition-all duration-300 hover:border-primary/60 hover:shadow-soft',
+          recommended && 'border-brand-peach/60 ring-1 ring-brand-peach/30',
+        )}
         onClick={onSelect}
       >
+        {recommended && (
+          <Badge variant="promo" className="mb-2 gap-1 px-1.5 py-0 text-[10px]">
+            <Sparkles className="h-2.5 w-2.5" aria-hidden />
+            En uygun
+          </Badge>
+        )}
         <div className="flex items-center justify-between gap-2">
           <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-foreground/70">
-            <Plane className="h-3.5 w-3.5 shrink-0 text-brand-teal" aria-hidden />
+            <Plane className="h-3.5 w-3.5 shrink-0 text-primary" aria-hidden />
             <span className="truncate font-semibold text-foreground">{product.airline}</span>
             {isRoundTrip && (
-              <span className="shrink-0 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-semibold text-foreground/80">
+              <span className="shrink-0 rounded-full bg-secondary px-1.5 py-0.5 text-[10px] font-semibold text-secondary-foreground">
                 Gidiş-dönüş
               </span>
             )}
@@ -179,6 +192,7 @@ export function FlightCard({
             )}
           </div>
           <Button
+            variant="cta"
             size="sm"
             className="h-7 rounded-full px-3 text-xs"
             aria-label={`${product.airline} ${product.origin} ${product.destination} uçuşunu seç`}
@@ -197,13 +211,22 @@ export function FlightCard({
   return (
     // Tüm kart tıklanabilir (fare); Seç klavye/ekran-okuyucu yolu olarak kalır.
     <div
-      className="glass-card cursor-pointer p-5 transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]"
+      className={cn(
+        'glass-card cursor-pointer p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-soft',
+        recommended && 'border-brand-peach/60 ring-1 ring-brand-peach/30',
+      )}
       onClick={onSelect}
     >
       <div className="flex items-center justify-between gap-3">
         <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-foreground/70">
-          <Plane className="h-4 w-4 shrink-0 text-brand-teal" aria-hidden />
+          <Plane className="h-4 w-4 shrink-0 text-primary" aria-hidden />
           <span className="truncate font-semibold text-foreground">{product.airline}</span>
+          {recommended && (
+            <Badge variant="promo" className="shrink-0 gap-1">
+              <Sparkles className="h-3 w-3" aria-hidden />
+              En uygun
+            </Badge>
+          )}
         </p>
         <div className="shrink-0 text-right">
           <AnimatedPrice
@@ -253,11 +276,12 @@ export function FlightCard({
           {isRoundTrip && (
             // Ne aldığı kartın ilk bakışta anlaşılmalı: bacak satırlarını okuyup çıkarmak zorunda
             // kalmasın. "Tek bilet" de bilinçli — iki bacak tek jetonla satılıyor.
-            <Badge variant="glass">Gidiş-dönüş · tek bilet</Badge>
+            <Badge variant="secondary">Gidiş-dönüş · tek bilet</Badge>
           )}
-          <Badge variant="glass">Bagaj: {product.baggage}</Badge>
+          <Badge variant="secondary">Bagaj: {product.baggage}</Badge>
         </div>
         <Button
+          variant="cta"
           size="sm"
           className="rounded-full px-5"
           aria-label={`${product.airline} ${product.origin} ${product.destination} uçuşunu seç`}

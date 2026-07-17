@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { ArrowRight, Eye, EyeOff, MapPin, Plane, Star, Wifi } from 'lucide-react'
@@ -7,7 +7,9 @@ import hotelImage from '@/assets/hotel-room.png'
 import { authApi, type ApiError, type AuthResponse } from '@/api'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { guestSessionStarted, sessionStarted } from '@/features/auth/authSlice'
+import { Button } from '@/components/ui/button'
 import { FloatingInput } from '@/components/ui/floating-input'
+import { Logo } from '@/components/Logo'
 import { ForgotPasswordModal } from '@/features/auth/ForgotPasswordModal'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +22,6 @@ interface RegisterData {
 }
 
 interface AuthScreenProps {
-  logoSrc?: string
   onLogin?: (email: string, password: string) => void
   onRegister?: (data: RegisterData) => void
   onGuestContinue?: () => void
@@ -34,7 +35,6 @@ interface AuthScreenProps {
 }
 
 const AuthScreen: React.FC<AuthScreenProps> = ({
-  logoSrc = '/logo.png',
   onLogin = () => {},
   onRegister = () => {},
   onGuestContinue = () => {},
@@ -81,42 +81,11 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
     onRegister({ fullName, email, password })
   }
 
-  // Static randomized blob field (computed once).
-  const blobsData = useMemo(
-    () =>
-      Array.from({ length: 8 }).map(() => ({
-        size: Math.random() * 250 + 200,
-        left: Math.random() * 80 + 10,
-        top: Math.random() * 80 + 10,
-        animationDelay: Math.random() * -20,
-        animationDuration: Math.random() * 20 + 15,
-      })),
-    [],
-  )
-
-  const blobRefs = useRef<(HTMLDivElement | null)[]>([])
-
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const x = e.clientX / window.innerWidth
-      const y = e.clientY / window.innerHeight
-      blobRefs.current.forEach((blob, index) => {
-        if (blob) {
-          const speed = (index + 1) * 15
-          blob.style.marginLeft = `${x * speed}px`
-          blob.style.marginTop = `${y * speed}px`
-        }
-      })
-    }
-    document.addEventListener('mousemove', handleMouseMove)
-    return () => document.removeEventListener('mousemove', handleMouseMove)
-  }, [])
-
   const eyeToggle = (
     <button
       type="button"
       onClick={() => setShowPassword(!showPassword)}
-      className="absolute right-0 top-2 text-brand-ice/50 hover:text-brand-teal transition-colors"
+      className="absolute right-0 top-2 text-muted-foreground transition-colors hover:text-primary"
       aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
     >
       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -124,31 +93,16 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
   )
 
   return (
-    <div className="min-h-screen lg:h-screen w-full flex overflow-hidden bg-brand-navy">
-      <svg className="absolute w-0 h-0">
-        <defs>
-          <filter id="gooey">
-            <feGaussianBlur in="SourceGraphic" stdDeviation="15" result="blur" />
-            <feColorMatrix
-              in="blur"
-              mode="matrix"
-              values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10"
-              result="goo"
-            />
-            <feComposite in="SourceGraphic" in2="goo" operator="atop" />
-          </filter>
-        </defs>
-      </svg>
-
-      {/* Sol yarı — vitrin paneli. Register modunda sağa kayar (kartla yer değiştirir);
-          yalnızca lg+; mobilde gizli, kart tam genişlik olur. */}
+    <div className="flex min-h-screen w-full overflow-hidden bg-background lg:h-screen">
+      {/* Sol yarı — fotoğraf vitrin paneli (Booking/Airbnb dili). Register modunda sağa
+          kayar (kartla yer değiştirir); yalnızca lg+; mobilde gizli, kart tam genişlik olur.
+          Fotoğrafın üstünde beyaz metin (tema-bağımsız) + dolu beyaz bilgi kartları — cam yok. */}
       <div
         className={cn(
-          'hidden lg:flex lg:w-1/2 lg:flex-col lg:justify-between relative overflow-hidden transition-transform duration-700 ease-in-out',
+          'relative hidden overflow-hidden transition-transform duration-700 ease-in-out lg:flex lg:w-1/2 lg:flex-col lg:justify-between',
           isRegister ? 'lg:translate-x-full' : 'lg:translate-x-0',
         )}
       >
-        {/* Görsel register modunda otel görseline döner. */}
         <img
           src={isRegister ? hotelImage : heroImage}
           alt={
@@ -158,81 +112,81 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
           }
           className="absolute inset-0 h-full w-full object-cover"
         />
-        {/* Okunabilirlik için koyu dikey geçiş. */}
+        {/* Okunabilirlik için koyu dikey geçiş (fotoğraf scrim'i — dekoratif gradyan değil). */}
         <div className="absolute inset-0 bg-gradient-to-b from-brand-navy/80 via-brand-navy/40 to-brand-navy/85" />
 
         {/* Üst marka satırı */}
         <div className="relative z-10 flex items-center justify-between p-10">
-          <span className="text-sm font-medium tracking-widest text-brand-ice/80 uppercase">
+          <span className="text-sm font-medium uppercase tracking-widest text-white/80">
             Seyahatini Keşfet
           </span>
-          <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+          <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-900">
             2026 Sezonu
           </span>
         </div>
 
         {/* Orta başlık */}
         <div className="relative z-10 px-10">
-          <h2 className="max-w-md text-4xl font-bold leading-tight text-balance text-white">
+          <h2 className="max-w-md text-balance text-4xl font-bold leading-tight text-white">
             Uçuşlar ve oteller, tek bir akıllı asistanda.
           </h2>
-          <p className="mt-4 max-w-sm text-pretty text-sm leading-relaxed text-brand-ice/80">
+          <p className="mt-4 max-w-sm text-pretty text-sm leading-relaxed text-white/80">
             En iyi fiyatları yakala, yolculuğunu planla ve dünyanın her yerinde kendini evinde
             hisset.
           </p>
         </div>
 
-        {/* Yüzen kartlar */}
+        {/* Yüzen kartlar — dolu beyaz, koyu yazı (fotoğrafın üstünde crisp okunur). */}
         <div className="relative z-10 space-y-4 p-10">
           {/* Uçuş kartı */}
-          <div className="rounded-2xl border border-white/15 bg-white/10 p-5 backdrop-blur-md">
+          <div className="rounded-2xl bg-white p-5 shadow-soft-lg">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-medium text-white/70">
+              <div className="flex items-center gap-2 text-xs font-medium text-slate-500">
                 <Plane className="h-4 w-4" />
                 Uçuş · TK1980
               </div>
-              <span className="rounded-full bg-brand-teal/25 px-2.5 py-0.5 text-xs font-semibold text-white">
+              <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                 %32 indirim
               </span>
             </div>
             <div className="mt-4 flex items-center justify-between">
               <div>
-                <p className="text-2xl font-bold text-white">IST</p>
-                <p className="text-xs text-white/70">09:40</p>
+                <p className="text-2xl font-bold text-slate-900">IST</p>
+                <p className="text-xs text-slate-500">09:40</p>
               </div>
               <div className="flex flex-1 flex-col items-center px-4">
                 <div className="flex w-full items-center gap-1">
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
-                  <span className="h-px flex-1 bg-white/40" />
-                  <Plane className="h-3.5 w-3.5 text-white/70" />
-                  <span className="h-px flex-1 bg-white/40" />
-                  <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
+                  <span className="h-px flex-1 bg-slate-200" />
+                  <Plane className="h-3.5 w-3.5 text-slate-400" />
+                  <span className="h-px flex-1 bg-slate-200" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-slate-300" />
                 </div>
-                <p className="mt-1 text-[11px] text-white/60">3s 25dk</p>
+                <p className="mt-1 text-[11px] text-slate-400">3s 25dk</p>
               </div>
               <div className="text-right">
-                <p className="text-2xl font-bold text-white">CDG</p>
-                <p className="text-xs text-white/70">12:05</p>
+                <p className="text-2xl font-bold text-slate-900">CDG</p>
+                <p className="text-xs text-slate-500">12:05</p>
               </div>
             </div>
           </div>
 
           {/* Otel kartı */}
-          <div className="flex items-center gap-4 rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur-md">
+          <div className="flex items-center gap-4 rounded-2xl bg-white p-4 shadow-soft-lg">
             <img
               src={hotelImage}
               alt="Okyanus manzaralı lüks otel süiti"
               className="h-16 w-16 flex-shrink-0 rounded-xl object-cover"
             />
             <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-1 text-xs text-white/70">
+              <div className="flex items-center gap-1 text-xs text-slate-500">
                 <MapPin className="h-3 w-3" />
                 Paris, Fransa
               </div>
-              <p className="mt-0.5 truncate text-sm font-semibold text-white">Le Marais Suites</p>
-              <div className="mt-1 flex items-center gap-3 text-xs text-white/70">
+              <p className="mt-0.5 truncate text-sm font-semibold text-slate-900">Le Marais Suites</p>
+              <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
                 <span className="flex items-center gap-1">
-                  <Star className="h-3 w-3 fill-brand-teal text-brand-teal" />
+                  <Star className="h-3 w-3 fill-warning text-warning" />
                   4.9
                 </span>
                 <span className="flex items-center gap-1">
@@ -244,7 +198,7 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
             {/* Dekoratif vitrin öğesi — işlevi yok, klavye/ekran okuyucuya kapalı. */}
             <span
               aria-hidden="true"
-              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-white text-brand-navy transition-transform hover:scale-105"
+              className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-brand-orange text-brand-navy transition-transform hover:scale-105"
             >
               <ArrowRight className="h-4 w-4" />
             </span>
@@ -252,71 +206,28 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
         </div>
       </div>
 
-      {/* Sağ yarı — giriş/kayıt kartı, arkasında animasyonlu "mercury blob" alanı.
-          Register modunda sola kayar (görselle yer değiştirir). */}
+      {/* Sağ yarı — giriş/kayıt kartı (düz beyaz yüzey). Register modunda sola kayar. */}
       <div
         className={cn(
-          'relative w-full lg:w-1/2 flex items-center justify-center px-4 py-8 overflow-hidden transition-transform duration-700 ease-in-out',
+          'relative flex w-full items-center justify-center overflow-hidden px-4 py-8 transition-transform duration-700 ease-in-out lg:w-1/2',
           isRegister ? 'lg:-translate-x-full' : 'lg:translate-x-0',
         )}
       >
-        <div className="absolute inset-0 gooey-filter">
-          {blobsData.map((data, index) => (
-            <div
-              key={index}
-              ref={(el) => {
-                blobRefs.current[index] = el
-              }}
-              className={cn(
-                'mercury-blob',
-                index % 3 === 0
-                  ? 'mercury-blob--a'
-                  : index % 3 === 1
-                    ? 'mercury-blob--b'
-                    : 'mercury-blob--c',
-              )}
-              style={{
-                width: `${data.size}px`,
-                height: `${data.size}px`,
-                left: `${data.left}%`,
-                top: `${data.top}%`,
-                animationDelay: `${data.animationDelay}s`,
-                animationDuration: `${data.animationDuration}s`,
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl relative z-10">
-          <div className="flex justify-center mb-6">
-            <div className="relative">
-              {/* Halo, Layout/LandingPage ile aynı reçete: lacivert "Pax" koyu cam
-                  kartta okunur kalsın. Buradaki eski iki katmanlı renkli bloom
-                  (blur-3xl gradient + blur-2xl beyaz) dekoratifti, kaldırıldı. */}
-              <span
-                aria-hidden="true"
-                className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
-              />
-              <img
-                src={logoSrc}
-                alt="PaxAssist Logo"
-                className="relative z-10 h-40 lg:h-60 w-auto object-contain"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement
-                  target.style.display = 'none'
-                }}
-              />
-            </div>
+        <div className="relative z-10 w-full max-w-md rounded-3xl border border-border bg-card p-8 shadow-soft-lg">
+          <div className="mb-6 flex justify-center">
+            <Logo height={44} />
           </div>
 
           {/* Mod'a göre değişen içerik — geçişte fade animasyonu. */}
           <div key={mode} className="auth-panel-anim">
-            <div className="space-y-2 text-center mb-8">
-              <h1 className="font-science-gothic text-3xl font-extralight tracking-tight bg-gradient-to-r from-brand-ice via-brand-teal to-brand-iris bg-clip-text text-transparent">
-            
+            <div className="mb-8 space-y-1.5 text-center">
+              <h1 className="text-2xl font-bold tracking-tight text-foreground">
+                {isRegister ? 'Hesap oluştur' : 'Tekrar hoş geldin'}
               </h1>
-              <p className="font-science-gothic text-sm font-light text-brand-ice/80">
-             
+              <p className="text-sm text-muted-foreground">
+                {isRegister
+                  ? 'Birkaç saniyede ücretsiz hesabını aç.'
+                  : 'Seyahat asistanına giriş yap.'}
               </p>
             </div>
 
@@ -352,26 +263,15 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                 />
 
                 {shownError && (
-                  // red-500 (#EF4444) = açık temanın --destructive'inin TAM karşılığı —
-                  // bugünkü görünüm birebir korunur. `text-destructive` artık kullanılamaz:
-                  // bu sayfa lacivert ama <html>'den `.dark`ı miras alıyor (app/theme.tsx),
-                  // koyu --destructive ise #7F1D1D'ye düşüp lacivert üstünde okunmuyor.
-                  // Kabuk içindeki aynı sorunun yerleşik çözümü: text-red-400.
-                  <p role="alert" className="text-xs text-red-500">
+                  // Sayfa artık AÇIK yüzeyde (bg-card): tema-duyarlı okunur hata rengi.
+                  <p role="alert" className="text-xs text-destructive-emphasis">
                     {shownError}
                   </p>
                 )}
 
-                <div className="relative gooey-filter mt-12">
-                  <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submitting ? 'Kayıt yapılıyor…' : 'Kayıt Ol'}
-                  </button>
-                </div>
+                <Button type="submit" variant="cta" size="xl" disabled={submitting} className="w-full">
+                  {submitting ? 'Kayıt yapılıyor…' : 'Kayıt Ol'}
+                </Button>
               </form>
             ) : (
               <form onSubmit={handleLogin} className="space-y-8">
@@ -395,46 +295,40 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
                   <button
                     type="button"
                     onClick={onForgotPassword}
-                    className="text-xs text-brand-ice/70 hover:text-white transition"
+                    className="text-xs text-muted-foreground transition hover:text-foreground"
                   >
                     Şifremi unuttum?
                   </button>
                 </div>
 
                 {shownError && (
-                  // red-500: yukarıdaki kayıt formundaki hata satırıyla aynı gerekçe.
-                  <p role="alert" className="text-xs text-red-500">
+                  <p role="alert" className="text-xs text-destructive-emphasis">
                     {shownError}
                   </p>
                 )}
 
-                <div className="relative gooey-filter mt-12">
-                  <div className="absolute top-1/2 left-1/2 w-full h-full bg-gradient-to-r from-brand-blue to-brand-teal transform -translate-x-1/2 -translate-y-1/2 rounded-full transition-all duration-500 hover:scale-105 opacity-60"></div>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="relative z-10 w-full py-4 px-4 bg-white text-brand-navy font-bold tracking-widest uppercase text-sm hover:tracking-[0.3em] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {submitting ? 'Giriş yapılıyor…' : 'Giriş Yap'}
-                  </button>
-                </div>
+                <Button type="submit" variant="cta" size="xl" disabled={submitting} className="w-full">
+                  {submitting ? 'Giriş yapılıyor…' : 'Giriş Yap'}
+                </Button>
 
-                <button
+                <Button
                   type="button"
+                  variant="secondary"
+                  size="xl"
                   onClick={onGuestContinue}
-                  className="w-full flex items-center justify-center py-3 px-4 bg-white/5 hover:bg-white/10 rounded-xl text-brand-ice font-semibold border border-brand-ice/30 hover:border-brand-teal focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal transition-all duration-300"
+                  className="w-full"
                 >
                   Misafir olarak devam et
-                </button>
+                </Button>
               </form>
             )}
 
-            <p className="text-center text-xs text-brand-ice/70 mt-6">
+            <p className="mt-6 text-center text-xs text-muted-foreground">
               {isRegister ? 'Zaten hesabın var mı? ' : 'Hesabın yok mu? '}
               <button
                 type="button"
                 onClick={() => switchMode(isRegister ? 'login' : 'register')}
-                className="font-semibold bg-gradient-to-r from-brand-teal to-brand-iris bg-clip-text text-transparent hover:from-brand-teal/80 hover:to-brand-iris/80 transition"
+                className="font-semibold text-primary transition hover:underline"
               >
                 {isRegister ? 'Giriş yap' : 'Kayıt ol'}
               </button>

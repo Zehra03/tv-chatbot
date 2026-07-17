@@ -34,10 +34,10 @@ export function ThemeToggle({ className }: { className?: string }) {
           title={label}
           onClick={() => setTheme(value)}
           className={cn(
-            'rounded-full p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal',
+            'rounded-full p-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
             theme === value
-              ? 'bg-brand-teal/20 text-current'
-              : 'opacity-60 hover:opacity-100',
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground hover:text-foreground',
           )}
         >
           <Icon className="h-4 w-4" aria-hidden />

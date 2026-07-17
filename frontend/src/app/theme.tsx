@@ -27,19 +27,18 @@ export type ResolvedTheme = 'light' | 'dark'
 const STORAGE_KEY = 'pax-theme'
 
 /**
- * Faz 0 varsayılanı KOYU — 'system' DEĞİL.
+ * Varsayılan AÇIK — düz (flat) marka kimliği açık-tema öncelikli.
  *
- * Hedef varsayılan 'system'. Sayfalar artık token'lara taşındı; ama Login/Landing
- * hâlâ kendi koyu marka yüzeylerinde ve açık tema yeni oturuyor. Varsayılanı
- * çevirmeden önce açık temayı gerçek kullanımda görmek istiyoruz.
+ * Uygulama artık temiz beyaz yüzeylerde açılıyor (Booking/Stripe dili); koyu tema
+ * desteklenen ikincil seçenek olarak toggle'da kalır. Eski cam/koyu kimlik kaldırıldı.
  *
  * DİKKAT: index.html'deki FOUC script'i bu değeri AYNALAR — ikisi BİRLİKTE değişir.
  */
-const DEFAULT_THEME: Theme = 'dark'
+const DEFAULT_THEME: Theme = 'light'
 
 /** Adres çubuğu/işletim sistemi çubuğu rengi (index.html'deki meta[name=theme-color]). */
 const THEME_COLOR: Record<ResolvedTheme, string> = {
-  dark: '#0B234A', // brand-navy — gece uçuşu tabanı
+  dark: '#00243F', // brand.navy — derin lacivert kanvas (yeni palet)
   light: '#FFFFFF',
 }
 

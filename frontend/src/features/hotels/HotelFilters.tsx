@@ -70,7 +70,7 @@ export function HotelFilters({ boardTypes }: { boardTypes: string[] }) {
         type="button"
         variant="ghost"
         size="sm"
-        className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
+        className="text-muted-foreground hover:bg-muted hover:text-foreground"
         onClick={() => dispatch(hotelFiltersReset())}
       >
         Temizle

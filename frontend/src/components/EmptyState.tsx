@@ -30,7 +30,7 @@ export function EmptyState({ children, icon, title, tone = 'light', className }:
           aria-hidden="true"
           className={cn(
             'mb-1 flex h-12 w-12 items-center justify-center rounded-full border',
-            dark ? 'border-foreground/15 bg-foreground/10 text-muted-foreground' : 'bg-muted/60 text-muted-foreground',
+            dark ? 'border-border bg-muted text-muted-foreground' : 'bg-muted/60 text-muted-foreground',
           )}
         >
           {icon}

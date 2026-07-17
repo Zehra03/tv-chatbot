@@ -11,7 +11,7 @@ export function Skeleton({ className, ...props }: HTMLAttributes<HTMLDivElement>
   return (
     <div
       className={cn(
-        'animate-shimmer rounded-2xl border border-foreground/10 bg-gradient-to-r from-foreground/5 via-foreground/15 to-foreground/5 bg-[length:200%_100%] motion-reduce:animate-none',
+        'animate-shimmer rounded-2xl border border-border bg-gradient-to-r from-muted via-muted/60 to-muted bg-[length:200%_100%] motion-reduce:animate-none',
         className,
       )}
       {...props}

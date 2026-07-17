@@ -1,9 +1,9 @@
 /* GooeyNav — pill navigasyon (reactbits.dev uyarlaması). Parçacık/goo efekti
    kaldırıldı; aktif öğeyi saran pill scale+opacity geçişiyle belirir.
 
-   Renkler token'dan (index.css) gelir, sabit `white`/`brand.ice` DEĞİL: bu dosya
+   Renkler token'dan (index.css) gelir, sabit `white`/`brand.cream` DEĞİL: bu dosya
    .css olduğu için Tailwind sınıflarıyla değil doğrudan `hsl(var(--token))` ile
-   yazılır. Koyu temada --foreground beyaz, --muted-foreground ise brand-ice/70'in
+   yazılır. Koyu temada --foreground beyaz, --muted-foreground ise brand-cream/70'in
    navy üzerindeki karşılığıdır — yani gece uçuşu görünümü korunur; açık temada
    aynı roller okunur koyu tonlara döner. */
 
@@ -50,17 +50,17 @@
 }
 
 .gooey-nav-container nav ul li:focus-within:has(:focus-visible) {
-  box-shadow: 0 0 0.5px 1.5px theme(colors.brand.teal);
+  box-shadow: 0 0 0.5px 1.5px hsl(var(--ring));
 }
 
-/* Aktif pill — kapsül, scale ile yumuşak belirme. Zıt yüzey: koyu temada beyaz
-   pill + lacivert yazı, açık temada lacivert pill + beyaz yazı. */
+/* Aktif pill — mavi (primary) kapsül + beyaz yazı, scale ile yumuşak belirme.
+   Mavi = aktif navigasyon (brief); iki temada da okunur. */
 .gooey-nav-container nav ul li::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 100vw;
-  background: hsl(var(--foreground));
+  background: hsl(var(--primary));
   opacity: 0;
   transform: scale(0);
   transition: all 0.3s ease;
@@ -68,7 +68,7 @@
 }
 
 .gooey-nav-container nav ul li.active {
-  color: hsl(var(--background));
+  color: hsl(var(--primary-foreground));
   text-shadow: none;
 }
 
