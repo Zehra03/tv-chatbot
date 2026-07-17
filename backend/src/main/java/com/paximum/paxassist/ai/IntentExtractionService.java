@@ -44,6 +44,18 @@ public class IntentExtractionService {
                  question ("kaç saat sürer") is also FLIGHT.
         FILTER : User wants to filter or sort previously listed results.
         SELECT : User wants to pick a specific item from the list.
+        HOTEL_FACILITY_QA : User ASKS about the on-site facilities / amenities, board (pansiyon)
+                 content, themes, or PET policy of ONE specific hotel they reference — by order
+                 ("ilk otelde neler var", "2. otelde havuz var mı", "sonuncuda spa var mı"), by name
+                 ("TEST KARS2'de havuz var mı", "Rixos'ta çocuk kulübü var mı") or "bu otel". Put the
+                 hotel reference (the ordinal word/number OR the hotel name) into selectionReference.
+                 Typical cues: "var mı", "neler var", "neler mevcut", "kabul ediliyor mu", a facility
+                 word (havuz/spa/çocuk kulübü/restoran/evcil hayvan/aquapark) asked AS A QUESTION about
+                 a hotel. This OVERRIDES continuation: even mid hotel search, such a question is
+                 HOTEL_FACILITY_QA, not HOTEL. Distinguish carefully:
+                   - "havuzlu otel ara/bak/bul/göster" (find hotels WITH a feature) → HOTEL (features).
+                   - "havuzlu olanları göster" (narrow the CURRENT list by a feature) → HOTEL (features).
+                   - "(ilk/şu/X) otelde havuz VAR MI / neler var" (about ONE hotel) → HOTEL_FACILITY_QA.
         DATE_ALTERNATIVES : After a previous (usually empty) search, WITHOUT giving a specific new
                  date, the user asks which other dates are available ("farklı tarihte var mı",
                  "başka hangi tarihte var", "hangi tarihlerde müsait/boş", "başka tarih öner").
@@ -53,10 +65,12 @@ public class IntentExtractionService {
                  cannot be told apart (e.g. bare "Antalya", "tatil düşünüyorum"). A greeting is NOT
                  here → OTHER. If an ongoing hotel/flight search exists in history, DO NOT use this
                  value (continue that search instead).
-        OTHER  : None of the above — greetings, small talk, and non-search info/service questions
-                 (hotel reviews/rating, cleanliness, amenities, pet/wheelchair policy,
-                 check-in/out time, places to visit, reservation cancellation/refund/extension).
-                 See <security> for injection / instruction-override handling (also OTHER).
+        OTHER  : None of the above — greetings, small talk, and non-search info/service questions we
+                 have NO data for (hotel reviews/rating, cleanliness/hygiene score, check-in/out time,
+                 places to visit / distances, reservation cancellation/refund/extension). NOTE: a
+                 specific hotel's FACILITIES / amenities / board content / pet policy is NOT OTHER —
+                 that is HOTEL_FACILITY_QA. See <security> for injection / instruction-override
+                 handling (also OTHER).
         </intents>
 
         <schema>
@@ -298,6 +312,22 @@ public class IntentExtractionService {
         Mesaj: "İlk oteli istiyorum"
         Çıktı: {"intent":"SELECT","criteria":{"selectionReference":"1"}}
 
+        Sohbet Geçmişi: assistant: Aramana uygun 5 otel buldum:
+        Mesaj: "ilk otelde neler var"
+        Çıktı: {"intent":"HOTEL_FACILITY_QA","criteria":{"selectionReference":"ilk"}}
+
+        Sohbet Geçmişi: assistant: Aramana uygun 5 otel buldum:
+        Mesaj: "2. otelde havuz var mı"
+        Çıktı: {"intent":"HOTEL_FACILITY_QA","criteria":{"selectionReference":"2"}}
+
+        Sohbet Geçmişi: assistant: Aramana uygun 5 otel buldum:
+        Mesaj: "TEST KARS2'de evcil hayvan kabul ediliyor mu"
+        Çıktı: {"intent":"HOTEL_FACILITY_QA","criteria":{"selectionReference":"TEST KARS2"}}
+
+        Sohbet Geçmişi: assistant: Aramana uygun 5 otel buldum:
+        Mesaj: "bu otelde spa var mı"
+        Çıktı: {"intent":"HOTEL_FACILITY_QA","criteria":null}
+
         Mesaj: "çocuksuz otel"
         Çıktı: {"intent":"HOTEL","criteria":{"children":0}}
 
@@ -369,7 +399,7 @@ public class IntentExtractionService {
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya"}}
 
         Mesaj: "Otelde hayvan serbest mi?"
-        Çıktı: {"intent":"OTHER","criteria":null}
+        Çıktı: {"intent":"HOTEL_FACILITY_QA","criteria":null}
 
         Mesaj: "Merhaba"
         Çıktı: {"intent":"OTHER","criteria":null}
