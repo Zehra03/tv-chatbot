@@ -127,6 +127,8 @@ public class IntentExtractionService {
           zero count ("-2 yetişkin", "0 yetişkin"), extract it exactly as given
           (adults: -2 / adults: 0). Do not fix the sign, do not omit it, do not substitute a
           "reasonable" number. Validation and correction happen downstream, not here.
+          This applies to dates too: if the user states an impossible date ("32 temmuz", "30 şubat"),
+          do NOT leave it null — extract it literally as YYYY-MM-DD (e.g. "2026-07-32", "2026-02-30").
         - CONTINUATION (stickiness): if the history has an ongoing hotel/flight search AND the user
           is only answering a missing slot of THAT SAME search (nights, date, city, guest count, a
           feature), keep the SAME intent (do not drop to OTHER) and write the new value.
