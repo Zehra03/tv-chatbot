@@ -15,6 +15,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.math.BigDecimal;
+import java.lang.reflect.RecordComponent;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -320,13 +322,16 @@ class HotelFacilityQaHandlerTest {
         verify(detailsService, never()).getFeatureDetails(anyString(), any(), any());
     }
 
-    /** Builds a SlotCriteria carrying only selectionReference (all 26 other slots null). */
+    /** Builds a SlotCriteria carrying only selectionReference (all other slots null). */
     private static SlotCriteria sel(String reference) {
-        return new SlotCriteria(
-                null, null, null, null, null, null, null, null, null, null, // hotel (10)
-                null, null, null, null, null, null, null, null, null,        // flight (9)
-                null, null, null, null, null,                                 // shared (5)
-                null, null,                                                   // filter/sort (2)
-                reference);                                                   // selectionReference
+        try {
+            RecordComponent[] components = SlotCriteria.class.getRecordComponents();
+            Object[] args = new Object[components.length];
+            args[components.length - 1] = reference;
+            Class<?>[] parameterTypes = Arrays.stream(components).map(RecordComponent::getType).toArray(Class[]::new);
+            return SlotCriteria.class.getDeclaredConstructor(parameterTypes).newInstance(args);
+        } catch (ReflectiveOperationException ex) {
+            throw new AssertionError("Could not create SlotCriteria for selection reference", ex);
+        }
     }
 }
