@@ -1,6 +1,7 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,10 +10,9 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,7 +20,9 @@ import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paximum.paxassist.ai.IntentType;
 import com.paximum.paxassist.ai.SlotCriteria;
 import com.paximum.paxassist.auth.service.GreetingNameService;
@@ -31,15 +33,17 @@ import com.paximum.paxassist.hotel.HotelDetailsService;
 import com.paximum.paxassist.hotel.HotelProduct;
 import com.paximum.paxassist.hotel.dto.HotelFeatureDetails;
 import com.paximum.paxassist.hotel.dto.HotelFeaturesDto;
+import com.paximum.paxassist.hotel.facility.FacilityMappingService;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.validator.ValidationOrchestrator;
 
 /**
- * Unit tests for {@link HotelFacilityQaHandler}'s deterministic core: resolving which hotel the user
- * means (ordinal / name / ambiguous / no results) and calling the detail service with the right
- * id + provider + board. The LLM + validator are mocked (the validator is made to throw so the
- * handler's fail-open path returns the generated answer verbatim).
+ * Unit tests for {@link HotelFacilityQaHandler}: resolving which hotel is meant (ordinal / name /
+ * price / ambiguous), the stale-pending guard, name-not-in-shown-list distinctions, and the bulk
+ * ("hepsinde …") per-hotel answer. A REAL {@link FacilityMappingService} (loads the classpath
+ * mapping) backs keyword/group detection; the LLM + validator are mocked, with the validator forced
+ * to throw so the fail-open path returns the generated answer verbatim.
  */
 class HotelFacilityQaHandlerTest {
 
@@ -55,6 +59,13 @@ class HotelFacilityQaHandlerTest {
     private static final HotelProduct HOTEL_B =
             new HotelProduct("B", "TEST KARS2", "Antalya", 5, new BigDecimal("200"), "EUR",
                     "HB", true, null, List.of(), "offer-b", 7);
+    /** Only ever in the raw (unfiltered) list — used for the "named but filtered out" case. */
+    private static final HotelProduct HOTEL_C =
+            new HotelProduct("C", "melihotel kemer", "Antalya", 4, new BigDecimal("300"), "EUR",
+                    "BB", true, null, List.of(), "offer-c", 1);
+
+    private static final HotelFeatureDetails EMPTY_DETAILS =
+            new HotelFeatureDetails(new HotelFeaturesDto(false, List.of()), List.of(), List.of());
 
     @BeforeEach
     void setUp() {
@@ -62,13 +73,14 @@ class HotelFacilityQaHandlerTest {
         chatService = mock(ChatService.class);
         validator = mock(ValidationOrchestrator.class);
         greetingNameService = mock(GreetingNameService.class);
-        handler = new HotelFacilityQaHandler(detailsService, chatService, validator, greetingNameService);
+        handler = new HotelFacilityQaHandler(detailsService, chatService, validator, greetingNameService,
+                new FacilityMappingService(new ObjectMapper()));
 
         when(greetingNameService.firstNameOf(nullable(Long.class))).thenReturn(Optional.empty());
         when(detailsService.getFeatureDetails(anyString(), nullable(Integer.class), nullable(String.class)))
-                .thenReturn(new HotelFeatureDetails(new HotelFeaturesDto(false, List.of()), List.of(), List.of()));
+                .thenReturn(EMPTY_DETAILS);
         when(chatService.chat(anyString(), nullable(String.class))).thenReturn(new AiReply("stub answer"));
-        // Force the fail-open path so the handler returns the generated answer without constructing a ValidationOutcome.
+        // Force the fail-open path so the handler returns the generated answer without a ValidationOutcome.
         when(validator.validate(nullable(String.class), anyString(), anyString(), anyString(), anyInt()))
                 .thenThrow(new RuntimeException("validator off in test"));
     }
@@ -118,6 +130,13 @@ class HotelFacilityQaHandlerTest {
     }
 
     @Test
+    void priceReferenceResolvesAgainstTheShownList() {
+        // "en pahalı" must pick the most expensive of the SHOWN cards (B=200 > A=100), not some raw list.
+        handler.handle(context(List.of(HOTEL_A, HOTEL_B), null, "en pahalı olanında havuz var mı"));
+        verify(detailsService).getFeatureDetails("B", 7, "HB");
+    }
+
+    @Test
     void nonHotelResultsAreRejected() {
         OrchestrationResult r = handler.handle(context(List.of("a flight card"), "ilk"));
         assertTrue(r.reply().contains("yalnızca oteller"));
@@ -125,35 +144,133 @@ class HotelFacilityQaHandlerTest {
     }
 
     @Test
-    void unresolvedReferenceRemembersQuestionForResume() {
-        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), null, "hangisinde spa var");
+    void unresolvedFreshQuestionRemembersItForResume() {
+        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), null, "hangisinde spa var mı");
         handler.handle(ctx);
-        // The original question is stored so the next "1" answer can resume it.
-        assertEquals("hangisinde spa var", ctx.session().getPendingFacilityQuestion());
+        assertEquals("hangisinde spa var mı", ctx.session().getPendingFacilityQuestion());
     }
 
     @Test
     void resumeAnswerUsesPendingQuestionAndClearsIt() {
         OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), "1", "1");
         ctx.session().setPendingFacilityQuestion("havuz var mı"); // asked a turn earlier
-        ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
 
-        handler.handle(ctx);
+        OrchestrationResult r = handler.handle(ctx);
 
         verify(detailsService).getFeatureDetails("A", 1, "ALL INCLUSIVE");
-        verify(chatService).chat(prompt.capture(), nullable(String.class));
-        assertTrue(prompt.getValue().contains("havuz var mı"),
-                "answer must be grounded on the ORIGINAL question, not the bare '1'");
+        // A specific facility is answered deterministically (no LLM), grounded on the PENDING "havuz"
+        // question — not the bare "1".
+        assertTrue(r.reply().toLowerCase().contains("havuz"), "must answer the pending havuz question");
+        verify(chatService, never()).chat(anyString(), nullable(String.class));
         assertNull(ctx.session().getPendingFacilityQuestion(), "pending cleared once answered");
     }
 
     @Test
-    void bulkQuestionGetsGracefulMessageNotALoop() {
+    void freshQuestionOverridesStalePendingSoWrongFacilityIsNotAnswered() {
+        // Regression: an earlier PET question left pending; a NEW "havuz" question must answer HAVUZ,
+        // resolved against the shown list (B=en pahalı), not the stale pet question.
+        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), null, "en pahalı olanında havuz var mı");
+        ctx.session().setPendingFacilityQuestion("hepsinde evcil hayvan var mı");
+
+        OrchestrationResult r = handler.handle(ctx);
+
+        verify(detailsService).getFeatureDetails("B", 7, "HB"); // en pahalı of the shown list
+        assertTrue(r.reply().toLowerCase().contains("havuz"), "must answer the CURRENT havuz question");
+        assertFalse(r.reply().toLowerCase().contains("evcil hayvan"), "stale pet question must be discarded");
+        assertNull(ctx.session().getPendingFacilityQuestion());
+    }
+
+    @Test
+    void specificFacilityIsAnsweredDeterministicallyWithoutLlm() {
+        when(detailsService.getFeatureDetails(anyString(), nullable(Integer.class), nullable(String.class)))
+                .thenReturn(new HotelFeatureDetails(new HotelFeaturesDto(false, List.of("pool")), List.of(), List.of()));
+
+        OrchestrationResult r = handler.handle(context(List.of(HOTEL_A, HOTEL_B), "ilk", "ilk otelde havuz var mı"));
+
+        assertTrue(r.reply().contains("Evet") && r.reply().toLowerCase().contains("havuz"),
+                "present facility → confident 'var', no model call");
+        verify(chatService, never()).chat(anyString(), nullable(String.class));
+    }
+
+    @Test
+    void openQuestionUsesLlmWithReferenceStripped() {
+        // "neler var" has no specific facility group → LLM path, but the relative reference is removed
+        // so the model never tries to re-rank by price.
+        ArgumentCaptor<String> prompt = ArgumentCaptor.forClass(String.class);
+        handler.handle(context(List.of(HOTEL_A, HOTEL_B), null, "en pahalı olanında neler var"));
+        verify(chatService).chat(prompt.capture(), nullable(String.class));
+        assertFalse(prompt.getValue().contains("en pahalı"), "relative reference must be stripped for the LLM");
+    }
+
+    @Test
+    void meaninglessAnswerKeepsPendingAndDoesNotResolve() {
+        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), null, "evet");
+        ctx.session().setPendingFacilityQuestion("havuz var mı");
+
+        OrchestrationResult r = handler.handle(ctx);
+
+        assertEquals("havuz var mı", ctx.session().getPendingFacilityQuestion(),
+                "a meaningless 'evet' must not wipe the pending question");
+        assertTrue(r.reply().contains("Hangi otel"));
+        verify(detailsService, never()).getFeatureDetails(anyString(), any(), any());
+    }
+
+    @Test
+    void namedHotelFilteredOutOffersToDropFilter() {
+        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), "melihotel kemer",
+                "melihotel kemer'de havuz var mı");
+        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_B, HOTEL_C)); // present in raw, filtered out
+
+        OrchestrationResult r = handler.handle(ctx);
+
+        assertTrue(r.reply().contains("filtrelenmiş listede yok"));
+        verify(detailsService, never()).getFeatureDetails(anyString(), any(), any());
+    }
+
+    @Test
+    void namedHotelUnknownSaysNotFound() {
+        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), "zzz otel", "zzz otel'de havuz var mı");
+        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_B));
+
+        OrchestrationResult r = handler.handle(ctx);
+
+        assertTrue(r.reply().contains("bulamadım"));
+        verify(detailsService, never()).getFeatureDetails(anyString(), any(), any());
+    }
+
+    @Test
+    void bulkQuestionAnswersEachShownHotel() {
         OrchestrationResult r = handler.handle(
                 context(List.of(HOTEL_A, HOTEL_B), null, "hepsinde havuz var mı"));
-        assertTrue(r.reply().contains("tek tek"));
-        // Still remembered, so a following "1" resumes instead of restarting.
-        // (getFeatureDetails not called yet — no single hotel picked.)
+        assertTrue(r.reply().contains("Havuz"));
+        assertTrue(r.reply().contains("Rixos Premium"));
+        assertTrue(r.reply().contains("TEST KARS2"));
+        verify(detailsService, times(2)).getFeatureDetails(anyString(), any(), any());
+    }
+
+    @Test
+    void bulkPetQuestionChecksPetFriendlyFlagNotOtherFacilities() {
+        // petFriendly lives on its own field, NOT in otherFacilities — the bulk check must read the flag.
+        when(detailsService.getFeatureDetails(anyString(), nullable(Integer.class), nullable(String.class)))
+                .thenReturn(new HotelFeatureDetails(new HotelFeaturesDto(true, List.of()), List.of(), List.of()));
+
+        OrchestrationResult r = handler.handle(
+                context(List.of(HOTEL_A, HOTEL_B), null, "hepsinde evcil hayvan var mı"));
+
+        assertTrue(r.reply().contains("Evcil hayvan"));
+        // Both hotels are pet-friendly via the flag → "var", not "görünmüyor".
+        assertFalse(r.reply().contains("görünmüyor"), "pet flag true must read as var");
+    }
+
+    @Test
+    void bulkOverThresholdNudgesToFilter() {
+        List<Object> many = new java.util.ArrayList<>();
+        for (int i = 0; i < 12; i++) {
+            many.add(new HotelProduct("H" + i, "Hotel " + i, "Antalya", 5, new BigDecimal("100"), "EUR",
+                    "AI", true, null, List.of(), "off" + i, 1));
+        }
+        OrchestrationResult r = handler.handle(context(many, null, "hepsinde havuz var mı"));
+        assertTrue(r.reply().contains("çok uzun") || r.reply().contains("filtreleyelim"));
         verify(detailsService, never()).getFeatureDetails(anyString(), any(), any());
     }
 
