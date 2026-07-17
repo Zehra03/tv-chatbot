@@ -65,7 +65,7 @@ public class SelectHandler implements IntentHandler {
      */
     private Optional<OrchestrationResult> offerReturnChoice(OrchestrationContext context, Object selected) {
         ChatSession session = context.session();
-        if (session.getPendingOutboundLegId() != null || !RoundTripOptions.isRoundTrip(selected)) {
+        if (session.getPendingOutboundLegId() != null || !RoundTripOptions.isPairedCombination(selected)) {
             return Optional.empty();
         }
         String outboundLegId = ((FlightProduct) selected).getOutboundLegId();

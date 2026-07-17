@@ -22,12 +22,22 @@ final class RoundTripOptions {
     }
 
     /**
-     * True for a card that is a round trip (both legs), as opposed to a hotel or a one-way.
+     * True for a trip whose legs the provider tokens — and therefore sells — separately, so the
+     * outbound and the return are two real choices and the two-step flow has something to offer.
      *
-     * <p>Keyed on the return leg, not on a second booking token: when the provider sells a trip as
-     * one result, a single token buys both legs and there is no return token to look for.
+     * <p>Not simply "is a round trip": when the provider sells the whole trip as one result, a
+     * single token buys both legs and every card is already a complete trip. Asking such a user to
+     * "pick an outbound" would promise a second step that cannot exist — each card goes straight to
+     * the reservation, which is what its Seç button does.
      */
-    static boolean isRoundTrip(Object card) {
+    static boolean isPairedCombination(Object card) {
+        return card instanceof FlightProduct flight
+                && flight.getReturnDepartTime() != null
+                && flight.getReturnOfferId() != null;
+    }
+
+    /** True for a card that flies home — however the provider tokens it. Wording, not flow. */
+    static boolean hasReturnLeg(Object card) {
         return card instanceof FlightProduct flight && flight.getReturnDepartTime() != null;
     }
 
