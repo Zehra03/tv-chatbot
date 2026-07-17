@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { Hotel } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ActiveFilterChips } from '@/components/ActiveFilterChips'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
@@ -8,10 +9,12 @@ import { SearchHero } from '@/components/SearchHero'
 import { Skeleton } from '@/components/ui/skeleton'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
-import { useAppSelector } from '@/app/hooks'
+import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
+import { hotelFiltersChanged } from '@/features/ui/uiSlice'
+import { hotelFilterChips } from '@/features/ui/filterChips'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
 import { HotelFilters } from '@/features/hotels/HotelFilters'
 import { HotelList } from '@/features/hotels/HotelList'
@@ -28,6 +31,7 @@ import hotelHero from '@/assets/hotel/valeriia-bugaiova-_pPHgeHz1uk-unsplash.jpg
  * tarafında uygulanır.
  */
 export function HotelsPage() {
+  const dispatch = useAppDispatch()
   const chatCriteria = useAppSelector((s) => s.chat.accumulatedCriteria)
   const prefill = chatCriteria?.intent === 'hotel' ? chatCriteria.criteria : undefined
 
@@ -83,6 +87,18 @@ export function HotelsPage() {
     if (sort === 'stars-desc') list = [...list].sort((a, b) => b.stars - a.stars)
     return list
   }, [query.data, filters])
+
+  // Aktif filtre çipleri: kaldırma, filtreyi boşa çeken kısmi güncellemeyi dispatch eder —
+  // `visible` memo'su yeniden hesaplanır, arama tekrar tetiklenmez (filtreler istemci tarafında).
+  const chips = useMemo(
+    () =>
+      hotelFilterChips(filters).map((chip) => ({
+        key: chip.key,
+        label: chip.label,
+        onRemove: () => dispatch(hotelFiltersChanged(chip.clear)),
+      })),
+    [filters, dispatch],
+  )
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -264,6 +280,7 @@ export function HotelsPage() {
       {query.data && (
         <>
           <HotelFilters boardTypes={boardTypes} />
+          <ActiveFilterChips chips={chips} />
           <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
           <HotelList products={visible} criteria={criteria ?? undefined} />
         </>
