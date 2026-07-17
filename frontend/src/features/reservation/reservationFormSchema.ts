@@ -1,12 +1,23 @@
 import { z } from 'zod'
 import type { PreviewReservationCommand, TravellerInput } from '@/api'
 import type { ReservationDraft } from '@/features/reservation/reservationDraftSlice'
+import {
+  DEFAULT_COUNTRY_CODE,
+  findCountry,
+  isCountryCode,
+  normalizeNationalNumber,
+  nsnRange,
+} from '@/lib/countries'
 
 /**
  * Rezervasyon formu sınır validasyonu (docs/frontend-architecture.md §9,
  * CLAUDE.md: formlar Zod ile valide edilir). TourVisio her yolcu için ünvan (Bay/Bayan) ve uyruk
  * ZORUNLU ister; ayrıca yolcu SAYISI teklifin pax'ıyla (yetişkin+çocuk) eşleşmelidir — bu yüzden
  * satırlar aramadan önden doldurulur ve tip/ sayı sabittir. Sayısal alanlar formda string taşınır.
+ *
+ * Kurallar backend Bean Validation'ını (PreviewReservationCommand) birebir yansıtır: yaş↔tip
+ * tutarlılığı, uçuşta doğum tarihi + kimlik no. Sunucuda da kontrol edilir; buradaki kopya hatayı
+ * ALANIN yanında, istek gitmeden gösterir.
  */
 
 /** TourVisio ünvan kodu: 1 = Bay, 2 = Bayan. */
@@ -15,49 +26,238 @@ export const TITLE_OPTIONS = [
   { value: '2', label: 'Bayan' },
 ] as const
 
+/** Backend PreviewReservationCommand ile aynı sınırlar (ADULT 18+, CHILD 3-17, INFANT 0-2). */
+const ADULT_MIN_AGE = 18
+const INFANT_MAX_AGE = 2
+const MAX_AGE = 120
+
+/** DB sütun sınırları (passengers.first_name/last_name varchar(100), email varchar(254)). */
+const NAME_MAX = 50
+const EMAIL_MAX = 254
+
+/**
+ * Ad/soyad: harfle başlar; harf, boşluk, kesme ve tire içerebilir. \p{L}+\p{M} Türkçe ve diğer
+ * alfabelerdeki harfleri/aksanları kapsar — [A-Za-z] "Şeyma"yı reddederdi.
+ */
+const NAME_RE = /^\p{L}[\p{L}\p{M}\s'’.-]*$/u
+const NAME_MESSAGE = 'Yalnızca harf, boşluk ve - kısaltma işaretleri kullanın'
+
+const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** yyyy-MM-dd gerçek bir takvim günü mü? ('2025-02-31' Date ile 3 Mart'a kayar — onu da eler.) */
+function isRealDate(value: string): boolean {
+  if (!ISO_DATE_RE.test(value)) return false
+  const date = new Date(`${value}T00:00:00Z`)
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+}
+
+/** Doğum tarihinden bugünkü yaş (tam yıl). */
+export function ageFromBirthDate(value: string, today = new Date()): number {
+  const birth = new Date(`${value}T00:00:00Z`)
+  let age = today.getUTCFullYear() - birth.getUTCFullYear()
+  const monthDelta = today.getUTCMonth() - birth.getUTCMonth()
+  if (monthDelta < 0 || (monthDelta === 0 && today.getUTCDate() < birth.getUTCDate())) age -= 1
+  return age
+}
+
+/**
+ * T.C. kimlik numarası algoritması: 11 hane, ilk hane 0 olamaz, 10. hane
+ * ((tekler×7) − çiftler) mod 10, 11. hane ilk 10 hanenin toplamının mod 10'u.
+ * Yalnız TR uyruklu yolcuya uygulanır — yabancı yolcunun TCKN'si yoktur.
+ */
+export function isValidTcKimlikNo(value: string): boolean {
+  if (!/^\d{11}$/.test(value) || value[0] === '0') return false
+  const d = value.split('').map(Number)
+  const odds = d[0] + d[2] + d[4] + d[6] + d[8]
+  const evens = d[1] + d[3] + d[5] + d[7]
+  const tenth = (odds * 7 - evens) % 10
+  if (tenth !== d[9]) return false
+  const sumOfFirstTen = d.slice(0, 10).reduce((total, digit) => total + digit, 0)
+  return sumOfFirstTen % 10 === d[10]
+}
+
+const nameSchema = (label: string) =>
+  z
+    .string()
+    .trim()
+    .min(2, 'En az 2 karakter girin')
+    .max(NAME_MAX, `${label} en fazla ${NAME_MAX} karakter olabilir`)
+    .regex(NAME_RE, NAME_MESSAGE)
+
+/** Uyruk: gerçek bir ISO-3166 ülkesi olmalı — iki harfli her dizi (ör. 'ZZ') geçerli değil. */
 const nationalitySchema = z
   .string()
   .trim()
-  .regex(/^[A-Za-z]{2}$/, 'İki harfli ülke kodu girin (ör. TR)')
+  .min(1, 'Uyruk seçin')
+  .refine(isCountryCode, 'Listeden bir ülke seçin')
 
-export const passengerSchema = z
-  .object({
-    firstName: z.string().trim().min(2, 'En az 2 karakter girin'),
-    lastName: z.string().trim().min(2, 'En az 2 karakter girin'),
-    passengerType: z.enum(['adult', 'child']),
-    // Ünvan zorunlu (TourVisio setReservationInfo şartı).
-    title: z.enum(['1', '2']),
-    age: z
-      .string()
-      .optional()
-      .refine((v) => !v || (/^\d{1,3}$/.test(v) && Number(v) <= 120), 'Geçerli bir yaş girin (0–120)'),
-    // Uyruk zorunlu (TourVisio şartı); aramadan önden doldurulur.
-    nationality: nationalitySchema,
-    // Doğum tarihi (yyyy-MM-dd) ve TC kimlik no — uçuş biletlemesi için ZORUNLU (uçuşa özel kontrol
-    // validatePreviewCommand'de). Otelde opsiyonel; format girildiyse doğrulanır.
-    birthDate: z
-      .string()
-      .optional()
-      .refine((v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v), 'Geçerli bir tarih girin'),
-    identityNumber: z
-      .string()
-      .optional()
-      .refine((v) => !v || /^\d{11}$/.test(v), 'TC kimlik no 11 haneli olmalı'),
-  })
-  .superRefine((p, ctx) => {
-    if (p.passengerType === 'child' && !p.age) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['age'], message: 'Çocuk için yaş gerekli' })
-    }
-  })
+export const makePassengerSchema = (productType: ReservationDraft['productType']) =>
+  z
+    .object({
+      firstName: nameSchema('Ad'),
+      lastName: nameSchema('Soyad'),
+      passengerType: z.enum(['adult', 'child']),
+      // Ünvan zorunlu (TourVisio setReservationInfo şartı).
+      title: z.enum(['1', '2']),
+      age: z
+        .string()
+        .optional()
+        .refine(
+          (v) => !v || (/^\d{1,3}$/.test(v) && Number(v) <= MAX_AGE),
+          `Geçerli bir yaş girin (0–${MAX_AGE})`,
+        ),
+      // Uyruk zorunlu (TourVisio şartı); aramadan önden doldurulur.
+      nationality: nationalitySchema,
+      // Doğum tarihi (yyyy-MM-dd) ve TC kimlik no — uçuş biletlemesi için ZORUNLU, otelde opsiyonel.
+      birthDate: z
+        .string()
+        .optional()
+        .refine((v) => !v || isRealDate(v), 'Geçerli bir tarih girin'),
+      identityNumber: z.string().optional(),
+    })
+    .superRefine((p, ctx) => {
+      const age = p.age?.trim() ? Number(p.age) : null
 
-export const reservationFormSchema = z.object({
-  passengers: z.array(passengerSchema).min(1, 'En az bir yolcu girin'),
-  email: z.string().trim().email('Geçerli bir e-posta girin'),
-  phone: z
-    .string()
-    .trim()
-    .regex(/^\+?[0-9 ()-]{7,20}$/, 'Geçerli bir telefon girin'),
-})
+      // Yaş ↔ tip tutarlılığı — backend'in isTravellerAgeConsistentWithType kuralı.
+      if (p.passengerType === 'child') {
+        if (age === null) {
+          ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['age'], message: 'Çocuk için yaş gerekli' })
+        } else if (age <= INFANT_MAX_AGE || age >= ADULT_MIN_AGE) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['age'],
+            message: `Çocuk yaşı ${INFANT_MAX_AGE + 1}–${ADULT_MIN_AGE - 1} arasında olmalı`,
+          })
+        }
+      } else if (age !== null && age < ADULT_MIN_AGE) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['age'],
+          message: `Yetişkin yolcu en az ${ADULT_MIN_AGE} yaşında olmalı`,
+        })
+      }
+
+      if (p.birthDate && isRealDate(p.birthDate)) {
+        const derived = ageFromBirthDate(p.birthDate)
+        if (derived < 0) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['birthDate'],
+            message: 'Doğum tarihi gelecekte olamaz',
+          })
+        } else if (derived > MAX_AGE) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['birthDate'],
+            message: 'Doğum tarihini kontrol edin',
+          })
+          // Yaş da girilmişse ikisi çelişmemeli: TourVisio'ya çelişkili yolcu gitmesin.
+        } else if (age !== null && Math.abs(derived - age) > 1) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['birthDate'],
+            message: `Doğum tarihi girilen yaşla (${age}) uyuşmuyor`,
+          })
+        }
+      }
+
+      // Uçuş biletlemesi: her yolcu için doğum tarihi + kimlik no zorunlu (TourVisio
+      // ParameterCanNotBeNull ile onaydan SONRA reddediyor — burada önden yakalanır).
+      if (productType === 'flight') {
+        if (!p.birthDate?.trim()) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['birthDate'],
+            message: 'Uçuş için doğum tarihi zorunlu',
+          })
+        }
+        const identity = p.identityNumber?.trim() ?? ''
+        if (!identity) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['identityNumber'],
+            message: 'Uçuş için kimlik no zorunlu',
+          })
+        } else if (!/^\d{11}$/.test(identity)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['identityNumber'],
+            message: 'Kimlik no 11 haneli olmalı',
+          })
+        } else if (p.nationality.toUpperCase() === 'TR' && !isValidTcKimlikNo(identity)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['identityNumber'],
+            message: 'TC kimlik no doğrulanamadı — lütfen kontrol edin',
+          })
+        }
+      } else if (p.identityNumber?.trim() && !/^\d{11}$/.test(p.identityNumber.trim())) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['identityNumber'],
+          message: 'Kimlik no 11 haneli olmalı',
+        })
+      }
+    })
+
+export const makeReservationFormSchema = (productType: ReservationDraft['productType']) =>
+  z
+    .object({
+      passengers: z.array(makePassengerSchema(productType)).min(1, 'En az bir yolcu girin'),
+      email: z
+        .string()
+        .trim()
+        .min(1, 'E-posta girin')
+        .email('Geçerli bir e-posta girin')
+        .max(EMAIL_MAX, 'E-posta çok uzun'),
+      /** Telefonun ÜLKESİ (ISO alpha-2) — arama kodu buradan türetilir (+1'i ABD/Kanada paylaşır). */
+      phoneCountry: z.string().trim().min(1, 'Telefon ülke kodunu seçin').refine(isCountryCode, 'Geçerli bir ülke seçin'),
+      /** Ulusal numara: ülke kodu ve baştaki 0 olmadan, yalnız rakam. */
+      phoneNumber: z.string().trim().min(1, 'Telefon numarası girin'),
+    })
+    .superRefine((values, ctx) => {
+      const country = findCountry(values.phoneCountry)
+      if (!country) return
+      // Ayırıcılar (boşluk, parantez, tire) serbest; harf ya da '+' değil — ülke kodu ayrı alanda.
+      if (!/^\d+$/.test(values.phoneNumber.replace(/[\s()-]/g, ''))) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['phoneNumber'],
+          message: 'Telefon numarası yalnızca rakam içerebilir',
+        })
+        return
+      }
+      const digits = normalizeNationalNumber(values.phoneNumber, country.code)
+      if (!digits) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['phoneNumber'],
+          message: 'Telefon numarası girin',
+        })
+        return
+      }
+      const [min, max] = nsnRange(country.code)
+      if (digits.length < min || digits.length > max) {
+        const expected = min === max ? `${min} haneli` : `${min}–${max} haneli`
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['phoneNumber'],
+          message: `${country.name} için telefon numarası ${expected} olmalı (ülke kodu ve baştaki 0 olmadan)`,
+        })
+        return
+      }
+      // Doğru uzunlukta ama imkânsız başlangıç (ör. ülke kodunu numaraya yazmak: '9055511122').
+      if (country.nsnStart && !country.nsnStart.re.test(digits)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['phoneNumber'],
+          message: `${country.name} numarası ${country.nsnStart.hint} ile başlar — ülke kodunu numaraya yazmayın`,
+        })
+      }
+    })
+
+/** Tip çıkarımı için varsayılan (otel) şema — alan yapısı iki üründe de aynıdır. */
+export const reservationFormSchema = makeReservationFormSchema('hotel')
 
 export type ReservationFormValues = z.infer<typeof reservationFormSchema>
 type PassengerValues = ReservationFormValues['passengers'][number]
@@ -84,20 +284,30 @@ export function initialPassengers(draft: ReservationDraft): PassengerValues[] {
     return Array.from({ length: count }, () => ({ ...emptyPassenger, passengerType: 'adult' }))
   }
   const nat = (draft.hotel.nationality ?? '').toUpperCase()
+  const prefill = isCountryCode(nat) ? nat : ''
   const adults = Math.max(1, draft.hotel.adults)
   const children = draft.hotel.children ?? 0
   const adultRows: PassengerValues[] = Array.from({ length: adults }, () => ({
     ...emptyPassenger,
     passengerType: 'adult',
-    nationality: nat,
+    nationality: prefill,
   }))
   const childRows: PassengerValues[] = Array.from({ length: children }, (_, i) => ({
     ...emptyPassenger,
     passengerType: 'child',
     age: draft.childAges[i] != null ? String(draft.childAges[i]) : '',
-    nationality: nat,
+    nationality: prefill,
   }))
   return [...adultRows, ...childRows]
+}
+
+/**
+ * Telefon alanının açılış ülkesi: ana misafirin uyruğu (varsa), yoksa varsayılan. Uyruk değişince
+ * form ayrıca kodu canlı günceller (ReservationFormPage).
+ */
+export function initialPhoneCountry(draft: ReservationDraft): string {
+  const lead = initialPassengers(draft)[0]?.nationality
+  return isCountryCode(lead) ? lead : DEFAULT_COUNTRY_CODE
 }
 
 /** Teklifin beklediği yolcu sayısı (yetişkin + çocuk / uçuşta yolcu sayısı). */
@@ -108,34 +318,42 @@ export function expectedTravellerCount(draft: ReservationDraft): number {
 }
 
 /**
+ * Ülke + ulusal numarayı TourVisio'nun istediği {ülke, alan, numara} üçlüsüne çevirir. Uçuş
+ * biletlemesi üçünü de NON-NULL ister. Ülke kodu artık tahmin EDİLMEZ — kullanıcının seçtiği
+ * ülkeden gelir (eski splitPhone her numarayı '90' sayıyordu, +49'luk bir numara Türk numarası
+ * olarak gidiyordu). Alan kodu ulusal numaranın ilk 3 hanesidir.
+ */
+export function buildContactPhone(
+  countryCode: string,
+  nationalNumber: string,
+): { countryCode: string; areaCode: string; phoneNumber: string } {
+  const country = findCountry(countryCode)
+  const digits = normalizeNationalNumber(nationalNumber, countryCode)
+  return {
+    countryCode: country?.dial ?? '',
+    areaCode: digits.slice(0, 3),
+    phoneNumber: digits.slice(3),
+  }
+}
+
+/** E.164 gösterim: '+90 5551112233' → '+905551112233'. Backend düz `phone` alanına yazılır. */
+export function formatE164(countryCode: string, nationalNumber: string): string {
+  const country = findCountry(countryCode)
+  const digits = normalizeNationalNumber(nationalNumber, countryCode)
+  return country ? `+${country.dial}${digits}` : digits
+}
+
+/**
  * Form değerleri + ürün taslağını `/preview` komutuna çevirir. İlk yolcu lider'dir (iletişim ona
  * yazılır); ünvan sayıya (1/2), uyruk büyük harfe çevrilir. Ürün tipine göre yalnız ilgili blok doldurulur.
  */
-/**
- * Tek parça telefonu TourVisio'nun istediği {ülke, alan, numara} üçlüsüne böler. Uçuş biletlemesi
- * üçünü de NON-NULL ister. TR varsayımıyla: rakamları al, baştaki 90/0'ı ayıkla, kalan ~10 haneden
- * ilk 3 alan kodu, geri kalanı numara. (Kaba ama "can not be null" için yeterli ve makul.)
- */
-export function splitPhone(raw: string): { countryCode: string; areaCode: string; phoneNumber: string } {
-  const digits = (raw ?? '').replace(/\D/g, '')
-  let rest = digits
-  let countryCode = '90'
-  if (rest.startsWith('90') && rest.length > 10) {
-    rest = rest.slice(2)
-  } else if (rest.startsWith('0')) {
-    rest = rest.slice(1)
-  }
-  const areaCode = rest.slice(0, 3) || '000'
-  const phoneNumber = rest.slice(3) || rest || '0000000'
-  return { countryCode, areaCode, phoneNumber }
-}
-
 export function toPreviewCommand(
   draft: ReservationDraft,
   values: ReservationFormValues,
 ): PreviewReservationCommand {
   const email = values.email.trim()
-  const contactPhone = splitPhone(values.phone)
+  const contactPhone = buildContactPhone(values.phoneCountry, values.phoneNumber)
+  const phone = formatE164(values.phoneCountry, values.phoneNumber)
   const travellers: TravellerInput[] = values.passengers.map((p, index) => ({
     firstName: p.firstName.trim(),
     lastName: p.lastName.trim(),
@@ -149,9 +367,7 @@ export function toPreviewCommand(
     leader: index === 0,
     // Lider yolcu iletişimi: backend mapper e-postayı address.email'den, telefonu yapısal
     // contactPhone'dan okur — düz email/phone'u da (uyumluluk için) taşıyoruz.
-    ...(index === 0
-      ? { email, phone: values.phone.trim(), contactPhone, address: { email } }
-      : {}),
+    ...(index === 0 ? { email, phone, contactPhone, address: { email } } : {}),
   }))
   const lead = values.passengers[0]
   const base = {
@@ -192,6 +408,10 @@ export function validatePreviewCommand(cmd: PreviewReservationCommand): string[]
     if (!t.title) errors.push(`${i + 1}. yolcunun ünvanı (Bay/Bayan) gerekli.`)
     if (!t.nationalityCode?.trim()) errors.push(`${i + 1}. yolcunun uyruğu gerekli.`)
   })
+  // Lider yolcu yetişkin olmalı (backend isLeadTravellerAnAdult) — iletişim ona yazılır.
+  if (cmd.travellers?.[0] && cmd.travellers[0].passengerType !== 'adult') {
+    errors.push('Ana misafir yetişkin olmalı.')
+  }
 
   if (!cmd.hotel && !cmd.flight) {
     errors.push('Rezervasyon için otel ya da uçuş bilgisi gerekli — lütfen aramadan tekrar seçin.')
@@ -227,7 +447,7 @@ export function validatePreviewCommand(cmd: PreviewReservationCommand): string[]
     // Uçuş biletlemesi TourVisio'da her yolcu için doğum tarihi + TC kimlik no, lider için de
     // e-posta ve telefon ister (setReservationInfo: ParameterCanNotBeNull). Otelde gerekmez.
     cmd.travellers?.forEach((t, i) => {
-      if (!/^\d{4}-\d{2}-\d{2}$/.test(t.birthDate ?? '')) {
+      if (!ISO_DATE_RE.test(t.birthDate ?? '')) {
         errors.push(`${i + 1}. yolcunun doğum tarihi gerekli (uçuş).`)
       }
       if (!/^\d{11}$/.test(t.identityNumber ?? '')) {

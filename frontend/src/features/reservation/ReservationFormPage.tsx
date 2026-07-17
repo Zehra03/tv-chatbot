@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Controller, useFieldArray, useForm } from 'react-hook-form'
+import { Controller, useFieldArray, useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { AiOffBanner } from '@/features/reservation/AiOffBanner'
@@ -8,16 +8,20 @@ import { FormStepper } from '@/features/reservation/FormStepper'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { CountrySelect } from '@/components/ui/country-select'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { Spinner } from '@/components/ui/spinner'
 import { useAppSelector } from '@/app/hooks'
 import { darkFieldClass } from '@/lib/field-styles'
+import { cn } from '@/lib/utils'
+import { dialCodeOf, isCountryCode, parseNationalNumber } from '@/lib/countries'
 import {
   emptyPassenger,
   initialPassengers,
-  reservationFormSchema,
+  initialPhoneCountry,
+  makeReservationFormSchema,
   TITLE_OPTIONS,
   toPreviewCommand,
   validatePreviewCommand,
@@ -108,21 +112,45 @@ export function ReservationFormPage() {
     }
   }, [confirm.data, navigate])
 
+  // Şema ürüne göre kurulur: uçuşta doğum tarihi + kimlik no ZORUNLU olur ve hata artık alanın
+  // yanında görünür (eskiden yalnız validatePreviewCommand'in toplu listesinde çıkıyordu).
+  const productType = draft?.productType ?? 'hotel'
+  const schema = useMemo(() => makeReservationFormSchema(productType), [productType])
+
   const {
     register,
     control,
     handleSubmit,
-    formState: { errors },
+    setValue,
+    trigger,
+    formState: { errors, isSubmitted },
   } = useForm<ReservationFormValues>({
-    resolver: zodResolver(reservationFormSchema),
+    resolver: zodResolver(schema),
     // Yolcu satırları teklifin pax'ına göre önden doldurulur (TourVisio sayı-eşleşmesi şart).
     defaultValues: {
       passengers: draft ? initialPassengers(draft) : [emptyPassenger],
       email: '',
-      phone: '',
+      phoneCountry: draft ? initialPhoneCountry(draft) : '',
+      phoneNumber: '',
     },
   })
   const { fields } = useFieldArray({ control, name: 'passengers' })
+
+  // Telefon ülke kodu ana misafirin uyruğunu izler: uyruk değişince kod (ör. TR → +90, DE → +49)
+  // kendiliğinden güncellenir. Kullanıcı isterse kodu sonradan ayrıca değiştirebilir (yurt dışında
+  // yaşayan bir TC vatandaşının numarası başka ülkeden olabilir) — bu yüzden alan kilitli değil,
+  // yalnız uyruk DEĞİŞTİĞİ anda senkronlanır.
+  const leadNationality = useWatch({ control, name: 'passengers.0.nationality' })
+  const phoneCountry = useWatch({ control, name: 'phoneCountry' })
+  const previousLeadNationality = useRef(leadNationality)
+  useEffect(() => {
+    if (leadNationality === previousLeadNationality.current) return
+    previousLeadNationality.current = leadNationality
+    if (!isCountryCode(leadNationality)) return
+    setValue('phoneCountry', leadNationality.toUpperCase())
+    // Numaranın hane kuralı ülkeye bağlı — gönderim denendiyse hatayı yeni ülkeye göre tazele.
+    if (isSubmitted) void trigger(['phoneCountry', 'phoneNumber'])
+  }, [leadNationality, setValue, trigger, isSubmitted])
 
   const resetAll = () => {
     confirm.reset()
@@ -476,16 +504,23 @@ export function ReservationFormPage() {
                   </div>
                   <div className="grid gap-1.5">
                     <Label htmlFor={`passenger-${index}-nationality`}>Uyruk</Label>
-                    <Input
-                      id={`passenger-${index}-nationality`}
-                      placeholder="TR"
-                      maxLength={2}
-                      aria-invalid={!!pErr?.nationality}
-                      aria-describedby={
-                        pErr?.nationality ? `passenger-${index}-nationality-error` : undefined
-                      }
-                      className={darkFieldClass}
-                      {...register(`passengers.${index}.nationality`)}
+                    {/* Serbest metin yerine liste: 'ZZ' gibi iki harfli uydurmalar TourVisio'ya
+                        gidemez ve ana misafirin uyruğu telefon kodunu besler. */}
+                    <Controller
+                      control={control}
+                      name={`passengers.${index}.nationality`}
+                      render={({ field: nationalityField }) => (
+                        <CountrySelect
+                          id={`passenger-${index}-nationality`}
+                          value={nationalityField.value}
+                          onChange={nationalityField.onChange}
+                          onBlur={nationalityField.onBlur}
+                          aria-invalid={!!pErr?.nationality}
+                          aria-describedby={
+                            pErr?.nationality ? `passenger-${index}-nationality-error` : undefined
+                          }
+                        />
+                      )}
                     />
                     {pErr?.nationality && (
                       <p
@@ -632,18 +667,59 @@ export function ReservationFormPage() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="contact-phone">Telefon</Label>
-              <Input
-                id="contact-phone"
-                type="tel"
-                placeholder="+90…"
-                aria-invalid={!!errors.phone}
-                aria-describedby={errors.phone ? 'contact-phone-error' : undefined}
-                className={darkFieldClass}
-                {...register('phone')}
-              />
-              {errors.phone && (
+              {/* Ülke kodu + ulusal numara ayrı taşınır: TourVisio ContactPhone'u {ülke, alan,
+                  numara} olarak ister, tek parça metinden tahmin etmek yanlış ülke kodu üretiyordu. */}
+              <div className="flex gap-2">
+                <Controller
+                  control={control}
+                  name="phoneCountry"
+                  render={({ field: countryField }) => (
+                    <CountrySelect
+                      variant="dial"
+                      className="w-[7.5rem] shrink-0"
+                      value={countryField.value}
+                      onChange={countryField.onChange}
+                      onBlur={countryField.onBlur}
+                      aria-label="Telefon ülke kodu"
+                      aria-invalid={!!errors.phoneCountry}
+                      placeholder="Kod"
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name="phoneNumber"
+                  render={({ field: numberField }) => (
+                    <Input
+                      id="contact-phone"
+                      type="tel"
+                      inputMode="tel"
+                      autoComplete="tel-national"
+                      placeholder="Ülke kodu olmadan"
+                      aria-invalid={!!errors.phoneNumber}
+                      aria-describedby={
+                        errors.phoneNumber || errors.phoneCountry ? 'contact-phone-error' : undefined
+                      }
+                      className={cn(darkFieldClass, 'flex-1')}
+                      value={numberField.value}
+                      onBlur={numberField.onBlur}
+                      // Yazarken/yapıştırırken ulusal numaraya indirger: rakam dışını, baştaki 0'ı ve
+                      // yapıştırılan ülke kodunu ('+90 555…') atar, ülkenin hane sınırına kırpar.
+                      onChange={(e) =>
+                        numberField.onChange(parseNationalNumber(e.target.value, phoneCountry))
+                      }
+                    />
+                  )}
+                />
+              </div>
+              {(errors.phoneNumber || errors.phoneCountry) && (
                 <p id="contact-phone-error" className="text-xs text-red-400">
-                  {errors.phone.message}
+                  {errors.phoneNumber?.message ?? errors.phoneCountry?.message}
+                </p>
+              )}
+              {!errors.phoneNumber && !errors.phoneCountry && dialCodeOf(phoneCountry) && (
+                <p className="text-xs text-brand-ice/50">
+                  Ülke kodu uyruğa göre seçilir; gerekirse değiştirebilirsiniz.
                 </p>
               )}
             </div>
