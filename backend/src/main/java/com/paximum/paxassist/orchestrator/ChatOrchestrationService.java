@@ -81,10 +81,24 @@ public class ChatOrchestrationService {
             }
         }
 
+        // 2c. Pending facility clarification: if the assistant already asked "hangi otel?" for a
+        //     facility question, the user's short answer ("1", "ilk") is otherwise misread as a
+        //     booking (SELECT) because both flows use a numbered list. While the clarification is
+        //     pending we route that answer back to the facility Q&A; any other real intent means the
+        //     user moved on, so we drop the pending context and proceed normally.
+        IntentType intent = extraction.intent();
+        if (session.getPendingFacilityQuestion() != null) {
+            if (intent == IntentType.SELECT) {
+                intent = IntentType.HOTEL_FACILITY_QA;
+            } else if (intent != IntentType.HOTEL_FACILITY_QA) {
+                session.setPendingFacilityQuestion(null);
+            }
+        }
+
         // 3. Route to the intent-specific handler (Strategy).
         OrchestrationContext context =
-                new OrchestrationContext(session, userMessage, extraction.intent(), extraction.criteria());
-        OrchestrationResult result = intentRouter.route(extraction.intent()).handle(context);
+                new OrchestrationContext(session, userMessage, intent, extraction.criteria());
+        OrchestrationResult result = intentRouter.route(intent).handle(context);
 
         // 4. Persist the turn (append user + assistant messages) and return.
         session.addMessage("user", userMessage);
