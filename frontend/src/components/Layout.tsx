@@ -240,17 +240,25 @@ export function Layout() {
             // sol kenara/header'ın hemen altına tam dayansın (Gemini deseni).
             // Oluğu burada değil, ChatPage'in kendi sütunlarında veriyoruz.
             // Diğer sayfalar okunur genişlikte ortalı + header ile hizalı kalır.
-            'mx-auto flex w-full min-h-0 flex-1 flex-col',
-            isChat ? 'max-w-none' : 'max-w-7xl px-4 py-8 sm:px-8',
+            //
+            // min-h-0 YALNIZCA chat'te: chat kabının main'in yüksekliğine oturması (ve kendi
+            // içinde kayması) için gerekli. Sohbet dışı sayfalarda ise bu sarmalayıcıyı main'in
+            // yüksekliğine KIRPIYORDU — uzun içerik (rezervasyon formu) alt kenarından taşıyor,
+            // py-8'in alt oluğu kırpılan sınırda kalıp kaydırılabilir alanın dışında kalıyordu:
+            // sona kaydırıldığında son öğe (Önizlemeye geç butonu) ekranın dibine yapışıyordu.
+            // min-height:auto ile sarmalayıcı içeriği kadar uzar, alt oluk da onunla birlikte kayar.
+            'mx-auto flex w-full flex-1 flex-col',
+            isChat ? 'min-h-0 max-w-none' : 'max-w-7xl px-4 py-8 sm:px-8',
           )}
         >
           {/* Rota geçişi: mode="wait" + pathname key — AnimatedOutlet ayrılan
-              kopyada eski sayfayı dondurur (frozen outlet deseni). flex-1 +
-              min-h-0: chat kabı dikeyde oturur, sonuç sayfaları taşıp main'i kaydırır. */}
+              kopyada eski sayfayı dondurur (frozen outlet deseni). flex-1: kısa
+              sayfalar yüksekliği doldurur. min-h-0 yalnız chat'te — sarmalayıcıyla
+              aynı gerekçe (bkz. üstteki not). */}
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={location.pathname}
-              className="flex min-h-0 flex-1 flex-col"
+              className={cn('flex flex-1 flex-col', isChat && 'min-h-0')}
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
