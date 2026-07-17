@@ -85,8 +85,10 @@ class SlotGuardTest {
     }
 
     @Test
-    void unparsableDate_isIgnored() {
-        assertThat(guard.checkInvalidSlots(slots(Map.of("checkIn", "yarın")))).isEmpty();
+    void unparsableDate_returnsMessage() {
+        Optional<String> msg = guard.checkInvalidSlots(slots(Map.of("checkIn", "yarın")));
+        assertThat(msg).isPresent();
+        assertThat(msg.get()).contains("geçerli değil");
     }
 
     @Test
