@@ -142,6 +142,38 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
     }
 
     @Override
+    public Object getProductInfo(String productId, Integer ownerProvider) {
+        // Same session/header pattern as priceSearch/getArrivalAutocomplete above — reuse the cached
+        // bearer token, never a new auth flow. Endpoint + body follow the existing productservice
+        // convention. ownerProvider is MANDATORY: verified against the live test service, omitting it
+        // fails with "pSource Parameter can not be null". currency, by contrast, is NOT required here.
+        String url = baseUrl + "/api/productservice/getproductinfo";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        headers.setBearerAuth(getOrFetchToken());
+
+        Map<String, Object> requestBody = new HashMap<>();
+        requestBody.put("productType", 2);
+        requestBody.put("product", productId);
+        requestBody.put("culture", "tr-TR");
+        if (ownerProvider != null) {
+            requestBody.put("ownerProvider", ownerProvider);
+        }
+
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+
+        ResponseEntity<Object> response = restTemplate.postForEntity(url, entity, Object.class);
+
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            // Raw provider payload; HotelFeatureMapper extracts facilities/board/themes from it.
+            return response.getBody();
+        }
+
+        throw new RuntimeException("TourVisio GetProductInfo failed!");
+    }
+
+    @Override
     public List<HotelProduct> searchHotels(HotelSearchCriteria criteria) {
         try {
             AutocompleteResponse autocompleteRes = getArrivalAutocomplete(criteria.destination());
@@ -230,7 +262,12 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
                 // themes ("Deniz Kenarında", "BEACH") are sparse but add signal. Never fabricated.
                 List<String> features = collectNames(hotelNode.path("facilities"), hotelNode.path("themes"));
 
-                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image, features, offerId));
+                // TourVisio owner provider — GetProductInfo needs it back as ownerProvider, so it rides
+                // on the card for the detail call. Null when the provider omitted it.
+                JsonNode providerNode = hotelNode.path("provider");
+                Integer provider = providerNode.canConvertToInt() ? providerNode.asInt() : null;
+
+                products.add(new HotelProduct(id, name, city, stars, price, currency, board, available, image, features, offerId, provider));
             }
         }
         return products;
