@@ -37,7 +37,10 @@ const hotelSnapshot = {
   currency: 'EUR',
 }
 
-const makeHotelDraft = (offerId = 'off-htl-mock-001'): ReservationDraft => ({
+const makeHotelDraft = (
+  offerId = 'off-htl-mock-001',
+  hotelOverrides: Partial<typeof hotelSnapshot> = {},
+): ReservationDraft => ({
   productType: 'hotel',
   offerId,
   title: 'MOCK Grand Antalya Resort',
@@ -45,7 +48,7 @@ const makeHotelDraft = (offerId = 'off-htl-mock-001'): ReservationDraft => ({
   price: 1200,
   currency: 'EUR',
   childAges: [],
-  hotel: hotelSnapshot,
+  hotel: { ...hotelSnapshot, ...hotelOverrides },
 })
 
 const hotelDraft: ReservationDraft = makeHotelDraft()
@@ -106,22 +109,104 @@ describe('ReservationFormPage', () => {
 
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
     expect(await screen.findAllByText('En az 2 karakter girin')).toHaveLength(2)
-    expect(screen.getByText('Geçerli bir e-posta girin')).toBeTruthy()
-    expect(screen.getByText('Geçerli bir telefon girin')).toBeTruthy()
+    expect(screen.getByText('E-posta girin')).toBeTruthy()
+    expect(screen.getByText('Telefon numarası girin')).toBeTruthy()
   })
 
-  it('geçersiz yaş ve uyruk alanları hata verir', async () => {
+  it('bozuk e-posta biçimi hata verir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(await screen.findByText('Geçerli bir e-posta girin')).toBeTruthy()
+  })
+
+  it('geçersiz yaş hata verir', async () => {
     const user = userEvent.setup()
     renderPage()
 
     await user.type(screen.getByLabelText('Yaş (opsiyonel)'), '200')
-    // Uyruk aramadan 'TR' önden dolar; geçersiz test için temizleyip 1 harf gir.
-    const nat = screen.getByLabelText('Uyruk')
-    await user.clear(nat)
-    await user.type(nat, '1')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
     expect(await screen.findByText('Geçerli bir yaş girin (0–120)')).toBeTruthy()
-    expect(screen.getByText('İki harfli ülke kodu girin (ör. TR)')).toBeTruthy()
+  })
+
+  it('ad alanı harf dışı karakter kabul etmez', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Ad'), 'Zehra42')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(
+      await screen.findByText('Yalnızca harf, boşluk ve - kısaltma işaretleri kullanın'),
+    ).toBeTruthy()
+  })
+
+  it('uyruk seçilmeden gönderilemez; seçim listeden yapılır', async () => {
+    const user = userEvent.setup()
+    // Aramada uyruk yoksa alan boş açılır ve seçim zorunlu olur.
+    renderPage(makeHotelDraft('off-htl-mock-001', { nationality: '' }))
+
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(await screen.findByText('Uyruk seçin')).toBeTruthy()
+
+    await user.click(screen.getByLabelText('Uyruk'))
+    await user.type(screen.getByLabelText('Ülke ara'), 'Almanya')
+    await user.click(screen.getByRole('option', { name: /Almanya/ }))
+    expect(screen.queryByText('Uyruk seçin')).toBeNull()
+  })
+
+  it('uyruk değişince telefon ülke kodu kendiliğinden güncellenir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    // Arama 'TR' taşıyor → kod +90 açılır.
+    expect(screen.getByLabelText('Telefon ülke kodu').textContent).toContain('+90')
+
+    await user.click(screen.getByLabelText('Uyruk'))
+    await user.type(screen.getByLabelText('Ülke ara'), 'Almanya')
+    await user.click(screen.getByRole('option', { name: /Almanya/ }))
+
+    await waitFor(() =>
+      expect(screen.getByLabelText('Telefon ülke kodu').textContent).toContain('+49'),
+    )
+  })
+
+  it('telefon numarası ülkenin hane kuralına uymalı', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.type(screen.getByLabelText('Telefon'), '555')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(await screen.findByText(/Türkiye için telefon numarası 10 haneli olmalı/)).toBeTruthy()
+  })
+
+  it('telefona ülke kodu yapıştırılırsa ulusal numaraya indirgenir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    const phone = screen.getByLabelText('Telefon') as HTMLInputElement
+    await user.click(phone)
+    await user.paste('+90 (555) 111 22 33')
+    expect(phone.value).toBe('5551112233')
+
+    // Baştaki trunk 0'ı da düşer.
+    await user.clear(phone)
+    await user.paste('0555 111 22 33')
+    expect(phone.value).toBe('5551112233')
+  })
+
+  it('ülke kodu numaranın içine yazılırsa (doğru uzunlukta olsa da) reddedilir', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    // '+90…' elle yazılınca alan '9055511122'de takılır: 10 hane olduğu için uzunluk kuralından
+    // geçer ama Türkiye numarası 9 ile başlamaz — sessizce yanlış numara gitmemeli.
+    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    expect((screen.getByLabelText('Telefon') as HTMLInputElement).value).toBe('9055511122')
+
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(await screen.findByText(/Türkiye numarası 2 ile 5 arasında bir hane ile başlar/)).toBeTruthy()
   })
 
   it('geçerli form → önizleme; onay checkbox işaretlenmeden gönderilemez, işaretlenince POST atılır', async () => {
@@ -136,7 +221,7 @@ describe('ReservationFormPage', () => {
     await user.type(screen.getByLabelText('Ad'), 'Zehra')
     await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
     await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
-    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    await user.type(screen.getByLabelText('Telefon'), '5551112233')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
 
     // Önizleme: dondurulan toplam + misafir adı listesi (passengerNames).
@@ -159,7 +244,7 @@ describe('ReservationFormPage', () => {
     await user.type(screen.getByLabelText('Ad'), 'Zehra')
     await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
     await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
-    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    await user.type(screen.getByLabelText('Telefon'), '5551112233')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
     await screen.findByText(/Toplam:/, {}, { timeout: 3000 })
   }
@@ -241,7 +326,7 @@ describe('ReservationFormPage', () => {
     await user.type(screen.getByLabelText('Ad'), 'Zehra')
     await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
     await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
-    await user.type(screen.getByLabelText('Telefon'), '+905551112233')
+    await user.type(screen.getByLabelText('Telefon'), '5551112233')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
 
     // Uyarı görünür ve backend'e hiç önizleme isteği çıkmaz (ham 400'den önce yakalanır).
