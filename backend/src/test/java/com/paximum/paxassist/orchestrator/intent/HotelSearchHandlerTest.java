@@ -52,9 +52,8 @@ class HotelSearchHandlerTest {
         org.mockito.Mockito.lenient().when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
         org.mockito.Mockito.lenient().when(locationGuard.checkInvalidLocation(any(), any())).thenReturn(Optional.empty());
         return new HotelSearchHandler(
-                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService, new ClarificationCatalog(), slotGuard, locationGuard);
                 slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService,
-                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard);
+                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard, locationGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {

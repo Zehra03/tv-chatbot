@@ -59,9 +59,8 @@ class FlightSearchHandlerTest {
         org.mockito.Mockito.lenient().when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
         org.mockito.Mockito.lenient().when(locationGuard.checkInvalidLocation(any(), any())).thenReturn(Optional.empty());
         return new FlightSearchHandler(
-                slotFilling, new FlightCriteriaMapper(new GeoCountryResolver()), flightSearchService, new ClarificationCatalog(), slotGuard, locationGuard);
                 slotFilling, new FlightCriteriaMapper(new GeoCountryResolver()), flightSearchService,
-                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard);
+                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard, locationGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
