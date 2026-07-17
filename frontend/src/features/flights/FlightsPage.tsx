@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { SearchHero } from '@/components/SearchHero'
-import { Skeleton } from '@/components/ui/skeleton'
+import { FlightCardSkeleton } from '@/features/flights/FlightCardSkeleton'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
@@ -322,11 +322,11 @@ export function FlightsPage() {
       {query.isFetching && (
         <div className="space-y-3">
           <LoadingState label="Aranıyor…" className="text-muted-foreground" />
-          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          {/* Karta birebir iskelet kartlar (CLS 0) — duyuruyu üstteki role="status" yapar. */}
           <div aria-hidden="true" className="grid gap-3">
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
+            <FlightCardSkeleton />
+            <FlightCardSkeleton />
+            <FlightCardSkeleton />
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { SearchHero } from '@/components/SearchHero'
-import { Skeleton } from '@/components/ui/skeleton'
+import { HotelCardSkeleton } from '@/features/hotels/HotelCardSkeleton'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
@@ -287,11 +287,11 @@ export function HotelsPage() {
       {query.isFetching && (
         <div className="space-y-3">
           <LoadingState label="Aranıyor…" className="text-muted-foreground" />
-          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          {/* Karta birebir iskelet kartlar (CLS 0) — duyuruyu üstteki role="status" yapar. */}
           <div aria-hidden="true" className="grid gap-3">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+            <HotelCardSkeleton />
+            <HotelCardSkeleton />
+            <HotelCardSkeleton />
           </div>
         </div>
       )}
