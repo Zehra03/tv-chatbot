@@ -53,7 +53,9 @@ describe('HotelCard', () => {
     expect(screen.getByText('MOCK Grand Antalya Resort')).toBeTruthy()
     expect(screen.getByText('Antalya')).toBeTruthy()
     expect(screen.getByText('5')).toBeTruthy()
-    expect(screen.getByText('AI')).toBeTruthy()
+    // Board rozeti artık ham kodu değil, tanınan pansiyon etiketini gösterir ("AI" → "Herşey Dahil");
+    // tanınmayan çöp board değerlerinde rozet hiç basılmaz (boardBadgeLabel → null).
+    expect(screen.getByText('Herşey Dahil')).toBeTruthy()
     expect(screen.getByText(/1\.200/)).toBeTruthy()
   })
 
