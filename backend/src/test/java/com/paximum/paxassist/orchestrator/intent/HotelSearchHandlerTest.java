@@ -21,6 +21,7 @@ import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
+import com.paximum.paxassist.orchestrator.slot.LocationGuard;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
@@ -41,12 +42,15 @@ class HotelSearchHandlerTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
     private SlotGuard slotGuard;
+    private LocationGuard locationGuard;
 
     private HotelSearchHandler handler() {
         slotGuard = mock(SlotGuard.class);
-        when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
+        locationGuard = mock(LocationGuard.class);
+        org.mockito.Mockito.lenient().when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
+        org.mockito.Mockito.lenient().when(locationGuard.checkInvalidLocation(any(), any())).thenReturn(Optional.empty());
         return new HotelSearchHandler(
-                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService, new ClarificationCatalog(), slotGuard);
+                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService, new ClarificationCatalog(), slotGuard, locationGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
@@ -116,6 +120,23 @@ class HotelSearchHandlerTest {
 
         assertThat(result.cards()).isEmpty();
         assertThat(result.reply()).contains("geçmiş");
+        org.mockito.Mockito.verifyNoInteractions(hotelSearchService);
+    }
+
+    @Test
+    void invalidLocationGuard_shortCircuitsBeforeSearch() {
+        HotelSearchHandler handler = handler();
+        when(locationGuard.checkInvalidLocation(any(), any()))
+                .thenReturn(Optional.of("Girdiğin şehir/bölge (burdan) sistemimizde bulunamadı."));
+
+        OrchestrationContext context = contextWith(slots(Map.of("location", "burdan")));
+        context.session().getAccumulatedCriteria().put("location", "burdan");
+
+        OrchestrationResult result = handler.handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        assertThat(result.reply()).contains("sistemimizde bulunamadı");
+        assertThat(context.session().getAccumulatedCriteria()).doesNotContainKey("location");
         org.mockito.Mockito.verifyNoInteractions(hotelSearchService);
     }
 
