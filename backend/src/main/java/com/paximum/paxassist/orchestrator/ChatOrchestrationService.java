@@ -89,10 +89,14 @@ public class ChatOrchestrationService {
         //     so a stray "evet" never wipes the pending context. Only a real new action (a fresh hotel/
         //     flight search, a filter, a greeting, a date-alternatives ask) means the user moved on, so
         //     there we drop the pending context and route normally.
+        //     CLEAR_FILTER is included on purpose: when we offered "filtreyi kaldırayım mı?" for a hotel
+        //     that was filtered out, the confirmation must reach the facility handler so it can drop the
+        //     filter AND answer the held question — FilterHandler alone would just re-list everything.
         IntentType intent = extraction.intent();
         if (session.getPendingFacilityQuestion() != null) {
             switch (intent) {
-                case SELECT, OTHER, AMBIGUOUS, HOTEL_FACILITY_QA -> intent = IntentType.HOTEL_FACILITY_QA;
+                case SELECT, OTHER, AMBIGUOUS, CLEAR_FILTER, HOTEL_FACILITY_QA ->
+                        intent = IntentType.HOTEL_FACILITY_QA;
                 default -> session.setPendingFacilityQuestion(null);
             }
         }
