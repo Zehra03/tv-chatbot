@@ -37,7 +37,7 @@ export function ReservationsPage() {
           text="Rezervasyonlarım"
           tag="h1"
           textAlign="left"
-          className="text-2xl font-bold text-white"
+          className="text-2xl font-bold text-foreground"
           delay={40}
           duration={0.8}
         />
@@ -45,7 +45,7 @@ export function ReservationsPage() {
           aria-hidden="true"
           className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
         />
-        <p className="mt-2 text-sm text-brand-ice/70">
+        <p className="mt-2 text-sm text-muted-foreground">
           Geçmiş ve bekleyen rezervasyonlarınız.
         </p>
       </motion.div>
@@ -73,9 +73,9 @@ export function ReservationsPage() {
           transition={{ duration: 0.3, ease: 'easeOut', delay: 0.08 }}
           className="glass-card overflow-x-auto"
         >
-          <table className="w-full text-sm text-white">
+          <table className="w-full text-sm text-foreground">
             <thead>
-              <tr className="border-b border-white/10 bg-white/5 text-left">
+              <tr className="border-b border-foreground/10 bg-foreground/5 text-left">
                 <th scope="col" className="p-3 font-semibold">No</th>
                 <th scope="col" className="p-3 font-semibold">Tip</th>
                 <th scope="col" className="p-3 font-semibold">Tarih</th>
@@ -95,7 +95,7 @@ export function ReservationsPage() {
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.25, ease: 'easeOut', delay: 0.15 + i * 0.06 }}
-                  className="border-b border-white/10 transition-colors even:bg-white/5 last:border-0 hover:bg-brand-teal/10"
+                  className="border-b border-foreground/10 transition-colors even:bg-foreground/5 last:border-0 hover:bg-brand-teal/10"
                 >
                   <td className="p-3 font-mono font-medium">{r.reservationNumber}</td>
                   <td className="p-3">
@@ -127,7 +127,7 @@ export function ReservationsPage() {
                         asChild
                         size="sm"
                         variant="outline"
-                        className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
+                        className="border-foreground/15 bg-foreground/5 text-muted-foreground transition-colors hover:border-brand-teal hover:bg-foreground/10 hover:text-foreground"
                       >
                         <Link to={`/reservations/${r.id}`}>Detay</Link>
                       </Button>
@@ -138,7 +138,7 @@ export function ReservationsPage() {
                         asChild
                         size="icon"
                         variant="outline"
-                        className="h-8 w-8 border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
+                        className="h-8 w-8 border-foreground/15 bg-foreground/5 text-muted-foreground transition-colors hover:border-brand-teal hover:bg-foreground/10 hover:text-foreground"
                       >
                         <Link
                           to={`/reservations/${r.id}/print`}

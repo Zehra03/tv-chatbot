@@ -22,7 +22,7 @@ import { formatDate, formatDateTime, formatPrice } from '@/utils/format'
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <dt className="text-brand-ice/70">{label}</dt>
+      <dt className="text-muted-foreground">{label}</dt>
       <dd className="font-medium">{children}</dd>
     </div>
   )
@@ -108,9 +108,9 @@ function CancelSection({ reservation }: { reservation: ReservationDetail }) {
 
   return (
     <div className="space-y-3 rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-      <h2 className="font-semibold text-white">Rezervasyonu iptal et</h2>
+      <h2 className="font-semibold text-foreground">Rezervasyonu iptal et</h2>
       <div className="grid gap-1.5">
-        <label htmlFor="cancel-reason" className="text-sm text-brand-ice/70">
+        <label htmlFor="cancel-reason" className="text-sm text-muted-foreground">
           İptal sebebi
         </label>
         <DropdownSelect
@@ -121,20 +121,20 @@ function CancelSection({ reservation }: { reservation: ReservationDetail }) {
         />
       </div>
       {selected?.price?.amount ? (
-        <p className="text-sm text-brand-ice/70">
+        <p className="text-sm text-muted-foreground">
           İptal cezası:{' '}
-          <span className="font-semibold text-white">
+          <span className="font-semibold text-foreground">
             {formatPrice(selected.price.amount, selected.price.currency)}
           </span>
         </p>
       ) : null}
 
-      <label className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-white">
+      <label className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-foreground">
         <input
           type="checkbox"
           checked={confirmed}
           onChange={(e) => setConfirmed(e.target.checked)}
-          className="mt-0.5 h-5 w-5 rounded border-white/30 accent-destructive"
+          className="mt-0.5 h-5 w-5 rounded border-foreground/30 accent-destructive"
         />
         Bu rezervasyonu iptal etmek istediğimi onaylıyorum.
       </label>
@@ -152,7 +152,7 @@ function CancelSection({ reservation }: { reservation: ReservationDetail }) {
       >
         {cancel.isPending ? (
           <>
-            <Spinner size={16} decorative className="text-white" />
+            <Spinner size={16} decorative className="text-foreground" />
             İptal ediliyor…
           </>
         ) : (
@@ -184,7 +184,7 @@ export function ReservationDetailPage() {
           asChild
           variant="ghost"
           size="sm"
-          className="-ml-2 text-brand-ice/80 hover:bg-white/10 hover:text-white"
+          className="-ml-2 text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
         >
           <Link to="/reservations">
             <ArrowLeft className="h-4 w-4" />
@@ -200,7 +200,7 @@ export function ReservationDetailPage() {
             asChild
             size="sm"
             variant="outline"
-            className="border-white/15 bg-white/5 text-brand-ice transition-colors hover:border-brand-teal hover:bg-white/10 hover:text-white"
+            className="border-foreground/15 bg-foreground/5 text-muted-foreground transition-colors hover:border-brand-teal hover:bg-foreground/10 hover:text-foreground"
           >
             <Link to={`/reservations/${data.id}/print`}>
               <FileDown className="h-4 w-4" />
@@ -213,12 +213,12 @@ export function ReservationDetailPage() {
       {justBooked && (
         <div
           role="status"
-          className="flex items-start gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/10 p-4 text-white"
+          className="flex items-start gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/10 p-4 text-foreground"
         >
           <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-brand-teal" aria-hidden />
           <div>
             <p className="font-semibold">Rezervasyonunuz alındı</p>
-            <p className="text-sm text-brand-ice/70">
+            <p className="text-sm text-muted-foreground">
               Rezervasyonunuz onaylandı. Detaylar aşağıda; dilediğinizde Rezervasyonlarım’dan tekrar
               ulaşabilirsiniz.
             </p>
@@ -233,7 +233,7 @@ export function ReservationDetailPage() {
       )}
 
       {data && (
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
+        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
           <CardHeader className="flex-row items-center justify-between space-y-0 gap-3">
             <CardTitle className="min-w-0 break-all font-mono">{data.reservationNumber}</CardTitle>
             <Badge className="shrink-0" variant={reservationStatusVariant(data.status)}>
@@ -264,18 +264,18 @@ export function ReservationDetailPage() {
                   {data.passengers.map((p, i) => (
                     <li
                       key={`${p.firstName}-${p.lastName}-${i}`}
-                      className="rounded-lg border border-white/10 bg-white/5 p-3 text-sm"
+                      className="rounded-lg border border-foreground/10 bg-foreground/5 p-3 text-sm"
                     >
                       <p className="font-medium">
                         {p.firstName} {p.lastName}
-                        <span className="ml-2 font-normal text-brand-ice/70">
+                        <span className="ml-2 font-normal text-muted-foreground">
                           {p.passengerType === 'adult' ? 'Yetişkin' : 'Çocuk'}
                           {p.age != null ? ` · ${p.age} yaş` : ''}
                           {p.nationality ? ` · ${p.nationality}` : ''}
                         </span>
                       </p>
                       {(p.email || p.phone) && (
-                        <p className="mt-1 break-words text-brand-ice/70">
+                        <p className="mt-1 break-words text-muted-foreground">
                           {[p.email, p.phone].filter(Boolean).join(' · ')}
                         </p>
                       )}
@@ -283,7 +283,7 @@ export function ReservationDetailPage() {
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm text-brand-ice/70">Misafir bilgisi bulunmuyor.</p>
+                <p className="text-sm text-muted-foreground">Misafir bilgisi bulunmuyor.</p>
               )}
             </div>
 

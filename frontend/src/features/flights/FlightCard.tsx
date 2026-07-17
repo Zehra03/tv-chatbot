@@ -51,43 +51,43 @@ function LegRow({
   return (
     <div>
       {label && (
-        <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-white/50">
+        <p className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
           <span>{label}</span>
           {airline && (
             <>
               <span aria-hidden>·</span>
-              <span className="normal-case text-white/70">{airline}</span>
+              <span className="normal-case text-foreground/70">{airline}</span>
             </>
           )}
         </p>
       )}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-2xl font-bold text-white">{from}</p>
-          {fromCity && <p className="truncate text-xs font-medium text-white/80">{fromCity}</p>}
-          <p className="mt-0.5 text-xs text-white/70">{formatDateTime(departTime)}</p>
+          <p className="truncate text-2xl font-bold text-foreground">{from}</p>
+          {fromCity && <p className="truncate text-xs font-medium text-foreground/80">{fromCity}</p>}
+          <p className="mt-0.5 text-xs text-foreground/70">{formatDateTime(departTime)}</p>
         </div>
         <div className="flex min-w-16 flex-1 flex-col items-center px-2">
           <div className="flex w-full items-center gap-1">
-            <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
-            <span className="h-px flex-1 bg-white/40" />
+            <span className="h-1.5 w-1.5 rounded-full bg-foreground/60" />
+            <span className="h-px flex-1 bg-foreground/40" />
             {/* Dönüşte uçak geri döner: yön, sırayı okumadan görünür olsun. */}
             <Plane
-              className={`h-3.5 w-3.5 shrink-0 text-white/70${inbound ? ' rotate-180' : ''}`}
+              className={`h-3.5 w-3.5 shrink-0 text-foreground/70${inbound ? ' rotate-180' : ''}`}
               aria-hidden
             />
-            <span className="h-px flex-1 bg-white/40" />
-            <span className="h-1.5 w-1.5 rounded-full bg-white/60" />
+            <span className="h-px flex-1 bg-foreground/40" />
+            <span className="h-1.5 w-1.5 rounded-full bg-foreground/60" />
           </div>
-          <p className="mt-1 text-[11px] text-white/60">
+          <p className="mt-1 text-[11px] text-foreground/60">
             {stops === 0 ? 'Direkt' : `${stops} aktarma`}
           </p>
         </div>
         <div className="min-w-0 text-right">
-          <p className="truncate text-2xl font-bold text-white">{to}</p>
-          {toCity && <p className="truncate text-xs font-medium text-white/80">{toCity}</p>}
+          <p className="truncate text-2xl font-bold text-foreground">{to}</p>
+          {toCity && <p className="truncate text-xs font-medium text-foreground/80">{toCity}</p>}
           {arriveTime && (
-            <p className="mt-0.5 text-xs text-white/70">{formatDateTime(arriveTime)}</p>
+            <p className="mt-0.5 text-xs text-foreground/70">{formatDateTime(arriveTime)}</p>
           )}
         </div>
       </div>
@@ -127,11 +127,11 @@ export function FlightCard({
         onClick={onSelect}
       >
         <div className="flex items-center justify-between gap-2">
-          <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-white/70">
+          <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-foreground/70">
             <Plane className="h-3.5 w-3.5 shrink-0 text-brand-teal" aria-hidden />
-            <span className="truncate font-semibold text-white">{product.airline}</span>
+            <span className="truncate font-semibold text-foreground">{product.airline}</span>
             {isRoundTrip && (
-              <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white/80">
+              <span className="shrink-0 rounded-full bg-foreground/10 px-1.5 py-0.5 text-[10px] font-semibold text-foreground/80">
                 Gidiş-dönüş
               </span>
             )}
@@ -140,34 +140,34 @@ export function FlightCard({
             <AnimatedPrice
               amount={product.price}
               currency={product.currency}
-              className="text-base font-bold text-white"
+              className="text-base font-bold text-foreground"
             />
-            {isRoundTrip && <p className="text-[10px] leading-tight text-white/60">toplam</p>}
+            {isRoundTrip && <p className="text-[10px] leading-tight text-foreground/60">toplam</p>}
           </div>
         </div>
-        <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-white">
+        <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-foreground">
           <span className="truncate">{product.origin}</span>
-          <span className="flex flex-1 items-center gap-1 text-white/40">
-            <span className="h-px flex-1 bg-white/30" />
+          <span className="flex flex-1 items-center gap-1 text-foreground/40">
+            <span className="h-px flex-1 bg-foreground/30" />
             <Plane className="h-3 w-3 shrink-0" aria-hidden />
-            <span className="h-px flex-1 bg-white/30" />
+            <span className="h-px flex-1 bg-foreground/30" />
           </span>
           <span className="truncate text-right">{product.destination}</span>
         </div>
         {isRoundTrip && product.returnDepartTime && (
           // Dar panelde de dönüş görünmeli: gidişi tek yön sanıp seçmesin.
-          <div className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-white/80">
+          <div className="mt-1.5 flex items-center gap-2 text-sm font-semibold text-foreground/80">
             <span className="truncate">{product.destination}</span>
-            <span className="flex flex-1 items-center gap-1 text-white/40">
-              <span className="h-px flex-1 bg-white/30" />
+            <span className="flex flex-1 items-center gap-1 text-foreground/40">
+              <span className="h-px flex-1 bg-foreground/30" />
               <Plane className="h-3 w-3 shrink-0 rotate-180" aria-hidden />
-              <span className="h-px flex-1 bg-white/30" />
+              <span className="h-px flex-1 bg-foreground/30" />
             </span>
             <span className="truncate text-right">{product.origin}</span>
           </div>
         )}
         <div className="mt-2 flex items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-white/70">
+          <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-foreground/70">
             <span>{formatDateTime(product.departTime)}</span>
             <span aria-hidden>·</span>
             <span>{stopsLabel}</span>
@@ -201,19 +201,19 @@ export function FlightCard({
       onClick={onSelect}
     >
       <div className="flex items-center justify-between gap-3">
-        <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-white/70">
+        <p className="flex min-w-0 items-center gap-2 text-xs font-medium text-foreground/70">
           <Plane className="h-4 w-4 shrink-0 text-brand-teal" aria-hidden />
-          <span className="truncate font-semibold text-white">{product.airline}</span>
+          <span className="truncate font-semibold text-foreground">{product.airline}</span>
         </p>
         <div className="shrink-0 text-right">
           <AnimatedPrice
             amount={product.price}
             currency={product.currency}
-            className="text-xl font-bold text-white"
+            className="text-xl font-bold text-foreground"
           />
           {isRoundTrip && (
             // Fiyat iki bacağın toplamı; gidiş satırının yanında tek yön gibi okunmamalı.
-            <p className="text-[11px] text-white/60">gidiş-dönüş toplamı</p>
+            <p className="text-[11px] text-foreground/60">gidiş-dönüş toplamı</p>
           )}
         </div>
       </div>

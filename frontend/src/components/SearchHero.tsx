@@ -9,6 +9,11 @@ import { SplitText } from '@/components/SplitText'
  * overflow-hidden BİLEREK yok: takvim ve misafir popover'ları kartın dışına
  * taşabilmeli. Yuvarlak köşeler bu yüzden mutlak katmanlara (görsel + örtü)
  * ayrı ayrı uygulanır.
+ *
+ * TEMADAN BAĞIMSIZ: örtü her temada lacivert (fotoğrafın üstü), dolayısıyla
+ * buradaki metin/kenarlar `text-foreground` gibi token'lar DEĞİL, sabit beyaz/ice
+ * olmalı — açık temada token'a bağlansaydı lacivert örtü üzerinde siyah yazı
+ * çıkardı. Aynı gerekçe alanlar için `heroFieldClass`'ta da geçerli.
  */
 interface SearchHeroProps {
   /** Arka plan fotoğrafı (import edilmiş asset URL'i). */
@@ -51,7 +56,7 @@ export function SearchHero({ image, title, subtitle, children }: SearchHeroProps
           aria-hidden="true"
           className="mt-2 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
         />
-        {subtitle && <p className="mt-2 max-w-2xl text-sm text-brand-ice/90">{subtitle}</p>}
+        {subtitle && <p className="mt-2 max-w-2xl text-sm text-brand-ice/80">{subtitle}</p>}
         <div className="mt-6">{children}</div>
       </div>
     </motion.section>

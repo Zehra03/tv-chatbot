@@ -35,18 +35,27 @@
   .dark {
     /* Native kontroller (date/select/scrollbar) koyu temada koyu render edilsin. */
     color-scheme: dark;
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
+    /* ——— Gece Uçuşu paleti ———
+       Bu değerler shadcn'in genel slate koyusu DEĞİL; sayfaların bugüne kadar elle
+       yazdığı renklerin BİREBİR karşılığı. Böylece sabit renkleri token'a çevirmek
+       koyu temayı oynatmıyor:
+         --background      = brand-navy (#0B234A)
+         --foreground      = text-white
+         --card            = bg-white/10'un navy üzerindeki gerçek rengi
+         --muted-foreground= text-brand-ice/70'in navy üzerindeki gerçek rengi
+                             (en yaygın ikincil metin — 48 kullanım) */
+    --background: 217.1 74.1% 16.7%;
+    --foreground: 0 0% 100%;
+    --card: 216.8 44.9% 24.9%;
+    --card-foreground: 0 0% 100%;
+    --popover: 217.1 74.1% 16.7%;
+    --popover-foreground: 0 0% 100%;
     --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 47.4% 11.2%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted-foreground: 200.5 42.2% 63.3%;
     --accent: 217.2 32.6% 17.5%;
     --accent-foreground: 210 40% 98%;
     --destructive: 0 62.8% 30.6%;

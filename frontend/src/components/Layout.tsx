@@ -5,7 +5,7 @@ import { Menu, UserRound, X } from 'lucide-react'
 import { AnimatedOutlet } from '@/components/AnimatedOutlet'
 import { GooeyNav } from '@/components/GooeyNav'
 import { Logo } from '@/components/Logo'
-import { NightSkyBackground } from '@/components/NightSkyBackground'
+import { SkyBackground } from '@/components/NightSkyBackground'
 import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
@@ -20,8 +20,12 @@ import { cn } from '@/lib/utils'
  * Yüzey rengi KULLANICI TEMASINDAN gelir (app/theme.tsx), rotadan değil. Önceden
  * rotanın `handle.zone` işareti boyardı ("AI bölgesi koyu, kontrollü bölge açık");
  * tüm rotalar 'ai' işaretlenip anlatı AiOffBanner'a taşınınca o mekanizma tek
- * renge çökmüştü. Aşağıdaki `dark ? … : …` üçlülerinin açık dalı o tasarımdan
- * kalan sağlam koddur — artık ölü değil, açık temanın ta kendisi. */
+ * renge çöktü ve kaldırıldı.
+ *
+ * Kabuk artık tema dalı taşımıyor — renkler token'dan geliyor ve ikisini de doğru
+ * veriyor. Tek istisna logo halo'su: public/logo.png'nin harfleri LACİVERT, yani
+ * doğası gereği bir AÇIK tema varlığı; koyu yüzeyde okunması için arkasına beyaz
+ * halo konur, açık temada halo gereksizdir (bkz. aşağıdaki `dark &&`). */
 const NAV = [
   { to: '/chat', label: 'Sohbet' },
   { to: '/hotels', label: 'Oteller' },
@@ -29,21 +33,15 @@ const NAV = [
   { to: '/reservations', label: 'Rezervasyonlar' },
 ]
 
-/** Mobil panel nav: her iki temada da pill (dikey listede alt çizgi okunmaz). */
-const mobileNavLinkClass =
-  (dark: boolean) =>
-  ({ isActive }: { isActive: boolean }) =>
-    dark
-      ? cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive ? 'bg-white/10 text-white' : 'text-brand-ice/60 hover:text-white',
-        )
-      : cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-accent text-accent-foreground'
-            : 'text-muted-foreground hover:text-foreground',
-        )
+/** Mobil panel nav: her iki temada da pill (dikey listede alt çizgi okunmaz).
+ *  Renkler token'dan geldiği için tema dalı gerekmiyor. */
+const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'rounded-md px-3 py-2 text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-foreground/10 text-foreground'
+      : 'text-muted-foreground hover:text-foreground',
+  )
 
 export function Layout() {
   const user = useAppSelector((s) => s.auth.user)
@@ -86,35 +84,34 @@ export function Layout() {
         // <body>'ye portal olan katmanlar (ui/modal, chat/ResultsPanel, sonner) bu
         // div'in altında değil ve sınıf burada kalsaydı temayı göremezlerdi.
         //
-        // Kabuğun boyası (brand-navy/text-white) şimdilik elle duruyor: koyu
-        // --background slate, --foreground ise #F8FAFC — token'a geçmek görünümü
-        // oynatırdı. Token'lar Gece Uçuşu paletine ayarlanınca burası
-        // `bg-background text-foreground`a sadeleşecek.
-        dark ? 'bg-brand-navy text-white' : 'bg-background text-foreground',
+        // Kabuk artık elle boyanmıyor: koyu --background = brand-navy, --foreground
+        // = beyaz (index.css'teki Gece Uçuşu paleti), yani token'lar iki temayı da
+        // doğru veriyor.
+        'bg-background text-foreground',
       )}
     >
-      {/* Gece uçuşu arka planı — yalnızca koyu temada, yumuşak giriş/çıkışla.
-          Açık temanın "gündüz göğü" karşılığı boyama fazında gelecek; şimdilik
-          açık tema düz `bg-background` üstünde durur. */}
-      <AnimatePresence>
-        {dark && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <NightSkyBackground />
-          </motion.div>
-        )}
+      {/* Gökyüzü — her iki temada da var (gece/gündüz), tema değişiminde çapraz
+          geçişle. Açık temada bu zemin ŞART: cam yüzeyler beyaz/0.65, saf beyaz
+          üstünde görünmezlerdi. */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={resolvedTheme}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.7 }}
+        >
+          <SkyBackground />
+        </motion.div>
       </AnimatePresence>
 
       <header
         className={cn(
           // Kabuğun sabit üst satırı — flex sütununda küçülmez (shrink-0); sticky
           // yerine gerçek akış elemanı, çünkü main artık tek kaydırma kabı.
-          'relative z-40 shrink-0 border-b backdrop-blur-md transition-colors duration-700',
-          dark ? 'border-white/10 bg-brand-navy/70' : 'border-border bg-background/80',
+          // Yarı saydam + blur: altındaki gökyüzü sızsın. Renkler token'dan, yani
+          // iki temada da doğru (koyu --background = navy, açık = beyaz).
+          'relative z-40 shrink-0 border-b border-foreground/10 bg-background/70 backdrop-blur-md transition-colors duration-700',
         )}
       >
         {/* Bar tam genişlik (container sınırı yok) — h-24; ChatPage 10rem hesabı buna bağlı. */}
@@ -125,7 +122,7 @@ export function Layout() {
               {dark && (
                 <span
                   aria-hidden="true"
-                  className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
+                  className="absolute inset-0 -m-1 rounded-full bg-foreground/35 blur-md"
                 />
               )}
               <Logo height={88} className="relative" />
@@ -150,13 +147,7 @@ export function Layout() {
                 className={({ isActive }) =>
                   cn(
                     'hidden max-w-[16rem] items-center gap-1.5 truncate rounded-md px-2 py-1 text-sm transition-colors md:flex',
-                    dark
-                      ? isActive
-                        ? 'text-white'
-                        : 'text-brand-ice/70 hover:text-white'
-                      : isActive
-                        ? 'text-foreground'
-                        : 'text-muted-foreground hover:text-foreground',
+                    isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )
                 }
               >
@@ -168,7 +159,7 @@ export function Layout() {
             <Button
               variant="ghost"
               size="icon"
-              className={cn('md:hidden', dark && 'text-brand-ice hover:bg-white/10 hover:text-white')}
+              className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground md:hidden"
               aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((o) => !o)}
@@ -181,41 +172,24 @@ export function Layout() {
         {/* Mobil panel — overlay olarak açılır (header shrink-0 yüksekliği
             sabit kalır, kabuk düzeni bozulmaz); linke tıklayınca kapanır. */}
         {menuOpen && (
-          <div
-            className={cn(
-              'absolute inset-x-0 top-full z-50 border-b border-t shadow-md backdrop-blur-md md:hidden',
-              dark ? 'border-white/10 bg-brand-navy/95' : 'bg-background',
-            )}
-          >
+          <div className="absolute inset-x-0 top-full z-50 border-b border-t border-foreground/10 bg-background/95 shadow-md backdrop-blur-md md:hidden">
             <nav className="flex flex-col gap-1 px-4 py-3 sm:px-8">
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className={mobileNavLinkClass(dark)}
+                  className={mobileNavLinkClass}
                   onClick={() => setMenuOpen(false)}
                 >
                   {item.label}
                 </NavLink>
               ))}
               {/* Tema seçici — mobil panelde kendi satırında. */}
-              <div
-                className={cn(
-                  'mt-2 flex items-center justify-between gap-2 border-t px-3 pt-3',
-                  dark && 'border-white/10',
-                )}
-              >
-                <span className={cn('text-sm', dark ? 'text-brand-ice/70' : 'text-muted-foreground')}>
-                  Tema
-                </span>
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-foreground/10 px-3 pt-3">
+                <span className="text-sm text-muted-foreground">Tema</span>
                 <ThemeToggle />
               </div>
-              <div
-                className={cn(
-                  'mt-2 flex items-center justify-between gap-2 border-t pt-3',
-                  dark && 'border-white/10',
-                )}
-              >
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-foreground/10 pt-3">
                 {/* Kullanıcı adı → profil sayfası (panel kapanır). */}
                 {user && (
                   <NavLink
@@ -224,7 +198,7 @@ export function Layout() {
                     className={cn(
                       'flex min-w-0 items-center gap-1.5 truncate px-3 text-sm transition-colors',
                       dark
-                        ? 'text-brand-ice/70 hover:text-white'
+                        ? 'text-muted-foreground hover:text-foreground'
                         : 'text-muted-foreground hover:text-foreground',
                     )}
                   >

@@ -17,10 +17,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const MIN_PASSWORD = 8
 
 const primaryButton =
-  'inline-flex items-center justify-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60'
+  'inline-flex items-center justify-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-4 py-2.5 text-sm font-semibold text-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60'
 
 const ghostButton =
-  'inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-brand-ice/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60'
+  'inline-flex items-center justify-center rounded-md px-4 py-2.5 text-sm font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60'
 
 interface ForgotPasswordModalProps {
   open: boolean
@@ -90,7 +90,7 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
     <button
       type="button"
       onClick={() => setShowPassword((v) => !v)}
-      className="absolute right-0 top-2 text-brand-ice/50 transition-colors hover:text-brand-teal"
+      className="absolute right-0 top-2 text-muted-foreground transition-colors hover:text-brand-teal"
       aria-label={showPassword ? 'Şifreyi gizle' : 'Şifreyi göster'}
     >
       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -102,7 +102,10 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
       open={open}
       onClose={onClose}
       title="Şifreni sıfırla"
-      className="border-white/15 bg-brand-navy/95 text-white backdrop-blur-lg"
+      // Yüzey token'dan: koyuda navy/95 + beyaz yazı (eskisiyle birebir aynı),
+      // açıkta beyaz/95 + koyu yazı. Sabit bg-brand-navy bırakılsaydı açık temada
+      // lacivert kutu üstünde siyah yazı olurdu.
+      className="border-foreground/15 bg-popover/95 text-popover-foreground backdrop-blur-lg"
     >
       {done ? (
         <div className="space-y-4 text-center">
@@ -112,8 +115,8 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
           >
             <CheckCircle2 className="h-6 w-6" />
           </div>
-          <p role="status" className="text-sm leading-relaxed text-brand-ice/80">
-            <span className="font-medium text-white">{email.trim()}</span> için şifren güncellendi.
+          <p role="status" className="text-sm leading-relaxed text-muted-foreground">
+            <span className="font-medium text-foreground">{email.trim()}</span> için şifren güncellendi.
             Artık yeni şifrenle giriş yapabilirsin.
           </p>
           <button type="button" onClick={onClose} className={`${primaryButton} w-full`}>
@@ -122,7 +125,7 @@ export function ForgotPasswordModal({ open, onClose, defaultEmail = '' }: Forgot
         </div>
       ) : (
         <form onSubmit={handleSubmit} noValidate className="space-y-6">
-          <p className="text-sm leading-relaxed text-brand-ice/70">
+          <p className="text-sm leading-relaxed text-muted-foreground">
             Hesabının e-posta adresini ve yeni şifreni gir; şifren hemen güncellensin.
           </p>
           <FloatingInput

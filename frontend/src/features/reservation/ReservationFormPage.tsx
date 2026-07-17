@@ -170,12 +170,12 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={3} />
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
+        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
           <CardContent className="space-y-4 p-8 text-center">
             <CheckCircle2 className="mx-auto h-10 w-10 text-brand-teal" aria-hidden />
             <h1 className="text-xl font-bold">Rezervasyonunuz alındı</h1>
-            <p className="flex items-center justify-center gap-2 text-sm text-brand-ice/70">
-              <Spinner size={16} decorative className="text-brand-ice/70" />
+            <p className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+              <Spinner size={16} decorative className="text-muted-foreground" />
               Rezervasyonunuza yönlendiriliyorsunuz…
             </p>
             <Button asChild variant="outline">
@@ -192,7 +192,7 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={3} />
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
+        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
           <CardContent className="space-y-4 p-8 text-center">
             <XCircle className="mx-auto h-10 w-10 text-destructive" aria-hidden />
             <h1 className="text-xl font-bold">Rezervasyon oluşturulamadı</h1>
@@ -210,7 +210,7 @@ export function ReservationFormPage() {
               </Button>
               <Button
                 variant="ghost"
-                className="text-brand-ice/80 hover:bg-white/10 hover:text-white"
+                className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
                 onClick={resetAll}
               >
                 Forma dön
@@ -227,13 +227,13 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={2} />
-        <Card className="glass-card border-amber-400/30 bg-amber-400/10 text-white">
+        <Card className="glass-card border-amber-400/30 bg-amber-400/10 text-foreground">
           <CardHeader className="flex-row items-center gap-3 space-y-0">
             <AlertTriangle className="h-6 w-6 shrink-0 text-amber-400" aria-hidden />
             <CardTitle>Onayınız gerekiyor</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-brand-ice/80">
+            <p className="text-sm text-muted-foreground">
               Rezervasyon sağlayıcısı bu işlemle ilgili bir uyarı bildirdi. Devam etmek için lütfen
               onaylayın:
             </p>
@@ -251,7 +251,7 @@ export function ReservationFormPage() {
               >
                 {confirm.isPending ? (
                   <>
-                    <Spinner size={16} decorative className="text-white" />
+                    <Spinner size={16} decorative className="text-foreground" />
                     Gönderiliyor…
                   </>
                 ) : (
@@ -260,7 +260,7 @@ export function ReservationFormPage() {
               </Button>
               <Button
                 variant="ghost"
-                className="text-brand-ice/80 hover:bg-white/10 hover:text-white"
+                className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
                 onClick={resetAll}
               >
                 Vazgeç
@@ -277,11 +277,11 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={3} />
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
+        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
           <CardContent className="space-y-4 p-8 text-center">
             <Clock className="mx-auto h-10 w-10 text-amber-400" aria-hidden />
             <h1 className="text-xl font-bold">Sonuç doğrulanıyor</h1>
-            <p className="text-sm text-brand-ice/70">
+            <p className="text-sm text-muted-foreground">
               Rezervasyonunuz işleme alındı ancak sonucu henüz kesinleşmedi. Lütfen birazdan
               rezervasyonlarınızı kontrol edin.
             </p>
@@ -297,8 +297,8 @@ export function ReservationFormPage() {
   if (!draft) {
     return (
       <div className="mx-auto max-w-2xl space-y-4 py-12 text-center">
-        <h1 className="text-2xl font-bold text-white">Rezervasyon</h1>
-        <p className="text-sm text-brand-ice/70">
+        <h1 className="text-2xl font-bold text-foreground">Rezervasyon</h1>
+        <p className="text-sm text-muted-foreground">
           Önce bir ürün seçmelisiniz — sohbetten ya da sonuç listelerinden bir kartta
           &quot;Seç&quot;e tıklayın.
         </p>
@@ -339,25 +339,25 @@ export function ReservationFormPage() {
     return (
       <div className="mx-auto max-w-2xl space-y-6">
         <FormStepper current={2} />
-        <h1 className="text-2xl font-bold text-white">Rezervasyon önizleme</h1>
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
+        <h1 className="text-2xl font-bold text-foreground">Rezervasyon önizleme</h1>
+        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
           <CardHeader>
             <CardTitle>{draft.title}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-sm text-brand-ice/70">{draft.summary}</p>
+            <p className="text-sm text-muted-foreground">{draft.summary}</p>
 
             {/* Rezervasyon snapshot'ı — kullanıcı onaydan önce gerçek booking verisini görür. */}
             {draft.productType === 'hotel' ? (
-              <dl className="grid gap-x-6 gap-y-2 rounded-lg border border-white/10 bg-white/5 p-3 text-sm sm:grid-cols-2">
+              <dl className="grid gap-x-6 gap-y-2 rounded-lg border border-foreground/10 bg-foreground/5 p-3 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-brand-ice/60">Giriş / çıkış</dt>
+                  <dt className="text-muted-foreground">Giriş / çıkış</dt>
                   <dd className="font-medium">
                     {formatDate(draft.hotel.checkIn)} — {formatDate(draft.hotel.checkOut)}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-brand-ice/60">Oda / kişi</dt>
+                  <dt className="text-muted-foreground">Oda / kişi</dt>
                   <dd className="font-medium">
                     {draft.hotel.rooms} oda · {draft.hotel.adults} yetişkin
                     {draft.hotel.children ? ` · ${draft.hotel.children} çocuk` : ''}
@@ -365,25 +365,25 @@ export function ReservationFormPage() {
                 </div>
                 {draft.hotel.boardType && (
                   <div>
-                    <dt className="text-brand-ice/60">Pansiyon</dt>
+                    <dt className="text-muted-foreground">Pansiyon</dt>
                     <dd className="font-medium">{draft.hotel.boardType}</dd>
                   </div>
                 )}
               </dl>
             ) : (
-              <dl className="grid gap-x-6 gap-y-2 rounded-lg border border-white/10 bg-white/5 p-3 text-sm sm:grid-cols-2">
+              <dl className="grid gap-x-6 gap-y-2 rounded-lg border border-foreground/10 bg-foreground/5 p-3 text-sm sm:grid-cols-2">
                 <div>
-                  <dt className="text-brand-ice/60">Rota</dt>
+                  <dt className="text-muted-foreground">Rota</dt>
                   <dd className="font-medium">
                     {draft.flight.origin} → {draft.flight.destination}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-brand-ice/60">Kalkış</dt>
+                  <dt className="text-muted-foreground">Kalkış</dt>
                   <dd className="font-medium">{formatDateTime(draft.flight.departTime)}</dd>
                 </div>
                 <div>
-                  <dt className="text-brand-ice/60">Yolcu</dt>
+                  <dt className="text-muted-foreground">Yolcu</dt>
                   <dd className="font-medium">{draft.flight.passengerCount}</dd>
                 </div>
               </dl>
@@ -391,7 +391,7 @@ export function ReservationFormPage() {
 
             <div>
               <p className="mb-1 text-sm font-semibold">Misafirler</p>
-              <ul className="space-y-1 text-sm text-brand-ice/70">
+              <ul className="space-y-1 text-sm text-muted-foreground">
                 {preview.data.passengerNames.map((name, i) => (
                   <li key={`${name}-${i}`}>{name}</li>
                 ))}
@@ -406,7 +406,7 @@ export function ReservationFormPage() {
                 type="checkbox"
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
-                className="mt-0.5 h-5 w-5 rounded border-white/30 accent-brand-teal"
+                className="mt-0.5 h-5 w-5 rounded border-foreground/30 accent-brand-teal"
               />
               Bilgilerimi kontrol ettim, rezervasyonu onaylıyorum.
             </label>
@@ -418,7 +418,7 @@ export function ReservationFormPage() {
               >
                 {confirm.isPending ? (
                   <>
-                    <Spinner size={16} decorative className="text-white" />
+                    <Spinner size={16} decorative className="text-foreground" />
                     Gönderiliyor…
                   </>
                 ) : (
@@ -427,7 +427,7 @@ export function ReservationFormPage() {
               </Button>
               <Button
                 variant="ghost"
-                className="text-brand-ice/80 hover:bg-white/10 hover:text-white"
+                className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
                 onClick={() => {
                   preview.reset()
                   confirm.reset()
@@ -445,17 +445,17 @@ export function ReservationFormPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <FormStepper current={1} />
-      <h1 className="text-2xl font-bold text-white">Rezervasyon</h1>
+      <h1 className="text-2xl font-bold text-foreground">Rezervasyon</h1>
       <AiOffBanner />
 
-      <Card className="glass-card border-white/15 bg-white/10 text-white">
+      <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
         <CardHeader>
           <CardTitle>Ürün özeti</CardTitle>
         </CardHeader>
         <CardContent className="flex items-center justify-between gap-4">
           <div className="min-w-0">
             <p className="break-words font-semibold">{draft.title}</p>
-            <p className="break-words text-sm text-brand-ice/70">{draft.summary}</p>
+            <p className="break-words text-sm text-muted-foreground">{draft.summary}</p>
           </div>
           <p className="shrink-0 text-lg font-bold">{formatPrice(draft.price, draft.currency)}</p>
         </CardContent>
@@ -463,9 +463,9 @@ export function ReservationFormPage() {
 
       <form onSubmit={handleSubmit(onValid)} className="space-y-6" noValidate>
         <section className="space-y-3">
-          <h2 className="font-semibold text-white">Misafir / yolcu bilgileri</h2>
+          <h2 className="font-semibold text-foreground">Misafir / yolcu bilgileri</h2>
           {/* Yolcu sayısı ve tipi aramanızla eşleşir (TourVisio şartı); ünvan ve uyruk zorunludur. */}
-          <p className="text-xs text-brand-ice/60">
+          <p className="text-xs text-muted-foreground">
             Yolcu sayısı ve tipi aramanızla eşleşir. Ünvan ve uyruk zorunludur.
           </p>
           {fields.map((field, index) => {
@@ -474,7 +474,7 @@ export function ReservationFormPage() {
             return (
               <div
                 key={field.id}
-                className="space-y-3 rounded-xl border border-white/10 bg-white/5 p-4 text-white"
+                className="space-y-3 rounded-xl border border-foreground/10 bg-foreground/5 p-4 text-foreground"
               >
                 {/* passengerType düzenlenmez (teklif eşleşmesi) — gizli input ile gönderilir, rozet gösterir. */}
                 <input type="hidden" {...register(`passengers.${index}.passengerType`)} />
@@ -647,7 +647,7 @@ export function ReservationFormPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="font-semibold text-white">İletişim</h2>
+          <h2 className="font-semibold text-foreground">İletişim</h2>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="contact-email">E-posta</Label>
@@ -718,7 +718,7 @@ export function ReservationFormPage() {
                 </p>
               )}
               {!errors.phoneNumber && !errors.phoneCountry && dialCodeOf(phoneCountry) && (
-                <p className="text-xs text-brand-ice/50">
+                <p className="text-xs text-muted-foreground">
                   Ülke kodu uyruğa göre seçilir; gerekirse değiştirebilirsiniz.
                 </p>
               )}
@@ -747,7 +747,7 @@ export function ReservationFormPage() {
         <Button type="submit" disabled={preview.isPending}>
           {preview.isPending ? (
             <>
-              <Spinner size={16} decorative className="text-white" />
+              <Spinner size={16} decorative className="text-foreground" />
               Önizleme hazırlanıyor…
             </>
           ) : (

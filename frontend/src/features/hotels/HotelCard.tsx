@@ -63,14 +63,14 @@ export function HotelCard({
         ) : (
           <div
             aria-hidden
-            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-white/5 text-white/30"
+            className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg bg-foreground/5 text-foreground/30"
           >
             <ImageOff className="h-5 w-5" />
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-white">{product.hotelName}</p>
-          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-white/70">
+          <p className="truncate text-sm font-semibold text-foreground">{product.hotelName}</p>
+          <p className="mt-0.5 flex items-center gap-1 text-[11px] text-foreground/70">
             <MapPin className="h-3 w-3 shrink-0" aria-hidden />
             <span className="truncate">{product.region}</span>
             <Star className="ml-1 h-3 w-3 shrink-0 fill-brand-teal text-brand-teal" aria-hidden />
@@ -92,7 +92,7 @@ export function HotelCard({
           <AnimatedPrice
             amount={product.price}
             currency={product.currency}
-            className="text-base font-bold text-white"
+            className="text-base font-bold text-foreground"
           />
           <Button
             size="sm"
@@ -132,18 +132,18 @@ export function HotelCard({
         ) : (
           <div
             aria-hidden
-            className="flex h-40 w-full shrink-0 items-center justify-center rounded-xl bg-white/5 text-white/30 sm:h-24 sm:w-32"
+            className="flex h-40 w-full shrink-0 items-center justify-center rounded-xl bg-foreground/5 text-foreground/30 sm:h-24 sm:w-32"
           >
             <ImageOff className="h-6 w-6" />
           </div>
         )}
         <div className="min-w-0">
-          <p className="flex items-center gap-1 text-xs text-white/70">
+          <p className="flex items-center gap-1 text-xs text-foreground/70">
             <MapPin className="h-3 w-3 shrink-0" aria-hidden />
             {product.region}
           </p>
-          <p className="mt-0.5 truncate text-lg font-semibold text-white">{product.hotelName}</p>
-          <p className="mt-1 flex items-center gap-1 text-xs text-white/70">
+          <p className="mt-0.5 truncate text-lg font-semibold text-foreground">{product.hotelName}</p>
+          <p className="mt-1 flex items-center gap-1 text-xs text-foreground/70">
             <Star className="h-3.5 w-3.5 fill-brand-teal text-brand-teal" aria-hidden />
             {product.stars}
             <span className="sr-only"> yıldız</span>
@@ -159,7 +159,7 @@ export function HotelCard({
         <AnimatedPrice
           amount={product.price}
           currency={product.currency}
-          className="text-xl font-bold text-white"
+          className="text-xl font-bold text-foreground"
         />
         <Button
           size="sm"

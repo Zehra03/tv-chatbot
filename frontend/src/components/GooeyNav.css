@@ -1,6 +1,11 @@
-/* GooeyNav — pill navigasyon (reactbits.dev uyarlaması, PaxAssist gece uçuşu
-   teması). Parçacık/goo efekti kaldırıldı; aktif öğeyi saran beyaz pill
-   scale+opacity geçişiyle belirir. */
+/* GooeyNav — pill navigasyon (reactbits.dev uyarlaması). Parçacık/goo efekti
+   kaldırıldı; aktif öğeyi saran pill scale+opacity geçişiyle belirir.
+
+   Renkler token'dan (index.css) gelir, sabit `white`/`brand.ice` DEĞİL: bu dosya
+   .css olduğu için Tailwind sınıflarıyla değil doğrudan `hsl(var(--token))` ile
+   yazılır. Koyu temada --foreground beyaz, --muted-foreground ise brand-ice/70'in
+   navy üzerindeki karşılığıdır — yani gece uçuşu görünümü korunur; açık temada
+   aynı roller okunur koyu tonlara döner. */
 
 .gooey-nav-container {
   position: relative;
@@ -12,9 +17,13 @@
   list-style: none;
   padding: 0 0.5em;
   margin: 0;
-  color: white;
+  color: hsl(var(--foreground));
   font-size: 0.875rem; /* text-sm — header ölçeği */
   font-weight: 500;
+}
+
+/* Metin gölgesi yalnız koyu gökyüzünde anlamlı; açık zeminde kir yapar. */
+.dark .gooey-nav-container nav ul {
   text-shadow: 0 1px 1px hsl(205deg 30% 10% / 0.2);
 }
 
@@ -26,11 +35,11 @@
     color 0.3s ease,
     box-shadow 0.3s ease;
   box-shadow: 0 0 0.5px 1.5px transparent;
-  color: theme(colors.brand.ice / 80%);
+  color: hsl(var(--muted-foreground));
 }
 
 .gooey-nav-container nav ul li:hover {
-  color: white;
+  color: hsl(var(--foreground));
 }
 
 .gooey-nav-container nav ul li a {
@@ -44,13 +53,14 @@
   box-shadow: 0 0 0.5px 1.5px theme(colors.brand.teal);
 }
 
-/* Aktif pill — beyaz kapsül, scale ile yumuşak belirme. */
+/* Aktif pill — kapsül, scale ile yumuşak belirme. Zıt yüzey: koyu temada beyaz
+   pill + lacivert yazı, açık temada lacivert pill + beyaz yazı. */
 .gooey-nav-container nav ul li::after {
   content: '';
   position: absolute;
   inset: 0;
   border-radius: 100vw;
-  background: white;
+  background: hsl(var(--foreground));
   opacity: 0;
   transform: scale(0);
   transition: all 0.3s ease;
@@ -58,7 +68,7 @@
 }
 
 .gooey-nav-container nav ul li.active {
-  color: theme(colors.brand.navy);
+  color: hsl(var(--background));
   text-shadow: none;
 }
 

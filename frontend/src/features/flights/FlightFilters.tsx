@@ -20,12 +20,12 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
 
   return (
     <div className="glass-card relative z-30 flex flex-wrap items-center gap-3 p-4">
-      <label className="flex items-center gap-2 text-sm text-white">
+      <label className="flex items-center gap-2 text-sm text-foreground">
         <input
           type="checkbox"
           checked={filters.nonstopOnly}
           onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
-          className="h-4 w-4 rounded border-white/30 accent-brand-teal"
+          className="h-4 w-4 rounded border-foreground/30 accent-brand-teal"
         />
         Yalnızca direkt
       </label>
@@ -67,7 +67,7 @@ export function FlightFilters({ airlines }: { airlines: string[] }) {
         type="button"
         variant="ghost"
         size="sm"
-        className="text-brand-ice/70 hover:bg-white/10 hover:text-white"
+        className="text-muted-foreground hover:bg-foreground/10 hover:text-foreground"
         onClick={() => dispatch(flightFiltersReset())}
       >
         Temizle

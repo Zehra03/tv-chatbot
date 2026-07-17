@@ -310,7 +310,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
     // diye overflow serbest kalır.
     return (
         <div className={cn(
-            "flex flex-col w-full items-center bg-transparent text-white relative",
+            "flex flex-col w-full items-center bg-transparent text-foreground relative",
             hero && "h-full min-h-full flex-1 justify-center p-6 overflow-hidden"
         )}>
             <div className={cn("w-full mx-auto relative", hero && "max-w-2xl")}>
@@ -334,18 +334,18 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     transition={{ delay: 0.2, duration: 0.5 }}
                                     className="inline-block"
                                 >
-                                    <h1 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white/90 to-white/40 pb-1">
+                                    <h1 className="text-3xl font-medium tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground/90 to-foreground/40 pb-1">
                                         Bugün nereye gidiyoruz?
                                     </h1>
                                     <motion.div
-                                        className="h-px bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                        className="h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent"
                                         initial={{ width: 0, opacity: 0 }}
                                         animate={{ width: "100%", opacity: 1 }}
                                         transition={{ delay: 0.5, duration: 0.8 }}
                                     />
                                 </motion.div>
                                 <motion.p
-                                    className="text-sm text-white/40"
+                                    className="text-sm text-foreground/40"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.3 }}
@@ -358,7 +358,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
 
                     <motion.div
                         layout
-                        className="relative backdrop-blur-xl bg-white/[0.02] rounded-2xl border border-white/[0.05] shadow-2xl"
+                        className="relative backdrop-blur-xl bg-foreground/[0.02] rounded-2xl border border-foreground/[0.05] shadow-2xl"
                         initial={{ scale: 0.98 }}
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.1, layout: { duration: 0.35, ease: "easeOut" } }}
@@ -367,7 +367,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                             {showCommandPalette && (
                                 <motion.div 
                                     ref={commandPaletteRef}
-                                    className="absolute left-4 right-4 bottom-full mb-2 backdrop-blur-xl bg-black/90 rounded-lg z-50 shadow-lg border border-white/10 overflow-hidden"
+                                    className="absolute left-4 right-4 bottom-full mb-2 backdrop-blur-xl bg-black/90 rounded-lg z-50 shadow-lg border border-foreground/10 overflow-hidden"
                                     initial={{ opacity: 0, y: 5 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: 5 }}
@@ -380,19 +380,19 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                                 className={cn(
                                                     "flex items-center gap-2 px-3 py-2 text-xs transition-colors cursor-pointer",
                                                     activeSuggestion === index 
-                                                        ? "bg-white/10 text-white" 
-                                                        : "text-white/70 hover:bg-white/5"
+                                                        ? "bg-foreground/10 text-foreground" 
+                                                        : "text-foreground/70 hover:bg-foreground/5"
                                                 )}
                                                 onClick={() => selectCommandSuggestion(index)}
                                                 initial={{ opacity: 0 }}
                                                 animate={{ opacity: 1 }}
                                                 transition={{ delay: index * 0.03 }}
                                             >
-                                                <div className="w-5 h-5 flex items-center justify-center text-white/60">
+                                                <div className="w-5 h-5 flex items-center justify-center text-foreground/60">
                                                     {COMMAND_ICONS[suggestion.prefix]}
                                                 </div>
                                                 <div className="font-medium">{suggestion.label}</div>
-                                                <div className="text-white/40 text-xs ml-1">
+                                                <div className="text-foreground/40 text-xs ml-1">
                                                     {suggestion.prefix}
                                                 </div>
                                             </motion.div>
@@ -421,9 +421,9 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     "resize-none",
                                     "bg-transparent",
                                     "border-none",
-                                    "text-white/90 text-sm",
+                                    "text-foreground/90 text-sm",
                                     "focus:outline-none",
-                                    "placeholder:text-white/20",
+                                    "placeholder:text-foreground/20",
                                     "min-h-[60px]"
                                 )}
                                 style={{
@@ -438,7 +438,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     aria-live="polite"
                                     className={cn(
                                         "px-4 pt-1 text-end text-xs tabular-nums",
-                                        value.length >= MAX_LENGTH ? "text-amber-300" : "text-white/40"
+                                        value.length >= MAX_LENGTH ? "text-amber-300" : "text-foreground/40"
                                     )}
                                 >
                                     {value.length}/{MAX_LENGTH}
@@ -446,7 +446,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                             )}
                         </div>
 
-                        <div className="p-4 border-t border-white/[0.05] flex items-center justify-between gap-4">
+                        <div className="p-4 border-t border-foreground/[0.05] flex items-center justify-between gap-4">
                             <div className="flex items-center gap-3">
                                 <motion.button
                                     type="button"
@@ -457,13 +457,13 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     }}
                                     whileTap={{ scale: 0.94 }}
                                     className={cn(
-                                        "p-2 text-white/40 hover:text-white/90 rounded-lg transition-colors relative group",
-                                        showCommandPalette && "bg-white/10 text-white/90"
+                                        "p-2 text-foreground/40 hover:text-foreground/90 rounded-lg transition-colors relative group",
+                                        showCommandPalette && "bg-foreground/10 text-foreground/90"
                                     )}
                                 >
                                     <Command className="w-4 h-4" />
                                     <motion.span
-                                        className="absolute inset-0 bg-white/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="absolute inset-0 bg-foreground/[0.05] rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
                                         layoutId="button-highlight"
                                     />
                                 </motion.button>
@@ -478,9 +478,11 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                 className={cn(
                                     "px-4 py-2 rounded-lg text-sm font-medium transition-all",
                                     "flex items-center gap-2",
+                                    // Etkin "Gönder": zıt yüzey (koyuda beyaz/lacivert,
+                                    // açıkta lacivert/beyaz) — token'lardan.
                                     value.trim()
-                                        ? "bg-white text-[#0A0A0B] shadow-lg shadow-white/10"
-                                        : "bg-white/[0.05] text-white/40"
+                                        ? "bg-foreground text-background shadow-lg shadow-foreground/10"
+                                        : "bg-foreground/[0.05] text-foreground/40"
                                 )}
                             >
                                 {isTyping || disabled ? (
@@ -507,7 +509,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                         type="button"
                                         onClick={() => runCommand(suggestion.prefix)}
                                         disabled={disabled}
-                                        className="flex items-center gap-2 px-3 py-2 bg-white/[0.02] hover:bg-white/[0.05] rounded-lg text-sm text-white/60 hover:text-white/90 transition-all relative group disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center gap-2 px-3 py-2 bg-foreground/[0.02] hover:bg-foreground/[0.05] rounded-lg text-sm text-foreground/60 hover:text-foreground/90 transition-all relative group disabled:opacity-50 disabled:cursor-not-allowed"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: index * 0.1 }}
@@ -515,7 +517,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                         {COMMAND_ICONS[suggestion.prefix]}
                                         <span>{suggestion.label}</span>
                                         <motion.div
-                                            className="absolute inset-0 border border-white/[0.05] rounded-lg"
+                                            className="absolute inset-0 border border-foreground/[0.05] rounded-lg"
                                             initial={false}
                                             animate={{
                                                 opacity: [0, 1],
@@ -537,16 +539,16 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
             <AnimatePresence>
                 {isTyping && (
                     <motion.div 
-                        className="fixed bottom-8 mx-auto transform -translate-x-1/2 backdrop-blur-2xl bg-white/[0.02] rounded-full px-4 py-2 shadow-lg border border-white/[0.05]"
+                        className="fixed bottom-8 mx-auto transform -translate-x-1/2 backdrop-blur-2xl bg-foreground/[0.02] rounded-full px-4 py-2 shadow-lg border border-foreground/[0.05]"
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                     >
                         <div className="flex items-center gap-3">
-                            <div className="w-8 h-7 rounded-full bg-white/[0.05] flex items-center justify-center text-center">
-                                <span className="text-xs font-medium text-white/90 mb-0.5">Pax</span>
+                            <div className="w-8 h-7 rounded-full bg-foreground/[0.05] flex items-center justify-center text-center">
+                                <span className="text-xs font-medium text-foreground/90 mb-0.5">Pax</span>
                             </div>
-                            <div className="flex items-center gap-2 text-sm text-white/70">
+                            <div className="flex items-center gap-2 text-sm text-foreground/70">
                                 <span>Düşünüyor</span>
                                 <TypingDots />
                             </div>
@@ -565,7 +567,7 @@ function TypingDots() {
             {[1, 2, 3].map((dot) => (
                 <motion.div
                     key={dot}
-                    className="w-1.5 h-1.5 bg-white/90 rounded-full mx-0.5"
+                    className="w-1.5 h-1.5 bg-foreground/90 rounded-full mx-0.5"
                     initial={{ opacity: 0.3 }}
                     animate={{ 
                         opacity: [0.3, 0.9, 0.3],
@@ -578,7 +580,8 @@ function TypingDots() {
                         ease: "easeInOut",
                     }}
                     style={{
-                        boxShadow: "0 0 4px rgba(255, 255, 255, 0.3)"
+                        // Nokta halesi ön plan renginden — açık temada beyaz hale görünmezdi.
+                        boxShadow: "0 0 4px hsl(var(--foreground) / 0.3)"
                     }}
                 />
             ))}

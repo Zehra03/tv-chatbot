@@ -25,8 +25,8 @@ export function ChoiceCard({
           disabled={disabled}
           onClick={() => onSelect(opt.value)}
           className={cn(
-            'rounded-full border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white',
-            'backdrop-blur transition hover:border-white/25 hover:bg-white/10',
+            'rounded-full border border-foreground/15 bg-foreground/5 px-4 py-2 text-sm font-medium text-foreground',
+            'backdrop-blur transition hover:border-foreground/25 hover:bg-foreground/10',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-blue/60',
             'disabled:cursor-not-allowed disabled:opacity-50',
           )}

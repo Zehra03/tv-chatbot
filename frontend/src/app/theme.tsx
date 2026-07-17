@@ -29,10 +29,9 @@ const STORAGE_KEY = 'pax-theme'
 /**
  * Faz 0 varsayılanı KOYU — 'system' DEĞİL.
  *
- * Hedef varsayılan 'system'; ama sayfalar henüz açık temaya taşınmadı (~372 sabit
- * `text-white`/`bg-white/10`). Bugün 'system' deseydik, işletim sistemi açık olan
- * her kullanıcı yarım boyanmış bir arayüzle karşılaşırdı. Altyapı hazır, boyama
- * bitince (son faz) burası 'system' olacak.
+ * Hedef varsayılan 'system'. Sayfalar artık token'lara taşındı; ama Login/Landing
+ * hâlâ kendi koyu marka yüzeylerinde ve açık tema yeni oturuyor. Varsayılanı
+ * çevirmeden önce açık temayı gerçek kullanımda görmek istiyoruz.
  *
  * DİKKAT: index.html'deki FOUC script'i bu değeri AYNALAR — ikisi BİRLİKTE değişir.
  */

@@ -66,7 +66,7 @@ export function DropdownSelect({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex h-9 items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-sm text-white shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal',
+          'flex h-9 items-center justify-between gap-2 rounded-xl border border-foreground/15 bg-foreground/5 px-3 text-sm text-foreground shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal',
           className,
         )}
       >
@@ -75,7 +75,7 @@ export function DropdownSelect({
           aria-hidden
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut', type: 'spring' }}
-          className="shrink-0 text-brand-ice/70"
+          className="shrink-0 text-muted-foreground"
         >
           <ChevronDown className="h-4 w-4" />
         </motion.span>
@@ -111,8 +111,8 @@ export function DropdownSelect({
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
                     selected
-                      ? 'bg-white/10 text-white'
-                      : 'text-brand-ice/80 hover:bg-white/10 hover:text-white',
+                      ? 'bg-foreground/10 text-foreground'
+                      : 'text-muted-foreground hover:bg-foreground/10 hover:text-foreground',
                   )}
                 >
                   <span className="truncate">{option.label}</span>

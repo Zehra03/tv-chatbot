@@ -114,7 +114,7 @@ export function ProfilePage() {
           text="Profil"
           tag="h1"
           textAlign="left"
-          className="text-2xl font-bold text-white"
+          className="text-2xl font-bold text-foreground"
           delay={40}
           duration={0.8}
         />
@@ -122,17 +122,17 @@ export function ProfilePage() {
           aria-hidden="true"
           className="mt-1.5 h-1 w-16 rounded-full bg-gradient-to-r from-brand-blue to-brand-teal"
         />
-        <p className="mt-2 text-sm text-brand-ice/70">
+        <p className="mt-2 text-sm text-muted-foreground">
           Hesap bilgileriniz ve hızlı bağlantılar.
         </p>
       </motion.div>
 
       <motion.div variants={itemVariants}>
-        <Card className="glass-card border-white/15 bg-white/10 text-white">
+        <Card className="glass-card border-foreground/15 bg-foreground/10 text-foreground">
           <CardHeader className="flex-row items-center gap-4 space-y-0">
             <div
               aria-hidden="true"
-              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-teal text-xl font-bold text-white ring-4 ring-white/15"
+              className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-blue to-brand-teal text-xl font-bold text-foreground ring-4 ring-foreground/15"
             >
               {initials}
             </div>
@@ -140,7 +140,7 @@ export function ProfilePage() {
               {/* Misafirde ad zaten "Misafir" — ayrıca rozet basmak tekrar olur;
                   oturum türü aşağıdaki bilgi listesinde gösteriliyor. */}
               <CardTitle className="truncate text-lg">{displayName}</CardTitle>
-              <CardDescription className="truncate text-brand-ice/70">
+              <CardDescription className="truncate text-muted-foreground">
                 {user.email || 'Misafir oturumu'}
               </CardDescription>
             </div>
@@ -155,7 +155,7 @@ export function ProfilePage() {
                   <Mail className="h-4 w-4" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <dt className="text-brand-ice/70">E-posta</dt>
+                  <dt className="text-muted-foreground">E-posta</dt>
                   {editingEmail ? (
                     <dd className="mt-1 space-y-2">
                       <input
@@ -173,7 +173,7 @@ export function ProfilePage() {
                             cancelEditEmail()
                           }
                         }}
-                        className="w-full rounded-md border border-white/20 bg-white/10 px-2.5 py-1.5 text-sm text-white placeholder:text-brand-ice/40 focus:border-brand-teal focus:outline-none focus:ring-1 focus:ring-brand-teal disabled:opacity-60"
+                        className="w-full rounded-md border border-foreground/20 bg-foreground/10 px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-brand-teal focus:outline-none focus:ring-1 focus:ring-brand-teal disabled:opacity-60"
                       />
                       {emailError && (
                         <p role="alert" className="text-xs text-destructive">
@@ -185,7 +185,7 @@ export function ProfilePage() {
                           type="button"
                           onClick={() => void saveEmail()}
                           disabled={savingEmail}
-                          className="inline-flex items-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-3 py-1.5 text-xs font-semibold text-white transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center rounded-md bg-gradient-to-r from-brand-blue to-brand-teal px-3 py-1.5 text-xs font-semibold text-foreground transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:cursor-not-allowed disabled:opacity-60"
                         >
                           {savingEmail ? 'Kaydediliyor…' : 'Kaydet'}
                         </button>
@@ -193,7 +193,7 @@ export function ProfilePage() {
                           type="button"
                           onClick={cancelEditEmail}
                           disabled={savingEmail}
-                          className="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium text-brand-ice/70 transition hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60"
+                          className="inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal disabled:opacity-60"
                         >
                           İptal
                         </button>
@@ -208,7 +208,7 @@ export function ProfilePage() {
                           type="button"
                           onClick={startEditEmail}
                           aria-label="E-postayı düzenle"
-                          className="shrink-0 text-brand-ice/60 transition-colors hover:text-brand-teal focus-visible:text-brand-teal focus-visible:outline-none"
+                          className="shrink-0 text-muted-foreground transition-colors hover:text-brand-teal focus-visible:text-brand-teal focus-visible:outline-none"
                         >
                           <Pencil className="h-3.5 w-3.5" aria-hidden />
                         </button>
@@ -225,7 +225,7 @@ export function ProfilePage() {
                   <UserRound className="h-4 w-4" />
                 </span>
                 <div>
-                  <dt className="text-brand-ice/70">Oturum türü</dt>
+                  <dt className="text-muted-foreground">Oturum türü</dt>
                   <dd className="font-medium">{user.guest ? 'Misafir' : 'Üye'}</dd>
                 </div>
               </div>
@@ -235,18 +235,18 @@ export function ProfilePage() {
       </motion.div>
 
       <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2">
-        <Card className="glass-card h-full border-white/15 bg-white/10 text-white transition-all hover:border-brand-teal/40 hover:bg-white/[0.14]">
+        <Card className="glass-card h-full border-foreground/15 bg-foreground/10 text-foreground transition-all hover:border-brand-teal/40 hover:bg-foreground/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
                 aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-teal text-white shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-teal text-foreground shadow-sm"
               >
                 <CalendarCheck className="h-4 w-4" />
               </span>
               Rezervasyonlarım
             </CardTitle>
-            <CardDescription className="text-brand-ice/70">
+            <CardDescription className="text-muted-foreground">
               {reservations.data ? (
                 <span className="font-semibold text-brand-teal">
                   {reservations.data.length} rezervasyon
@@ -267,18 +267,18 @@ export function ProfilePage() {
           </CardContent>
         </Card>
 
-        <Card className="glass-card h-full border-white/15 bg-white/10 text-white transition-all hover:border-brand-teal/40 hover:bg-white/[0.14]">
+        <Card className="glass-card h-full border-foreground/15 bg-foreground/10 text-foreground transition-all hover:border-brand-teal/40 hover:bg-foreground/[0.14]">
           <CardHeader>
             <CardTitle className="flex items-center gap-2.5 text-base">
               <span
                 aria-hidden="true"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-teal text-white shadow-sm"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-brand-blue to-brand-teal text-foreground shadow-sm"
               >
                 <MessagesSquare className="h-4 w-4" />
               </span>
               Sohbet
             </CardTitle>
-            <CardDescription className="text-brand-ice/70">
+            <CardDescription className="text-muted-foreground">
               Aramaya asistanla devam edin.
             </CardDescription>
           </CardHeader>
@@ -298,7 +298,7 @@ export function ProfilePage() {
         <Button
           variant="outline"
           onClick={handleLogout}
-          className="gap-2 hover:border-destructive hover:bg-destructive/20 hover:text-white"
+          className="gap-2 hover:border-destructive hover:bg-destructive/20 hover:text-foreground"
         >
           <LogOut className="h-4 w-4" aria-hidden />
           Çıkış yap

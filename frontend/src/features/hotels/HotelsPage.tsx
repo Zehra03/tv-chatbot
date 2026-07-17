@@ -197,8 +197,8 @@ export function HotelsPage() {
             fieldClassName={cn('w-56', heroFieldClass)}
           >
             {childCount > 0 && (
-              <div className="mt-4 border-t border-white/10 pt-3">
-                <p className="text-xs font-medium text-brand-ice/70">
+              <div className="mt-4 border-t border-foreground/10 pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
                   Çocuk yaşları (fiyatlama için)
                 </p>
                 {/* auto-fit: panel daraldığında (küçük ekranda min() ile kısalır)
@@ -208,7 +208,7 @@ export function HotelsPage() {
                   {childAges.map((age, i) => (
                     <label
                       key={i}
-                      className="grid min-w-0 grid-rows-[auto_auto] gap-1 text-start text-xs text-brand-ice/70"
+                      className="grid min-w-0 grid-rows-[auto_auto] gap-1 text-start text-xs text-muted-foreground"
                     >
                       {/* truncate: etiket sarmalanırsa o sütunun select'i komşusuna
                           göre aşağı kayıyordu — tek satıra sabitleyip hizayı korur. */}
@@ -220,13 +220,16 @@ export function HotelsPage() {
                             ages.map((a, j) => (j === i ? Number(e.target.value) : a)),
                           )
                         }
-                        // bg-brand-navy opak olmalı: yarı saydam bir zeminde native
-                        // seçenek listesi panelin değil OS yüzeyinin üstünde
-                        // birleştiriliyor ve beyaz zemin + beyaz yazı çıkıyor.
-                        className="h-9 w-full min-w-0 rounded-md border border-white/15 bg-brand-navy px-2 text-sm text-white [color-scheme:dark] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
+                        // Zemin OPAK olmalı (yarı saydamda native seçenek listesi
+                        // panelin değil OS yüzeyinin üstünde birleşiyor ve beyaz
+                        // zemin + beyaz yazı çıkıyordu) — `bg-background` opak ve
+                        // temayı izliyor. color-scheme artık :root/.dark'tan miras:
+                        // sabit [color-scheme:dark] açık temada native listeyi
+                        // zorla koyu render ediyordu.
+                        className="h-9 w-full min-w-0 rounded-md border border-foreground/15 bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
                       >
                         {Array.from({ length: 18 }, (_, y) => (
-                          <option key={y} value={y} className="bg-brand-navy text-white">
+                          <option key={y} value={y} className="bg-background text-foreground">
                             {y}
                           </option>
                         ))}
@@ -263,7 +266,7 @@ export function HotelsPage() {
 
       {query.isFetching && (
         <div className="space-y-3">
-          <LoadingState label="Aranıyor…" className="text-brand-ice/70" />
+          <LoadingState label="Aranıyor…" className="text-muted-foreground" />
           {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
           <div aria-hidden="true" className="grid gap-3">
             <Skeleton className="h-32" />
@@ -281,7 +284,7 @@ export function HotelsPage() {
         <>
           <HotelFilters boardTypes={boardTypes} />
           <ActiveFilterChips chips={chips} />
-          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
+          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
           <HotelList products={visible} criteria={criteria ?? undefined} />
         </>
       )}

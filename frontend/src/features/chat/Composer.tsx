@@ -45,7 +45,7 @@ export function Composer({ onSend, disabled, placeholder }: ComposerProps) {
             maxLength={MAX_LENGTH}
             aria-label="Mesaj"
             autoComplete="off"
-            className="h-11 rounded-xl border-white/15 bg-white/5 text-white placeholder:text-white/40 focus-visible:ring-brand-teal"
+            className="h-11 rounded-xl border-foreground/15 bg-foreground/5 text-foreground placeholder:text-foreground/40 focus-visible:ring-brand-teal"
           />
           <div className="input-glow-bar" aria-hidden="true"></div>
         </div>
@@ -55,7 +55,7 @@ export function Composer({ onSend, disabled, placeholder }: ComposerProps) {
           <p
             aria-live="polite"
             className={`mt-1 text-end text-xs tabular-nums ${
-              text.length >= MAX_LENGTH ? 'text-amber-300' : 'text-brand-ice/60'
+              text.length >= MAX_LENGTH ? 'text-amber-300' : 'text-muted-foreground'
             }`}
           >
             {text.length}/{MAX_LENGTH}

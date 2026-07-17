@@ -32,7 +32,7 @@ function ResultsBody({
 }) {
   return (
     <div className={scrollClass}>
-      {loading && <LoadingState label="Aranıyor…" className="mb-3 text-brand-ice/70" />}
+      {loading && <LoadingState label="Aranıyor…" className="mb-3 text-muted-foreground" />}
       <div className={cn('transition-opacity duration-200', loading && 'opacity-50')}>
         <ResultCards cards={cards} criteria={criteria} />
       </div>
@@ -46,11 +46,11 @@ function ResultsHeader({ cards, onClose }: { cards: ResultCard[]; onClose?: () =
   const label = type === 'flight' ? 'Uçuşlar' : 'Oteller'
   const Icon = type === 'flight' ? Plane : Hotel
   return (
-    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
-      <h2 className="flex items-center gap-2 text-sm font-semibold text-white">
+    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-foreground/10 px-4 py-3">
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
         <Icon className="h-4 w-4 text-brand-teal" aria-hidden />
         {label}
-        <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-brand-ice/70">
+        <span className="rounded-full bg-foreground/10 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted-foreground">
           {cards.length}
         </span>
       </h2>
@@ -59,7 +59,7 @@ function ResultsHeader({ cards, onClose }: { cards: ResultCard[]; onClose?: () =
           type="button"
           onClick={onClose}
           aria-label="Sonuçları kapat"
-          className="rounded-lg p-1.5 text-brand-ice/60 transition-colors hover:bg-white/10 hover:text-white"
+          className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-foreground/10 hover:text-foreground"
         >
           <X className="h-4 w-4" aria-hidden />
         </button>

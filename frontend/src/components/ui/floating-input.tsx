@@ -30,13 +30,13 @@ export function FloatingInput({
         id={id}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className={`block py-2.5 px-0 w-full text-sm text-white bg-transparent border-0 border-b-2 border-brand-ice/30 appearance-none focus:outline-none focus:ring-0 focus:border-brand-teal peer${trailing ? ' pr-8' : ''}`}
+        className={`block py-2.5 px-0 w-full text-sm text-foreground bg-transparent border-0 border-b-2 border-brand-ice/30 appearance-none focus:outline-none focus:ring-0 focus:border-brand-teal peer${trailing ? ' pr-8' : ''}`}
         placeholder=" "
         required
       />
       <label
         htmlFor={id}
-        className="absolute text-xs text-brand-ice/60 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-brand-teal peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 uppercase tracking-wider font-mono"
+        className="absolute text-xs text-muted-foreground duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:left-0 peer-focus:text-brand-teal peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6 uppercase tracking-wider font-mono"
       >
         {label}
       </label>

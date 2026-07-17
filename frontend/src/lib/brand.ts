@@ -28,6 +28,13 @@ export function shade(hex: string, factor: number): string {
   return `rgb(${r}, ${g}, ${b})`
 }
 
+/** shade()'in ikizi: beyaza doğru karıştırır (0 = renk, 1 = beyaz).
+ *  Gündüz göğünün soluk uçlarını ham hex yazmadan üretmek için. */
+export function tint(hex: string, factor: number): string {
+  const [r, g, b] = hexChannels(hex).map((c) => Math.round(c + (255 - c) * factor))
+  return `rgb(${r}, ${g}, ${b})`
+}
+
 function hexChannels(hex: string): [number, number, number] {
   const value = hex.replace('#', '')
   return [

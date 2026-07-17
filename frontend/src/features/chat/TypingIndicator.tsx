@@ -32,7 +32,7 @@ export function TypingIndicator({ searching = false }: { searching?: boolean }) 
             aria-hidden="true"
           />
           {/* Görünür metin → role="status" ekran okuyucuya kendisi duyurur (sr-only gereksiz). */}
-          <span className="text-sm text-brand-ice/90">Arıyorum…</span>
+          <span className="text-sm text-muted-foreground">Arıyorum…</span>
           {dots}
         </div>
       </div>

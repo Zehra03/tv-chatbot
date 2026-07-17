@@ -107,8 +107,8 @@ export function PeoplePicker({
               {rows.map((row) => (
                 <div key={row.key} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">{row.label}</p>
-                    {row.hint && <p className="text-xs text-brand-ice/60">{row.hint}</p>}
+                    <p className="text-sm font-medium text-foreground">{row.label}</p>
+                    {row.hint && <p className="text-xs text-muted-foreground">{row.hint}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -116,11 +116,11 @@ export function PeoplePicker({
                       aria-label={`${row.label} sayısını azalt`}
                       disabled={row.value <= row.min}
                       onClick={() => onRowChange(row.key, row.value - 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/20 text-foreground transition-colors hover:bg-foreground/10 disabled:opacity-30 disabled:hover:bg-transparent"
                     >
                       <Minus className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <span className="w-5 text-center text-sm font-semibold tabular-nums text-white">
+                    <span className="w-5 text-center text-sm font-semibold tabular-nums text-foreground">
                       {row.value}
                     </span>
                     <button
@@ -128,7 +128,7 @@ export function PeoplePicker({
                       aria-label={`${row.label} sayısını artır`}
                       disabled={row.value >= row.max}
                       onClick={() => onRowChange(row.key, row.value + 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-foreground/20 text-foreground transition-colors hover:bg-foreground/10 disabled:opacity-30 disabled:hover:bg-transparent"
                     >
                       <Plus className="h-4 w-4" aria-hidden="true" />
                     </button>

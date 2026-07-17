@@ -98,22 +98,22 @@ export default function Design() {
               <h3 className="text-2xl font-bold tracking-tight text-gradient-brand">
                 Gece uçuşuna hoş geldin
               </h3>
-              <p className="text-sm text-brand-ice/70">
+              <p className="text-sm text-muted-foreground">
                 Chat ve arama sonuçları bu yüzeyi kullanır; rezervasyon bilinçli olarak açık kalır.
               </p>
             </div>
 
             <div className="glass-card max-w-md p-5">
-              <p className="text-sm font-semibold text-white">.glass-card reçetesi</p>
-              <p className="mt-1 text-xs text-white/70">
-                rounded-2xl · border-white/15 · bg-white/10 · backdrop-blur-md
+              <p className="text-sm font-semibold text-foreground">.glass-card reçetesi</p>
+              <p className="mt-1 text-xs text-foreground/70">
+                rounded-2xl · border-foreground/15 · bg-foreground/10 · backdrop-blur-md
               </p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="glass-chip text-brand-ice">Antalya</span>
-              <span className="glass-chip text-brand-ice">2 misafir</span>
-              <span className="glass-chip border-brand-teal/40 bg-brand-teal/15 text-white">
+              <span className="glass-chip text-muted-foreground">Antalya</span>
+              <span className="glass-chip text-muted-foreground">2 misafir</span>
+              <span className="glass-chip border-brand-teal/40 bg-brand-teal/15 text-foreground">
                 otel araması
               </span>
             </div>
@@ -136,7 +136,7 @@ export default function Design() {
               </button>
               <button
                 type="button"
-                className="rounded-xl border border-brand-ice/30 bg-white/5 px-6 py-3 text-sm font-semibold text-brand-ice transition-all duration-300 hover:border-brand-teal hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
+                className="rounded-xl border border-brand-ice/30 bg-foreground/5 px-6 py-3 text-sm font-semibold text-muted-foreground transition-all duration-300 hover:border-brand-teal hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal"
               >
                 İkincil eylem
               </button>
@@ -152,8 +152,8 @@ export default function Design() {
             </div>
 
             {/* Koyu drop zone — Magic/shadcn üretimi bileşenler önce buraya. */}
-            <div className="rounded-xl border border-dashed border-white/20 p-8">
-              <p className="text-center text-sm text-brand-ice/60">
+            <div className="rounded-xl border border-dashed border-foreground/20 p-8">
+              <p className="text-center text-sm text-muted-foreground">
                 Koyu yüzey drop zone — üretilen bileşeni buraya koy, screenshot al, kritik et.
               </p>
             </div>
@@ -180,8 +180,8 @@ export default function Design() {
               <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,theme(colors.brand.teal/12%),transparent_70%)]" />
               {/* dark: koyu görsel üstündeki buton/metin token'ları koyu bölgeyle uysun. */}
               <div className="dark absolute inset-0 flex flex-col items-center justify-center gap-2">
-                <p className="text-3xl font-semibold text-white">Gece uçuşuna hazır mısın?</p>
-                <p className="text-sm text-white/70">Statik gradyan hero — hafif ve akıcı</p>
+                <p className="text-3xl font-semibold text-foreground">Gece uçuşuna hazır mısın?</p>
+                <p className="text-sm text-foreground/70">Statik gradyan hero — hafif ve akıcı</p>
                 <Button className="mt-2">Uçuş ara</Button>
               </div>
             </div>

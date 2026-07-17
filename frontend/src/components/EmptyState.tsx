@@ -17,7 +17,7 @@ interface EmptyStateProps {
 
 export function EmptyState({ children, icon, title, tone = 'light', className }: EmptyStateProps) {
   const dark = tone === 'dark'
-  const bodyClass = dark ? 'text-brand-ice/70' : 'text-muted-foreground'
+  const bodyClass = dark ? 'text-muted-foreground' : 'text-muted-foreground'
 
   if (!icon && !title) {
     return <p className={cn('text-sm', bodyClass, className)}>{children}</p>
@@ -30,14 +30,14 @@ export function EmptyState({ children, icon, title, tone = 'light', className }:
           aria-hidden="true"
           className={cn(
             'mb-1 flex h-12 w-12 items-center justify-center rounded-full border',
-            dark ? 'border-white/15 bg-white/10 text-brand-ice' : 'bg-muted/60 text-muted-foreground',
+            dark ? 'border-foreground/15 bg-foreground/10 text-muted-foreground' : 'bg-muted/60 text-muted-foreground',
           )}
         >
           {icon}
         </div>
       )}
       {title && (
-        <p className={cn('font-semibold', dark ? 'text-white' : 'text-foreground')}>{title}</p>
+        <p className={cn('font-semibold', dark ? 'text-foreground' : 'text-foreground')}>{title}</p>
       )}
       <p className={cn('max-w-sm text-sm', bodyClass)}>{children}</p>
     </div>
