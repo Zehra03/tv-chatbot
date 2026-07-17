@@ -24,6 +24,7 @@ import com.paximum.paxassist.flight.service.FlightSearchService;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
+import com.paximum.paxassist.orchestrator.slot.LocationGuard;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
 import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
@@ -43,14 +44,17 @@ class FlightSearchHandlerTest {
     private FlightSearchService flightSearchService;
 
     private SlotGuard slotGuard;
+    private LocationGuard locationGuard;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private FlightSearchHandler handler() {
         slotGuard = mock(SlotGuard.class);
-        when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
+        locationGuard = mock(LocationGuard.class);
+        org.mockito.Mockito.lenient().when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
+        org.mockito.Mockito.lenient().when(locationGuard.checkInvalidLocation(any(), any())).thenReturn(Optional.empty());
         return new FlightSearchHandler(
-                slotFilling, new FlightCriteriaMapper(new GeoCountryResolver()), flightSearchService, new ClarificationCatalog(), slotGuard);
+                slotFilling, new FlightCriteriaMapper(new GeoCountryResolver()), flightSearchService, new ClarificationCatalog(), slotGuard, locationGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
@@ -108,6 +112,24 @@ class FlightSearchHandlerTest {
 
         assertThat(result.cards()).isEmpty();
         assertThat(result.reply()).contains("geçmiş");
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void invalidLocationGuard_shortCircuitsBeforeSearch() {
+        FlightSearchHandler handler = handler();
+        when(locationGuard.checkInvalidLocation(any(), any()))
+                .thenReturn(Optional.of("Girdiğin kalkış noktası (burdan) sistemimizde bulunamadı."));
+
+        OrchestrationContext context = contextWith(slots(Map.of("origin", "burdan")));
+        context.session().getAccumulatedCriteria().put("origin", "burdan");
+
+        OrchestrationResult result = handler.handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        assertThat(result.reply()).contains("sistemimizde bulunamadı");
+        assertThat(context.session().getAccumulatedCriteria()).doesNotContainKey("origin");
+        assertThat(context.session().getAccumulatedCriteria()).doesNotContainKey("destination");
         org.mockito.Mockito.verifyNoInteractions(flightSearchService);
     }
 
