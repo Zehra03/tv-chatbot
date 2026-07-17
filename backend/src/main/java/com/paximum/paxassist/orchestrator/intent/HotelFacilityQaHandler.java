@@ -1,5 +1,7 @@
 package com.paximum.paxassist.orchestrator.intent;
 
+import java.text.Normalizer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -122,6 +124,14 @@ public class HotelFacilityQaHandler implements IntentHandler {
         String question = fresh ? userMessage
                 : (pending != null && !pending.isBlank() ? pending : userMessage);
 
+        // "Filtreyi kaldır" while we're holding a question: dropping the filter is only half the job —
+        // the user asked something, so restore the unfiltered list AND answer the pending question
+        // instead of just re-listing everything.
+        if (pending != null && !pending.isBlank() && isFilterRemovalConfirmation(userMessage)
+                && isFilterActive(session)) {
+            return removeFilterAndAnswer(context, session, pending);
+        }
+
         // Bulk ("hepsinde ... var mı"): answer every shown hotel (<= MAX) or nudge to filter.
         if (isBulkReference(userMessage)) {
             return handleBulk(session, cards, question);
@@ -177,6 +187,45 @@ public class HotelFacilityQaHandler implements IntentHandler {
         String grounding = buildDataBlock(hotel, details);
         String firstName = greetingNameService.firstNameOf(context.session().getUserId()).orElse(null);
         return OrchestrationResult.message(answerFromData(context, cleaned, hotel.hotelName(), grounding, firstName));
+    }
+
+    /**
+     * Natural ways of confirming "drop the filter" — kept deterministic (and deliberately broad:
+     * "kaldır", "kaldır da bak", "evet kaldır", "filtreyi kaldır bak", "filtreleri temizle") rather
+     * than relying on the model to classify the confirmation. A bare "evet" is NOT enough: per the
+     * pending rules it stays a meaningless answer that keeps the question waiting.
+     */
+    private static final Pattern FILTER_REMOVAL = Pattern.compile(
+            "kaldir|temizle|filtresiz|butun otel|tum otel",
+            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+
+    private static boolean isFilterRemovalConfirmation(String message) {
+        return message != null && FILTER_REMOVAL.matcher(fold(message)).find();
+    }
+
+    /** A filter is active when fewer cards are shown than the raw search returned. */
+    private static boolean isFilterActive(ChatSession session) {
+        List<Object> raw = session.getLastApiResultCards();
+        List<Object> shown = session.getLastResultCards();
+        return raw != null && shown != null && raw.size() > shown.size();
+    }
+
+    /**
+     * Restores the unfiltered result list and immediately answers the question we were holding — the
+     * hotel is resolved from the pending question itself (it carries the name the user asked about).
+     */
+    private OrchestrationResult removeFilterAndAnswer(OrchestrationContext context, ChatSession session,
+                                                      String pendingQuestion) {
+        List<Object> raw = new ArrayList<>(session.getLastApiResultCards());
+        session.setLastResultCards(raw);
+        session.setPendingFacilityQuestion(null);
+
+        HotelProduct hotel = resolveHotel(raw, pendingQuestion);
+        if (hotel == null) {
+            return OrchestrationResult.message("Filtreyi kaldırdım. " + askWhichHotel(raw));
+        }
+        return OrchestrationResult.message(
+                "Filtreyi kaldırdım. " + answerSingle(context, hotel, pendingQuestion).reply());
     }
 
     /** Deterministic, LLM-free answer for a hotel's specific facility group(s), grounded in real data. */
@@ -371,7 +420,7 @@ public class HotelFacilityQaHandler implements IntentHandler {
             return hotelAt(cards, Integer.parseInt(matcher.group()) - 1);
         }
         // Fall back to matching the reference against a hotel name ("TEST KARS2'de havuz var mı").
-        return byName(cards, ref);
+        return byName(cards, reference);
     }
 
     private static HotelProduct hotelAt(List<Object> cards, int index) {
@@ -381,16 +430,38 @@ public class HotelFacilityQaHandler implements IntentHandler {
         return (cards.get(index) instanceof HotelProduct hotel) ? hotel : null;
     }
 
-    private static HotelProduct byName(List<Object> cards, String refLower) {
+    /**
+     * Case- and diacritic-insensitive hotel name match. Uses {@link #fold} rather than a Turkish
+     * lower-case: {@code toLowerCase(tr)} maps capital {@code I} to dotless {@code ı}, so
+     * "MELIHOTEL" would never match the hotel "melihotel". Matching is bidirectional so either a bare
+     * name or a whole question ("melihotel kemer'de havuz var mı") resolves.
+     */
+    private static HotelProduct byName(List<Object> cards, String reference) {
+        String needle = fold(reference);
+        if (needle.isEmpty()) {
+            return null;
+        }
         for (Object card : cards) {
             if (card instanceof HotelProduct hotel && hotel.hotelName() != null) {
-                String name = hotel.hotelName().toLowerCase(TR);
-                if (name.contains(refLower) || refLower.contains(name)) {
+                String name = fold(hotel.hotelName());
+                if (!name.isEmpty() && (name.contains(needle) || needle.contains(name))) {
                     return hotel;
                 }
             }
         }
         return null;
+    }
+
+    /**
+     * Folds text for locale-safe comparison: strips diacritics (ü→u, ş→s, ğ→g), lower-cases with the
+     * ROOT locale and maps dotless {@code ı} to {@code i}. Mirrors {@code HotelSearchServiceImpl.fold}.
+     */
+    private static String fold(String value) {
+        if (value == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(value.trim(), Normalizer.Form.NFD).replaceAll("\\p{M}+", "");
+        return normalized.toLowerCase(Locale.ROOT).replace("ı", "i");
     }
 
     private static HotelProduct byPrice(List<Object> cards, boolean cheapest) {
@@ -415,7 +486,7 @@ public class HotelFacilityQaHandler implements IntentHandler {
      */
     private static String nameNotFoundMessage(ChatSession session, String name) {
         List<Object> raw = session.getLastApiResultCards();
-        boolean inRaw = raw != null && byName(raw, name.toLowerCase(TR)) != null;
+        boolean inRaw = raw != null && byName(raw, name) != null;
         if (inRaw) {
             return "\"" + name + "\" oteli şu anki filtrelenmiş listede yok. Filtrelenmiş liste üzerinden mi"
                     + " soruyorsun, yoksa filtreyi kaldırıp bu otele mi bakayım?";
@@ -431,9 +502,8 @@ public class HotelFacilityQaHandler implements IntentHandler {
     private static String askWhichHotel(List<Object> cards) {
         long hotelCount = cards.stream().filter(HotelProduct.class::isInstance).count();
         if (hotelCount > MAX_LISTED_HOTELS) {
-            return "Listede " + hotelCount + " otel var — hepsini tek tek yazmak yerine, hangisini"
-                    + " kastettiğini otel adıyla söyler misin? İstersen önce filtreleyelim"
-                    + " (örn. \"en ucuz 5 otel\" ya da fiyata/yıldıza göre).";
+            return "Listede " + hotelCount + " otel var. Hangi otel için soruyorsun?"
+                    + " Adını yazman yeterli — istersen önce filtreleyebiliriz.";
         }
         StringBuilder sb = new StringBuilder("Hangi otel hakkında soruyorsun? Şu an listede:");
         int i = 1;
