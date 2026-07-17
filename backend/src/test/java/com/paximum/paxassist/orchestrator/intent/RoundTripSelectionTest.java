@@ -81,6 +81,38 @@ class RoundTripSelectionTest {
         assertThat(((FlightProduct) choices.get(1)).getPrice()).isEqualByComparingTo(new BigDecimal("1500"));
     }
 
+    /**
+     * A trip the provider sells as one ticket (one token, no return token) has no leg choice to
+     * make: picking it goes to the reservation, which is what the card's Seç button does anyway.
+     * Offering a second step here promised one the flow could not deliver.
+     */
+    @Test
+    void pickingASingleTicketTripGoesStraightToTheReservation() {
+        FlightProduct wholeTrip = FlightProduct.builder()
+                .id("trip-1")
+                .outboundLegId("VF4009@2026-07-18T21:20:00")
+                .returnLegId("trip-1")
+                .offerId("offer-trip-1")
+                .returnOfferId(null) // one token buys both legs
+                .airline("VF")
+                .origin("AYT")
+                .destination("ADB")
+                .returnDepartTime(Instant.parse("2026-07-21T15:00:00Z"))
+                .returnArriveTime(Instant.parse("2026-07-21T16:10:00Z"))
+                .price(new BigDecimal("3817"))
+                .currency("TRY")
+                .build();
+        ChatSession session = new ChatSession("s1");
+        session.setActiveDomain("FLIGHT");
+        session.setLastResultCards(List.of(wholeTrip));
+
+        OrchestrationResult result = handler.handle(select(session, "1"));
+
+        assertThat(result.redirectToReservation()).isTrue();
+        assertThat(result.reply()).doesNotContain("dönüşünü seç");
+        assertThat(session.getPendingOutboundLegId()).isNull();
+    }
+
     @Test
     void pickingAnOutboundOffersTheReturnsThatFlyWithIt_insteadOfBooking() {
         ChatSession session = sessionShowingOutbounds();
