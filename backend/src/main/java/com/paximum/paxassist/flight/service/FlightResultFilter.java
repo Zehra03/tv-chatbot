@@ -5,14 +5,15 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 
+import com.paximum.paxassist.flight.domain.BaggageAllowance;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 
 /**
  * Applies the criteria's optional result filters ({@code nonstop}, {@code preferredAirline},
- * departure-time window). TourVisio's price search takes none of them as a request parameter, so all
- * are honoured here on the mapped results — without this step the flags reach the criteria and are
- * silently swallowed.
+ * departure-time window, baggage). TourVisio's price search takes none of them as a request
+ * parameter, so all are honoured here on the mapped results — without this step the flags reach the
+ * criteria and are silently swallowed.
  *
  * <p>Filtering only ever removes provider results; it never invents one.
  */
@@ -32,7 +33,22 @@ final class FlightResultFilter {
                 .filter(product -> matchesNonstop(criteria, product))
                 .filter(product -> matchesAirline(criteria, product))
                 .filter(product -> matchesDepartWindow(criteria, product, zone))
+                .filter(product -> matchesBaggage(criteria, product))
                 .toList();
+    }
+
+    /**
+     * A no-op for the TourVisio path, whose response mapper already priced each card at a fare that
+     * meets the request — this is what enforces the same rule for search services that map no offers
+     * of their own (mock/demo). A product whose allowance is unknown is dropped while baggage is
+     * requested, for the same reason an unknown departure time is: it must not be presented as
+     * meeting a filter that could not be evaluated against it.
+     */
+    private static boolean matchesBaggage(FlightSearchCriteria criteria, FlightProduct product) {
+        BaggageAllowance allowance = product.getBaggageAllowance() != null
+                ? product.getBaggageAllowance()
+                : BaggageAllowance.unknown();
+        return allowance.satisfies(criteria.getCheckedBaggage(), criteria.getMinCheckedBaggageKg());
     }
 
     private static boolean matchesNonstop(FlightSearchCriteria criteria, FlightProduct product) {

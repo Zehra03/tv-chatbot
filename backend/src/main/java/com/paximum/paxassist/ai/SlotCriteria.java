@@ -13,7 +13,7 @@ import java.util.List;
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
  *                nationality, currency, rooms, stars, boardType, features, hotelMaxPrice, sortBy
  * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice,
- *                directFlight, airline, departTimeRange
+ *                directFlight, airline, departTimeRange, checkedBaggage, minCheckedBaggageKg
  * Shared        : adults, children, childAges, nationality, currency
  * SELECT intent : selectionReference
  *
@@ -45,6 +45,8 @@ public record SlotCriteria(
         Boolean directFlight,     // true: direct/non-stop, false: layovers, null: any
         String airline,           // preferred airline as the user stated it, e.g. "THY", "Pegasus"
         String departTimeRange,   // departure time-of-day bucket: morning | afternoon | evening | night
+        Boolean checkedBaggage,   // true: fare must include checked baggage, false: cabin-only fare, null: any
+        Integer minCheckedBaggageKg, // minimum checked allowance in kg, "15 kilo bagajlı" → 15
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -69,9 +71,10 @@ public record SlotCriteria(
         return new SlotCriteria(
                 // hotel (10)
                 null, null, null, null, null, null, null, null, null, null,
-                // flight (9): origin, destination, departureDate, returnDate, cabinClass,
-                //             flightMaxPrice, directFlight, airline, departTimeRange
-                null, null, null, null, null, null, null, null, null,
+                // flight (11): origin, destination, departureDate, returnDate, cabinClass,
+                //              flightMaxPrice, directFlight, airline, departTimeRange,
+                //              checkedBaggage, minCheckedBaggageKg
+                null, null, null, null, null, null, null, null, null, null, null,
                 // shared (5) + filter/sort (2) + select (1)
                 null, null, null, null, null, null, null, null);
     }

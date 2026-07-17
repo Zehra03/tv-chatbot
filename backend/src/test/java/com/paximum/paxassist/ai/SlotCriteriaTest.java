@@ -16,7 +16,7 @@ class SlotCriteriaTest {
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 "İstanbul", "İzmir", null, null, null, null, Boolean.TRUE,
-                "THY", "morning",
+                "THY", "morning", null, null,
                 null, null, null, null, null, null, null, null);
 
         assertThat(criteria.directFlight()).isTrue();
