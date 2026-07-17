@@ -128,7 +128,7 @@ export function FlightCard({
       // kalır ve stopPropagation ile kartın onClick'ini ikiye katlamaz.
       <div
         className={cn(
-          'glass-card cursor-pointer p-3 transition-all duration-300 hover:border-primary/60 hover:shadow-soft',
+          'glass-card cursor-pointer p-3 transition-all duration-300 hover:border-primary/60 hover:shadow-soft motion-safe:hover:-translate-y-0.5',
           recommended && 'border-brand-peach/60 ring-1 ring-brand-peach/30',
         )}
         onClick={onSelect}
@@ -212,7 +212,7 @@ export function FlightCard({
     // Tüm kart tıklanabilir (fare); Seç klavye/ekran-okuyucu yolu olarak kalır.
     <div
       className={cn(
-        'glass-card cursor-pointer p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-soft',
+        'glass-card cursor-pointer p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-soft motion-safe:hover:-translate-y-0.5',
         recommended && 'border-brand-peach/60 ring-1 ring-brand-peach/30',
       )}
       onClick={onSelect}

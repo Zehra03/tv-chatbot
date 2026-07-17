@@ -52,7 +52,9 @@ describe('HotelCard', () => {
     renderCard(hotel)
     expect(screen.getByText('MOCK Grand Antalya Resort')).toBeTruthy()
     expect(screen.getByText('Antalya')).toBeTruthy()
-    expect(screen.getByText('5')).toBeTruthy()
+    // Yıldız artık paylaşılan StarRating ile (detay sayfasıyla tek dil, §4): metin değil,
+    // role="img" + aria-label taşır.
+    expect(screen.getByLabelText('5 yıldız')).toBeTruthy()
     expect(screen.getByText('AI')).toBeTruthy()
     expect(screen.getByText(/1\.200/)).toBeTruthy()
   })
@@ -65,7 +67,8 @@ describe('HotelCard', () => {
 
   it('image yoksa görsel yerine placeholder gösterir', () => {
     renderCard({ ...hotel, image: null })
-    expect(screen.queryByRole('img')).toBeNull()
+    // StarRating da role="img" taşır; sorguyu otel görseline daralt (yalnız otel fotoğrafı yok).
+    expect(screen.queryByRole('img', { name: /otel görseli/i })).toBeNull()
   })
 
   it('müsait olmayan otelde rozet gösterir ve Seç devre dışıdır', () => {
