@@ -82,16 +82,18 @@ public class ChatOrchestrationService {
         }
 
         // 2c. Pending facility clarification: if the assistant already asked "hangi otel?" for a
-        //     facility question, the user's short answer ("1", "ilk") is otherwise misread as a
-        //     booking (SELECT) because both flows use a numbered list. While the clarification is
-        //     pending we route that answer back to the facility Q&A; any other real intent means the
-        //     user moved on, so we drop the pending context and proceed normally.
+        //     facility question, the user's short answer ("1", "ilk", "en pahalı") is otherwise misread
+        //     as a booking (SELECT) because both flows use a numbered list. While the clarification is
+        //     pending we keep the turn in the facility Q&A for the vague cases — a bare reference
+        //     (SELECT), a meaningless answer like "evet"/"tamam" (OTHER) or a lone place (AMBIGUOUS) —
+        //     so a stray "evet" never wipes the pending context. Only a real new action (a fresh hotel/
+        //     flight search, a filter, a greeting, a date-alternatives ask) means the user moved on, so
+        //     there we drop the pending context and route normally.
         IntentType intent = extraction.intent();
         if (session.getPendingFacilityQuestion() != null) {
-            if (intent == IntentType.SELECT) {
-                intent = IntentType.HOTEL_FACILITY_QA;
-            } else if (intent != IntentType.HOTEL_FACILITY_QA) {
-                session.setPendingFacilityQuestion(null);
+            switch (intent) {
+                case SELECT, OTHER, AMBIGUOUS, HOTEL_FACILITY_QA -> intent = IntentType.HOTEL_FACILITY_QA;
+                default -> session.setPendingFacilityQuestion(null);
             }
         }
 
