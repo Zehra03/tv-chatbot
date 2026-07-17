@@ -45,7 +45,11 @@ public record FlightProductApiDto(
                 product.getDestinationCity(),
                 product.getDepartTime(),
                 product.getArriveTime(),
-                tripType == TripType.ROUND_TRIP ? "round_trip" : "one_way",
+                // What this card IS, not what was asked for. A round-trip search that yields no
+                // return leg still answers with outbound-only cards; labelling those "round_trip"
+                // told the user they had a return they had not been shown.
+                tripType == TripType.ROUND_TRIP && product.getReturnDepartTime() != null
+                        ? "round_trip" : "one_way",
                 product.getReturnDepartTime(),
                 product.getReturnArriveTime(),
                 product.getReturnAirline(),

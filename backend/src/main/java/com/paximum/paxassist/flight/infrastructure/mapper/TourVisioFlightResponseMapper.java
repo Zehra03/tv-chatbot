@@ -31,12 +31,18 @@ import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioPriceSe
 /**
  * Turns a TourVisio price search into {@link FlightProduct} cards.
  *
- * <p>The provider does not return trips, it returns <b>legs</b>: a round-trip search answers with
- * the outbound flights and the return flights as separate results ({@code items[].route} 1 vs 2),
- * each carrying its own priced offers. So a round trip is rebuilt here by pairing an outbound offer
- * with a return offer that shares a group key — the provider's own rule for which fares may be sold
- * together — and the pair's two booking tokens both travel on the product, because booking with the
- * outbound token alone would buy a one-way.
+ * <p>A round-trip search comes back in one of two shapes, and both are handled:
+ * <ul>
+ *   <li><b>A result per leg</b> — the outbound flights and the return flights arrive as separate
+ *       results ({@code items[].route} 1 vs 2), each priced by its own offers. A trip is rebuilt by
+ *       pairing an outbound offer with a return offer that shares a group key (the provider's own
+ *       rule for which fares may be sold together), and the pair's two booking tokens both travel
+ *       on the product, because booking with the outbound token alone would buy a one-way.</li>
+ *   <li><b>A result per trip</b> — one result holds both legs in its segments and one offer buys
+ *       them together, so the product carries a single token.</li>
+ * </ul>
+ * Which shape arrives depends on the route, so neither may be assumed: reading a per-trip result as
+ * a leg is what produced AYT→AYT cards with no return to choose.
  *
  * <p>Every combinable (outbound, return) pair becomes one option, priced with the cheapest fares that
  * pair allows — so the chat can first offer the outbounds and then, once one is chosen, the returns
@@ -71,6 +77,19 @@ public class TourVisioFlightResponseMapper {
                     .toList();
         }
 
+        // Shape 1: one result per bookable round trip, both legs in its segments.
+        List<TourVisioFlightResult> combined = flights.stream()
+                .filter(flight -> flight != null && flight.items() != null && !flight.items().isEmpty())
+                .filter(this::carriesBothLegs)
+                .toList();
+        if (!combined.isEmpty()) {
+            return combined.stream()
+                    .map(trip -> mapSafely(trip, () -> toCombinedRoundTrip(trip)))
+                    .flatMap(Optional::stream)
+                    .toList();
+        }
+
+        // Shape 2: a result per leg — rebuild trips by pairing them.
         List<TourVisioFlightResult> returns = legsOfRoute(flights, ROUTE_RETURN);
         if (returns.isEmpty()) {
             // Asked for a round trip and got no return legs at all: show the outbounds rather than
@@ -102,6 +121,40 @@ public class TourVisioFlightResponseMapper {
         return route != null ? route : ROUTE_OUTBOUND;
     }
 
+    /** A segment with no {@code route} is outbound, matching {@link TourVisioFlightItem}. */
+    private static int routeOf(TourVisioFlightItem segment) {
+        return segment.route() != null ? segment.route() : ROUTE_OUTBOUND;
+    }
+
+    /** Only the segments of one leg, in provider order — a layover keeps several of them. */
+    private List<TourVisioFlightItem> segmentsOfRoute(TourVisioFlightResult flight, int route) {
+        return flight.items().stream()
+                .filter(segment -> routeOf(segment) == route)
+                .toList();
+    }
+
+    /**
+     * True when one result already holds the whole trip: its segments carry route 1 <b>and</b> 2.
+     *
+     * <p>The provider sends both shapes. Sometimes a leg per result (paired here via group keys);
+     * sometimes — as on AYT⇄ADB — a single result per bookable round trip, whose one offer buys
+     * both legs. Classifying by {@code items[0].route} alone reads the second shape as an outbound,
+     * which left no returns to pair, no return to choose, and an origin/destination spanning the
+     * trip instead of the leg.
+     */
+    private boolean carriesBothLegs(TourVisioFlightResult flight) {
+        boolean out = false;
+        boolean back = false;
+        for (TourVisioFlightItem segment : flight.items()) {
+            if (routeOf(segment) == ROUTE_OUTBOUND) {
+                out = true;
+            } else if (routeOf(segment) == ROUTE_RETURN) {
+                back = true;
+            }
+        }
+        return out && back;
+    }
+
     /** A single unparsable result must not sink the whole search. */
     private Optional<FlightProduct> mapSafely(TourVisioFlightResult flight,
                                               java.util.function.Supplier<Optional<FlightProduct>> mapping) {
@@ -120,11 +173,53 @@ public class TourVisioFlightResponseMapper {
             log.warn("Skipping flight result {}: no priced offer", outbound.id());
             return Optional.empty();
         }
-        return baseBuilder(outbound, offer.offerIdFor(null))
+        // Outbound segments only: a one-way request can still be answered with a combined result,
+        // and its return segments would otherwise land the card back where it started.
+        return baseBuilder(outbound, segmentsOfRoute(outbound, ROUTE_OUTBOUND), offer.offerIdFor(null))
                 .map(builder -> builder
                         .price(priceOf(offer))
                         .currency(currencyOf(offer))
                         .build());
+    }
+
+    /**
+     * A round trip the provider sells as one result: a single offer buys both legs, so there is no
+     * second token to carry and no group key to agree on. The card's origin/destination describe the
+     * outbound; the return leg fills the return fields.
+     */
+    private Optional<FlightProduct> toCombinedRoundTrip(TourVisioFlightResult trip) {
+        TourVisioOffer offer = cheapestOffer(trip.allOffers()).orElse(null);
+        if (offer == null || priceOf(offer) == null) {
+            log.warn("Skipping flight result {}: no priced offer", trip.id());
+            return Optional.empty();
+        }
+        List<TourVisioFlightItem> returnSegments = segmentsOfRoute(trip, ROUTE_RETURN);
+        return baseBuilder(trip, segmentsOfRoute(trip, ROUTE_OUTBOUND), offer.offerIdFor(null))
+                .map(builder -> builder
+                        // Trips that fly the same outbound must share an outbound id, or the chat's
+                        // "pick an outbound, then a return" step would offer one return per outbound.
+                        .outboundLegId(outboundKey(trip))
+                        .returnLegId(trip.id())
+                        // Deliberately no returnOfferId: the reservation sends [offerId, returnOfferId]
+                        // when it is set, and repeating this trip's single token would book it twice.
+                        .returnDepartTime(legDepartTime(returnSegments))
+                        .returnArriveTime(legArriveTime(returnSegments))
+                        .returnAirline(airlineOf(returnSegments))
+                        .returnStops(stopsOf(returnSegments))
+                        .price(priceOf(offer))
+                        .currency(currencyOf(offer))
+                        .build());
+    }
+
+    /**
+     * Identity of a combined result's outbound leg. The provider gives no id for a leg inside a
+     * trip, so the flight numbers and departure time — what makes it that flight — stand in.
+     */
+    private String outboundKey(TourVisioFlightResult trip) {
+        return segmentsOfRoute(trip, ROUTE_OUTBOUND).stream()
+                .map(segment -> segment.flightNo() + "@"
+                        + (segment.departure() != null ? segment.departure().date() : "?"))
+                .collect(Collectors.joining("+"));
     }
 
     /**
@@ -147,9 +242,9 @@ public class TourVisioFlightResponseMapper {
             return Optional.empty();
         }
 
-        List<TourVisioFlightItem> returnSegments = returnLeg.items();
+        List<TourVisioFlightItem> returnSegments = segmentsOfRoute(returnLeg, ROUTE_RETURN);
         Pairing paired = best;
-        return baseBuilder(outbound, best.outboundOfferId())
+        return baseBuilder(outbound, segmentsOfRoute(outbound, ROUTE_OUTBOUND), best.outboundOfferId())
                 .map(builder -> builder
                         // A pair needs its own id: several returns share one outbound, and a card id
                         // that repeated across them could not tell the options apart.
@@ -208,13 +303,25 @@ public class TourVisioFlightResponseMapper {
         return shared.stream().findFirst().orElse(null);
     }
 
-    /** The outbound half of a product: everything that does not depend on the return leg. */
-    private Optional<FlightProduct.FlightProductBuilder> baseBuilder(TourVisioFlightResult outbound, String offerId) {
+    /**
+     * The outbound half of a product: everything that does not depend on the return leg.
+     *
+     * <p>{@code segments} is passed in rather than read from {@code outbound.items()} because a
+     * result does not always hold exactly one leg — see {@link #carriesBothLegs}. Reading all of a
+     * combined result's items here is what produced AYT→AYT cards: the first segment departs the
+     * origin and the last one arrives back at it.
+     */
+    private Optional<FlightProduct.FlightProductBuilder> baseBuilder(TourVisioFlightResult outbound,
+                                                                     List<TourVisioFlightItem> segments,
+                                                                     String offerId) {
         if (offerId == null) {
             log.warn("Skipping flight result {}: offer carries no booking token", outbound.id());
             return Optional.empty();
         }
-        List<TourVisioFlightItem> segments = outbound.items();
+        if (segments.isEmpty()) {
+            log.warn("Skipping flight result {}: no segments for the leg", outbound.id());
+            return Optional.empty();
+        }
         TourVisioFlightItem first = segments.get(0);
         TourVisioFlightItem last = segments.get(segments.size() - 1);
         if (first.departure() == null || first.departure().airport() == null

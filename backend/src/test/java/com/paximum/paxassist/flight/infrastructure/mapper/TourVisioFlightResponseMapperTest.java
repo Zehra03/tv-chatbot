@@ -173,6 +173,78 @@ class TourVisioFlightResponseMapperTest {
         assertThat(product.getReturnOfferId()).isEqualTo("offer-in");
     }
 
+    /**
+     * The other shape the provider sends (seen live on AYT⇄ADB): ONE result per bookable trip,
+     * holding both legs in its segments and priced by one offer. Read as a leg — which is what
+     * classifying on {@code items[0].route} did — the card spanned the whole trip and came out
+     * AYT→AYT, with no return leg for the chat to offer.
+     */
+    @Test
+    void toFlightProducts_mapsATripThatArrivesAsOneResultWithBothLegs() {
+        TourVisioFlightItem outbound = segment(ROUTE_OUTBOUND, "AYT", "Antalya", "2026-07-18T09:00:00",
+                "ADB", "Izmir", "2026-07-18T10:10:00");
+        TourVisioFlightItem inbound = segment(ROUTE_RETURN, "ADB", "Izmir", "2026-07-21T18:00:00",
+                "AYT", "Antalya", "2026-07-21T19:10:00");
+        TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
+
+        List<FlightProduct> products = mapper.toFlightProducts(
+                responseWith(legWith("trip-1", "offer-trip", outbound, inbound)), TripType.ROUND_TRIP);
+
+        assertThat(products).hasSize(1);
+        FlightProduct product = products.get(0);
+        // The card describes the OUTBOUND, not the round trip's start and end.
+        assertThat(product.getOrigin()).isEqualTo("AYT");
+        assertThat(product.getDestination()).isEqualTo("ADB");
+        assertThat(product.getDepartTime()).isEqualTo(Instant.parse("2026-07-18T06:00:00Z"));
+        assertThat(product.getArriveTime()).isEqualTo(Instant.parse("2026-07-18T07:10:00Z"));
+        // ...and the return leg is present, so there is something to fly home on.
+        assertThat(product.getReturnDepartTime()).isEqualTo(Instant.parse("2026-07-21T15:00:00Z"));
+        assertThat(product.getReturnArriveTime()).isEqualTo(Instant.parse("2026-07-21T16:10:00Z"));
+        assertThat(product.getOfferId()).isEqualTo("offer-trip");
+        // One offer buys both legs; a second token would book this trip twice.
+        assertThat(product.getReturnOfferId()).isNull();
+    }
+
+    /** Trips flying the same outbound must share an outbound id, or the chat's step 1 is meaningless. */
+    @Test
+    void toFlightProducts_givesCombinedTripsSharingAnOutboundTheSameOutboundId() {
+        TourVisioFlightItem outbound = segment(ROUTE_OUTBOUND, "AYT", "Antalya", "2026-07-18T09:00:00",
+                "ADB", "Izmir", "2026-07-18T10:10:00");
+        TourVisioFlightItem earlyReturn = segment(ROUTE_RETURN, "ADB", "Izmir", "2026-07-21T08:00:00",
+                "AYT", "Antalya", "2026-07-21T09:10:00");
+        TourVisioFlightItem lateReturn = segment(ROUTE_RETURN, "ADB", "Izmir", "2026-07-21T18:00:00",
+                "AYT", "Antalya", "2026-07-21T19:10:00");
+        TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
+
+        List<FlightProduct> products = mapper.toFlightProducts(
+                responseWith(legWith("trip-1", "offer-1", outbound, earlyReturn),
+                        legWith("trip-2", "offer-2", outbound, lateReturn)),
+                TripType.ROUND_TRIP);
+
+        assertThat(products).hasSize(2);
+        assertThat(products.get(0).getOutboundLegId()).isEqualTo(products.get(1).getOutboundLegId());
+        // Each trip stays individually selectable.
+        assertThat(products.get(0).getId()).isNotEqualTo(products.get(1).getId());
+    }
+
+    /** A one-way request answered with a combined result must not land back at the origin. */
+    @Test
+    void toFlightProducts_usesOnlyTheOutboundWhenAOneWayAnswerCarriesBothLegs() {
+        TourVisioFlightItem outbound = segment(ROUTE_OUTBOUND, "AYT", "Antalya", "2026-07-18T09:00:00",
+                "ADB", "Izmir", "2026-07-18T10:10:00");
+        TourVisioFlightItem inbound = segment(ROUTE_RETURN, "ADB", "Izmir", "2026-07-21T18:00:00",
+                "AYT", "Antalya", "2026-07-21T19:10:00");
+        TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
+
+        List<FlightProduct> products = mapper.toFlightProducts(
+                responseWith(legWith("trip-1", "offer-trip", outbound, inbound)), TripType.ONE_WAY);
+
+        assertThat(products).hasSize(1);
+        assertThat(products.get(0).getOrigin()).isEqualTo("AYT");
+        assertThat(products.get(0).getDestination()).isEqualTo("ADB");
+        assertThat(products.get(0).getReturnDepartTime()).isNull();
+    }
+
     /** A layover splits a leg into several segments: it departs with the first and lands with the last. */
     @Test
     void toFlightProducts_collapsesLayoverSegmentsIntoOneLegPerDirection() {

@@ -1,6 +1,7 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +36,10 @@ class RoundTripSelectionTest {
                 .airline("TK")
                 .origin("IST")
                 .destination("AYT")
+                // A return leg the user flies home on is what makes this a round trip, so a
+                // combination always has its times — the mapper cannot produce one without them.
+                .returnDepartTime(Instant.parse("2026-08-27T04:50:00Z"))
+                .returnArriveTime(Instant.parse("2026-08-27T06:00:00Z"))
                 .price(new BigDecimal(price))
                 .currency("TRY")
                 .build();
