@@ -50,6 +50,15 @@ final class ResultFilters {
      * "Oda Kahvaltı", sometimes "Unknown") and unreliable, so this is best-effort keyword matching
      * and it NEVER empties the list: if nothing matches (e.g. all boards are "Unknown"), the
      * original list is returned rather than hiding every result.
+     *
+     * <p><b>Why the board codes here differ from the detail model's.</b> This filter's vocabulary
+     * ({@code AI/HB/BB/RO}) is the compact one the AI Intention layer emits (see
+     * {@code IntentExtractionService}'s {@code boardType} rule) and the chat uses to narrow results.
+     * The detail-screen response model uses verbose, frontend-facing codes
+     * ({@code ALL_INCLUSIVE/HALF_BOARD/...}, see {@code hotel.facility.BoardNormalizer}). The two are
+     * intentionally separate: they belong to different layers and consumers (chat filter vs. detail
+     * DTO) and are NOT interchangeable — don't unify them without changing both the AI prompt schema
+     * and the frontend contract.
      */
     static List<Object> applyBoardType(List<Object> cards, String boardType) {
         if (boardType == null || boardType.isBlank() || cards == null || cards.isEmpty()) {
