@@ -87,15 +87,18 @@ public class FlightSearchHandler implements IntentHandler {
         cards = ResultFilters.applyDepartTimeRange(cards, merged.departTimeRange());
         cards = ResultFilters.applySort(cards, merged.sortBy());
 
-        // A round-trip search yields every outbound+return combination the provider allows. Showing
-        // them all would list the same outbound once per return, so the user picks the outbound
-        // first and the returns for it are offered next (see SelectHandler).
-        boolean roundTrip = cards.stream().anyMatch(RoundTripOptions::isRoundTrip);
-        List<Object> combinations = roundTrip ? cards : List.of();
-        if (roundTrip) {
+        // When the provider tokens the legs separately, a round-trip search yields every allowed
+        // outbound+return combination. Showing them all would list the same outbound once per
+        // return, so the user picks the outbound first and the returns for it come next (see
+        // SelectHandler). A trip sold as one ticket has no such choice — each card is already the
+        // whole trip, so it is listed as-is and its Seç goes to the reservation.
+        boolean paired = cards.stream().anyMatch(RoundTripOptions::isPairedCombination);
+        List<Object> combinations = paired ? cards : List.of();
+        if (paired) {
             cards = RoundTripOptions.outboundChoices(cards);
             rawCards = new ArrayList<>(cards);
         }
+        boolean returnLegShown = cards.stream().anyMatch(RoundTripOptions::hasReturnLeg);
 
         context.session().setActiveDomain("FLIGHT");
         context.session().setRoundTripOptions(new ArrayList<>(combinations));
@@ -104,16 +107,24 @@ public class FlightSearchHandler implements IntentHandler {
         context.session().setLastResultCards(cards);
 
         return OrchestrationResult.cards(
-                flightReply(cards, rawCards, merged, roundTrip, criteria.getCurrency()) + carriedOver, cards);
+                flightReply(cards, rawCards, merged, paired, returnLegShown, criteria.getCurrency())
+                        + carriedOver, cards);
     }
 
     private String flightReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged,
-                               boolean roundTrip, String searchCurrency) {
-        if (!cards.isEmpty() && roundTrip) {
+                               boolean paired, boolean returnLegShown, String searchCurrency) {
+        if (!cards.isEmpty() && paired) {
             // Say the price covers both legs: the same number next to a single outbound would
             // otherwise read as the price of that flight alone.
             return "Aramana uygun " + cards.size() + " gidiş uçuşu buldum (fiyatlar gidiş-dönüş "
                     + "toplamı). Önce gidişini seç:";
+        }
+        if (!cards.isEmpty() && returnLegShown) {
+            // Whole trips, sold as one ticket: nothing to choose between the legs, so do not ask —
+            // promising a step that cannot follow is what made "Önce gidişini seç" a lie when the
+            // card's Seç went straight to the reservation.
+            return "Aramana uygun " + cards.size() + " gidiş-dönüş buldum (fiyatlar gidiş-dönüş "
+                    + "toplamı, tek bilet):";
         }
         if (!cards.isEmpty()) {
             return "Aramana uygun " + cards.size() + " uçuş buldum:";
