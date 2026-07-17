@@ -112,10 +112,11 @@ export function FlightCard({
   const onSelect = () => select(buildFlightDraft(product, criteria))
 
   const stopsLabel = product.stops === 0 ? 'Direkt' : `${product.stops} aktarma`
-  // Dönüş bacağının VARLIĞI turu gidiş-dönüş yapar, tripType etiketi değil: dönüşsüz bir ürüne
-  // "gidiş-dönüş" dendiğinde kart gösteremediği bir dönüşü vaat etmiş olur (backend de aynı kuralı
-  // uygular — FlightProductApiDto).
-  const isRoundTrip = product.tripType === 'round_trip' && !!product.returnDepartTime
+  // Turu gidiş-dönüş yapan şey dönüş bacağının VARLIĞI, `tripType` etiketi değil (backend de aynı
+  // kuralı uygular — FlightProductApiDto). Etiketi ayrıca şart koşmak kartı chat panelinde tek
+  // bacağa düşürüyordu: chat kartları ürünü domain nesnesinden serileştiriyor ve `tripType`
+  // taşımıyor, yani dönüş verisi elde olduğu hâlde gizleniyordu.
+  const isRoundTrip = !!product.returnDepartTime
 
   if (compact) {
     return (
@@ -129,12 +130,20 @@ export function FlightCard({
           <p className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-white/70">
             <Plane className="h-3.5 w-3.5 shrink-0 text-brand-teal" aria-hidden />
             <span className="truncate font-semibold text-white">{product.airline}</span>
+            {isRoundTrip && (
+              <span className="shrink-0 rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white/80">
+                Gidiş-dönüş
+              </span>
+            )}
           </p>
-          <AnimatedPrice
-            amount={product.price}
-            currency={product.currency}
-            className="shrink-0 text-base font-bold text-white"
-          />
+          <div className="shrink-0 text-right">
+            <AnimatedPrice
+              amount={product.price}
+              currency={product.currency}
+              className="text-base font-bold text-white"
+            />
+            {isRoundTrip && <p className="text-[10px] leading-tight text-white/60">toplam</p>}
+          </div>
         </div>
         <div className="mt-2 flex items-center gap-2 text-sm font-semibold text-white">
           <span className="truncate">{product.origin}</span>
@@ -241,6 +250,11 @@ export function FlightCard({
 
       <div className="mt-4 flex items-center justify-between gap-3">
         <div className="flex flex-wrap gap-2">
+          {isRoundTrip && (
+            // Ne aldığı kartın ilk bakışta anlaşılmalı: bacak satırlarını okuyup çıkarmak zorunda
+            // kalmasın. "Tek bilet" de bilinçli — iki bacak tek jetonla satılıyor.
+            <Badge variant="glass">Gidiş-dönüş · tek bilet</Badge>
+          )}
           <Badge variant="glass">Bagaj: {product.baggage}</Badge>
         </div>
         <Button

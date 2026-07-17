@@ -92,6 +92,40 @@ describe('FlightsPage (MSW ile)', () => {
     expect(screen.getByText('3 sonuç')).toBeTruthy()
   })
 
+  it('aktif filtre çipi gösterir ve çipin ✕\'i filtreyi tek tıkla temizler (B21)', async () => {
+    const user = userEvent.setup()
+    renderPage()
+
+    await search(user)
+    expect(await screen.findByText('3 sonuç', {}, { timeout: 3000 })).toBeTruthy()
+    // Filtre yokken çip grubu hiç render edilmez.
+    expect(screen.queryByRole('group', { name: 'Aktif filtreler' })).toBeNull()
+
+    await user.click(screen.getByLabelText('Yalnızca direkt'))
+    await user.click(screen.getByLabelText('Havayolu filtresi'))
+    await user.click(await screen.findByRole('option', { name: 'MockAir' }))
+
+    const chips = screen.getByRole('group', { name: 'Aktif filtreler' })
+    expect(chips.textContent).toContain('Aktarmasız')
+    expect(chips.textContent).toContain('Havayolu: MockAir')
+    expect(screen.getByText('2 sonuç')).toBeTruthy()
+
+    // ✕ → yalnız havayolu filtresi düşer; aktarmasız çipi ve filtresi kalır.
+    await user.click(screen.getByRole('button', { name: 'Havayolu: MockAir filtresini kaldır' }))
+    // Sayı değişmez: iki direkt fixture uçuşu da zaten MockAir — aktarmasız filtresi
+    // hâlâ TestJet'i eliyor, yani çip kalkınca filtre sıfırlanmadı diye yanılmayalım.
+    expect(screen.getByText('2 sonuç')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Havayolu: MockAir filtresini kaldır' })).toBeNull()
+    expect(screen.getByRole('group', { name: 'Aktif filtreler' }).textContent).toContain(
+      'Aktarmasız',
+    )
+
+    // Son çip de kalkınca liste tamamen açılır ve grup kaybolur.
+    await user.click(screen.getByRole('button', { name: 'Aktarmasız filtresini kaldır' }))
+    expect(screen.getByText('3 sonuç')).toBeTruthy()
+    expect(screen.queryByRole('group', { name: 'Aktif filtreler' })).toBeNull()
+  })
+
   it('konum otomatik tamamlamadan öneri seçince alanı doldurur', async () => {
     const user = userEvent.setup()
     renderPage()
