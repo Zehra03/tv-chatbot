@@ -23,7 +23,14 @@ public record TourVisioOffer(
         List<TourVisioOfferId> offerIds,
         List<String> groupKeys,
         Boolean isPackageOffer,
-        TourVisioPrice price) {
+        TourVisioPrice price,
+        /**
+         * What this fare's price buys in baggage. It belongs to the OFFER, not to the flight: the
+         * same aircraft is sold as ECO FLY with 15 kg and EXTRA FLY with 20 kg at different prices,
+         * so a card must take its price and its baggage from the same offer or it describes a fare
+         * nobody can buy. Absent in legacy payloads, where the flight item's list is all there is.
+         */
+        List<TourVisioBaggageInfo> baggageInformations) {
 
     /** True when the provider bundles the round trip, which changes how the total is computed. */
     public boolean packaged() {

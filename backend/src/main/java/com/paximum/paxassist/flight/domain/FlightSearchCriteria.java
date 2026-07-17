@@ -22,6 +22,14 @@ public class FlightSearchCriteria {
     private final Boolean nonstop;
     private final String preferredAirline;
     /**
+     * true = only fares that include checked baggage, false = only cabin-only fares, null = either.
+     * Unlike {@link #nonstop}, this is not a filter over finished results: baggage belongs to the
+     * fare, so it decides which of a flight's fares is priced — see the TourVisio response mapper.
+     */
+    private final Boolean checkedBaggage;
+    /** Minimum checked allowance in kg ("15 kilo bagajlı olsun"); null = no threshold. */
+    private final Integer minCheckedBaggageKg;
+    /**
      * Optional departure-time window (inclusive), local to the departure timestamps of whichever
      * search service produced the results — TourVisio's configured {@code tourvisio.timezone} for the
      * real path. Either bound may stand alone: only {@code departTimeFrom} means "at or after".
@@ -41,6 +49,10 @@ public class FlightSearchCriteria {
                 String.valueOf(preferredAirline),
                 String.valueOf(departTimeFrom),
                 String.valueOf(departTimeTo),
+                // Part of the key because the baggage request changes WHICH fare each card carries,
+                // so two searches that differ only here have genuinely different results.
+                String.valueOf(checkedBaggage),
+                String.valueOf(minCheckedBaggageKg),
                 passengers == null
                         ? "0A0C0I"
                         : passengers.getAdults() + "A" + passengers.getChildren() + "C" + passengers.getInfants() + "I");

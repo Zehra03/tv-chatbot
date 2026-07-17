@@ -10,6 +10,7 @@ import java.util.List;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
+import com.paximum.paxassist.flight.domain.BaggageAllowance;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.TripType;
@@ -32,15 +33,16 @@ public class MockFlightSearchService implements FlightSearchService {
         }
         String cur = criteria.getCurrency();
         List<FlightProduct> products = List.of(
-                build(criteria, "FLT-1", "Turkish Airlines", "TK1980", 8, 4, 0, "20kg", "2500.00", cur),
-                build(criteria, "FLT-2", "Pegasus", "PC2110", 12, 5, 1, "15kg", "1450.00", cur),
-                build(criteria, "FLT-3", "SunExpress", "XQ640", 18, 4, 0, "20kg", "1980.00", cur));
+                build(criteria, "FLT-1", "Turkish Airlines", "TK1980", 8, 4, 0, 20, "2500.00", cur),
+                build(criteria, "FLT-2", "Pegasus", "PC2110", 12, 5, 1, 15, "1450.00", cur),
+                build(criteria, "FLT-3", "SunExpress", "XQ640", 18, 4, 0, 20, "1980.00", cur));
         // The fixture's departure hours are built at UTC (see at()), so the window is read there too.
         return FlightSearchOutcome.complete(FlightResultFilter.apply(criteria, products, ZoneOffset.UTC));
     }
 
+    /** @param checkedKg the fare's checked baggage allowance in kg — the fixtures all include some. */
     private FlightProduct build(FlightSearchCriteria c, String id, String airline, String flightNumber,
-                                int departHour, int durationHours, int stops, String baggage,
+                                int departHour, int durationHours, int stops, int checkedKg,
                                 String price, String cur) {
         Instant depart = at(c.getDepartDate(), departHour);
         Instant arrive = depart.plusSeconds(durationHours * 3600L);
@@ -59,7 +61,8 @@ public class MockFlightSearchService implements FlightSearchService {
                 .returnArriveTime(returnArrive)
                 .stops(stops)
                 .durationMinutes(durationHours * 60)
-                .baggage(baggage)
+                .baggage(checkedKg + "kg")
+                .baggageAllowance(new BaggageAllowance(true, checkedKg))
                 .price(new BigDecimal(price))
                 .currency(cur)
                 .build();

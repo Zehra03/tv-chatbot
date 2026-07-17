@@ -1,6 +1,7 @@
 package com.paximum.paxassist.orchestrator.mapper;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 
 import org.junit.jupiter.api.Test;
@@ -43,12 +44,54 @@ class FlightCriteriaMapperTest {
     }
 
     @Test
-    void buildsPassengersFromAdultsAndChildren() {
+    void typesEachChildByAge_infantChildAndAdultFare() {
+        // 1 → lap infant, 8 → child, 14 → pays the adult fare and joins the adult count.
+        FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of(
+                "adults", 2, "children", 3, "childAges", List.of(1, 8, 14))));
+
+        assertThat(criteria.getPassengers().getInfants()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getChildren()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getAdults()).isEqualTo(3);
+    }
+
+    @Test
+    void ageBoundariesFollowTheAirlineFareRule() {
+        // The exact edges: 1 is still an infant, 2 is already a child, 11 is still a child,
+        // 12 already pays the adult fare.
+        FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of(
+                "adults", 1, "children", 4, "childAges", List.of(1, 2, 11, 12))));
+
+        assertThat(criteria.getPassengers().getInfants()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getChildren()).isEqualTo(2);
+        assertThat(criteria.getPassengers().getAdults()).isEqualTo(2);
+    }
+
+    @Test
+    void newbornIsAnInfant() {
+        FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of(
+                "adults", 1, "children", 1, "childAges", List.of(0))));
+
+        assertThat(criteria.getPassengers().getInfants()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getChildren()).isZero();
+    }
+
+    @Test
+    void adultsOnly_hasNoChildrenOrInfants() {
+        FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of("adults", 2)));
+
+        assertThat(criteria.getPassengers().getAdults()).isEqualTo(2);
+        assertThat(criteria.getPassengers().getChildren()).isZero();
+        assertThat(criteria.getPassengers().getInfants()).isZero();
+    }
+
+    @Test
+    void childCountWithoutAgesIsNotTypedAsChild() {
+        // A bare count cannot be typed, so nothing is assumed here: FlightSearchHandler asks for the
+        // ages before the search runs, which is what stops an infant being priced as a child.
         FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of("adults", 2, "children", 1)));
 
-        assertThat(criteria.getPassengers()).isNotNull();
         assertThat(criteria.getPassengers().getAdults()).isEqualTo(2);
-        assertThat(criteria.getPassengers().getChildren()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getChildren()).isZero();
         assertThat(criteria.getPassengers().getInfants()).isZero();
     }
 

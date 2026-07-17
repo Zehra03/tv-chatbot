@@ -58,23 +58,36 @@ public class HotelFlightTools {
 
     @Tool(description = "Search real-time flight availability and prices from TourVisio. "
             + "Returns live results only; never invents flights or prices. "
-            + "A one-way trip is assumed unless a return date is given.")
+            + "A one-way trip is assumed unless a return date is given. "
+            + "One booking holds at most 9 seated passengers (lap infants do not take a seat), and "
+            + "cannot carry more infants than adults.")
     public FlightSearchOutcome searchFlights(
             @ToolParam(description = "Origin city or airport, e.g. \"IST\"") String origin,
             @ToolParam(description = "Destination city or airport, e.g. \"CDG\"") String destination,
             @ToolParam(description = "Departure date, format YYYY-MM-DD") String departureDate,
             @ToolParam(description = "Return date YYYY-MM-DD; omit for one-way", required = false) String returnDate,
-            @ToolParam(description = "Number of adult passengers") Integer adults,
-            @ToolParam(description = "Number of child passengers", required = false) Integer children,
+            @ToolParam(description = "Number of adult passengers (12 and older)") Integer adults,
+            @ToolParam(description = "Ages of accompanying children; empty when none. The fare depends "
+                    + "on the age: under 2 flies as an infant, 12 and older pays the adult fare",
+                    required = false) List<Integer> childAges,
             @ToolParam(description = "Price currency, ISO 4217, e.g. \"TRY\"") String currency) {
 
         LocalDate depart = parse(departureDate);
         LocalDate ret = parse(returnDate);
-        PassengerCount passengers = (adults == null) ? null : PassengerCount.builder()
-                .adults(adults)
-                .children(children != null ? children : 0)
-                .infants(0)
-                .build();
+        PassengerCount passengers = (adults == null) ? null : PassengerCount.ofChildAges(adults, childAges);
+
+        // The provider rejects an over-sized party anyway, but only once a booking is under way. An
+        // MCP client gets the reason back as a plain tool error instead.
+        if (passengers != null && passengers.exceedsSeatLimit()) {
+            throw new IllegalArgumentException("A booking holds at most " + PassengerCount.MAX_SEATS
+                    + " seated passengers (adults + children aged 2 and over); this party needs "
+                    + passengers.seatedCount() + ".");
+        }
+        if (passengers != null && passengers.hasMoreInfantsThanAdults()) {
+            throw new IllegalArgumentException("Each infant flies on an adult's lap, so infants cannot "
+                    + "outnumber adults: " + passengers.getInfants() + " infants for "
+                    + passengers.getAdults() + " adults.");
+        }
 
         FlightSearchCriteria criteria = FlightSearchCriteria.builder()
                 .origin(origin)

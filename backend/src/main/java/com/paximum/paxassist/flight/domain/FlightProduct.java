@@ -43,7 +43,13 @@ public class FlightProduct {
     private final int returnStops;
     private final int stops;
     private final int durationMinutes;
+    /** Human-readable summary of the fare's baggage, e.g. "1x20kg" — for display only. */
     private final String baggage;
+    /**
+     * The same fare's baggage in the form a filter can act on. Comes from the offer the
+     * {@link #price} comes from, so the two always describe one buyable fare.
+     */
+    private final BaggageAllowance baggageAllowance;
     /** Total for the whole trip in the searched party's size — both legs for a round trip. */
     private final BigDecimal price;
     private final String currency;

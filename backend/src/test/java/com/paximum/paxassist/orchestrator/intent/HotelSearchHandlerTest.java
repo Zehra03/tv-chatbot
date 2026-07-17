@@ -21,6 +21,8 @@ import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
+import com.paximum.paxassist.orchestrator.clarify.ClarificationComposer;
+import com.paximum.paxassist.orchestrator.clarify.NoPreferenceDetector;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
@@ -46,7 +48,8 @@ class HotelSearchHandlerTest {
         slotGuard = mock(SlotGuard.class);
         when(slotGuard.checkInvalidSlots(any())).thenReturn(Optional.empty());
         return new HotelSearchHandler(
-                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService, new ClarificationCatalog(), slotGuard);
+                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService,
+                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {

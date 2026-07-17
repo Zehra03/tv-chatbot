@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 
 import com.paximum.paxassist.flight.config.TourVisioProperties;
 import com.paximum.paxassist.flight.domain.FlightProduct;
+import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAirline;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioAirport;
@@ -30,6 +31,11 @@ class TourVisioFlightResponseMapperTest {
 
     private static final int ROUTE_OUTBOUND = 1;
     private static final int ROUTE_RETURN = 2;
+
+    /** A search with no baggage request, so every priced fare stays a candidate. */
+    private static FlightSearchCriteria criteriaFor(TripType tripType) {
+        return FlightSearchCriteria.builder().tripType(tripType).build();
+    }
 
     private TourVisioFlightItem segment(Integer route, String from, String fromCity, String departDate,
                                         String to, String toCity, String arriveDate) {
@@ -54,7 +60,7 @@ class TourVisioFlightResponseMapperTest {
         return new TourVisioFlightResult(
                 id,
                 List.of(items),
-                new TourVisioOffer(offerId, null, null, null, new TourVisioPrice(BigDecimal.TEN, "USD")),
+                new TourVisioOffer(offerId, null, null, null, new TourVisioPrice(BigDecimal.TEN, "USD"), null),
                 null);
     }
 
@@ -82,7 +88,7 @@ class TourVisioFlightResponseMapperTest {
                 List.of());
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
-        List<FlightProduct> products = mapper.toFlightProducts(responseWith(validFlight(item)), TripType.ONE_WAY);
+        List<FlightProduct> products = mapper.toFlightProducts(responseWith(validFlight(item)), criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).isEmpty();
     }
@@ -97,7 +103,7 @@ class TourVisioFlightResponseMapperTest {
                 List.of());
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
-        List<FlightProduct> products = mapper.toFlightProducts(responseWith(validFlight(item)), TripType.ONE_WAY);
+        List<FlightProduct> products = mapper.toFlightProducts(responseWith(validFlight(item)), criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).isEmpty();
     }
@@ -109,7 +115,7 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(blankTimezoneProperties);
 
         List<FlightProduct> products =
-                mapper.toFlightProducts(responseWith(validFlight(validItem())), TripType.ONE_WAY);
+                mapper.toFlightProducts(responseWith(validFlight(validItem())), criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).isEmpty();
     }
@@ -119,7 +125,7 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
         List<FlightProduct> products =
-                mapper.toFlightProducts(responseWith(validFlight(validItem())), TripType.ONE_WAY);
+                mapper.toFlightProducts(responseWith(validFlight(validItem())), criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).hasSize(1);
         FlightProduct product = products.get(0);
@@ -142,7 +148,7 @@ class TourVisioFlightResponseMapperTest {
                 "LHR", "London", "2026-08-01T12:00:00");
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
-        List<FlightProduct> products = mapper.toFlightProducts(responseWith(flightWith(item)), TripType.ONE_WAY);
+        List<FlightProduct> products = mapper.toFlightProducts(responseWith(flightWith(item)), criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).hasSize(1);
         assertThat(products.get(0).getOrigin()).isEqualTo("IST");
@@ -159,7 +165,7 @@ class TourVisioFlightResponseMapperTest {
 
         List<FlightProduct> products = mapper.toFlightProducts(
                 responseWith(legWith("out-1", "offer-out", outbound), legWith("in-1", "offer-in", inbound)),
-                TripType.ROUND_TRIP);
+                criteriaFor(TripType.ROUND_TRIP));
 
         assertThat(products).hasSize(1);
         FlightProduct product = products.get(0);
@@ -188,7 +194,7 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
         List<FlightProduct> products = mapper.toFlightProducts(
-                responseWith(legWith("trip-1", "offer-trip", outbound, inbound)), TripType.ROUND_TRIP);
+                responseWith(legWith("trip-1", "offer-trip", outbound, inbound)), criteriaFor(TripType.ROUND_TRIP));
 
         assertThat(products).hasSize(1);
         FlightProduct product = products.get(0);
@@ -219,7 +225,7 @@ class TourVisioFlightResponseMapperTest {
         List<FlightProduct> products = mapper.toFlightProducts(
                 responseWith(legWith("trip-1", "offer-1", outbound, earlyReturn),
                         legWith("trip-2", "offer-2", outbound, lateReturn)),
-                TripType.ROUND_TRIP);
+                criteriaFor(TripType.ROUND_TRIP));
 
         assertThat(products).hasSize(2);
         assertThat(products.get(0).getOutboundLegId()).isEqualTo(products.get(1).getOutboundLegId());
@@ -237,7 +243,7 @@ class TourVisioFlightResponseMapperTest {
         TourVisioFlightResponseMapper mapper = new TourVisioFlightResponseMapper(VALID_PROPERTIES);
 
         List<FlightProduct> products = mapper.toFlightProducts(
-                responseWith(legWith("trip-1", "offer-trip", outbound, inbound)), TripType.ONE_WAY);
+                responseWith(legWith("trip-1", "offer-trip", outbound, inbound)), criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).hasSize(1);
         assertThat(products.get(0).getOrigin()).isEqualTo("AYT");
@@ -261,7 +267,7 @@ class TourVisioFlightResponseMapperTest {
         List<FlightProduct> products = mapper.toFlightProducts(
                 responseWith(legWith("out-1", "offer-out", outboundLeg1, outboundLeg2),
                         legWith("in-1", "offer-in", inboundLeg1, inboundLeg2)),
-                TripType.ROUND_TRIP);
+                criteriaFor(TripType.ROUND_TRIP));
 
         assertThat(products).hasSize(1);
         FlightProduct product = products.get(0);
@@ -288,7 +294,7 @@ class TourVisioFlightResponseMapperTest {
 
         List<FlightProduct> products = mapper.toFlightProducts(
                 responseWith(legWith("out-1", "offer-out", outbound), legWith("in-1", "offer-in", inbound)),
-                TripType.ROUND_TRIP);
+                criteriaFor(TripType.ROUND_TRIP));
 
         assertThat(products).hasSize(1);
         assertThat(products.get(0).getDepartTime()).isEqualTo(Instant.parse("2026-08-20T06:45:00Z"));
