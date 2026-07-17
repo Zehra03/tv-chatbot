@@ -27,7 +27,7 @@ const buttonVariants = cva(
         // Beyaz yazı turuncuda 2.84:1 (AA'yı GEÇMEZ); lacivert (brand.navy) 5.5:1 ✓.
         // Hover'da turuncu KOYULAŞIR (açık şeftali yazıyı düşürürdü). İki temada da aynı.
         cta:
-          "bg-brand-orange text-brand-navy shadow-soft hover:bg-[#E85D2A] active:scale-[0.98]",
+          "bg-brand-orange text-brand-navy shadow-soft hover:bg-brand-orange-hover active:scale-[0.98]",
         // Ghost (brief): saydam + mavi yazı.
         ghost: "text-primary hover:bg-primary/10 active:scale-[0.98]",
         link: "text-primary underline-offset-4 hover:underline",

@@ -13,7 +13,7 @@ import { BRAND, shade, tint } from '@/lib/brand'
 const NIGHT_SKY = `linear-gradient(180deg, ${shade(BRAND.navy, 1)}, ${shade(BRAND.navy, 0.7)})`
 
 // Açık tema: beyaza en ince mavi ferahlık — büyük dekoratif blob yok.
-const DAY_SKY = `linear-gradient(180deg, ${tint(BRAND.blue, 0.985)}, #ffffff 55%)`
+const DAY_SKY = `linear-gradient(180deg, ${tint(BRAND.blue, 0.985)}, white 55%)`
 
 export function SkyBackground() {
   const { resolvedTheme } = useTheme()

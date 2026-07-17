@@ -2,6 +2,11 @@
 <html lang="tr">
   <head>
     <meta charset="UTF-8" />
+    <!-- Google Fonts (Inter + Science Gothic) index.css'te @import ile yükleniyor;
+         bağlantıyı erkenden ısıt (DNS/TLS) → yazı tipi daha erken gelir, LCP düşer.
+         Türkçe latin-ext alt kümesi (ğ/ş/İ/ı) css2'nin unicode-range'iyle zaten servis edilir. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <script>
       // Tema, React boyamadan ÖNCE <html>'e yazılmalı; yoksa ilk kare varsayılan
       // temayla çizilip sonra kullanıcının tercihine atlar (FOUC). Bu yüzden

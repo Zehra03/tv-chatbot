@@ -63,8 +63,10 @@ export function Calendar({ endpointsOnly, className, ...props }: CalendarProps) 
     <DayPicker
       locale={tr}
       style={style}
+      // tabular-nums: gün rakamları sabit genişlikte (§3), takvim "rakam çorbasına" dönmez;
+      // font-variant-numeric kalıtımla tüm gün hücrelerine akar.
       // Ara günlerdeki .rdp-selected kalınlaştırmasını da sıfırla (index.css).
-      className={cn(endpointsOnly && 'pax-endpoints-only', className)}
+      className={cn('tabular-nums', endpointsOnly && 'pax-endpoints-only', className)}
       {...props}
     />
   )

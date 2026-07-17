@@ -29,6 +29,7 @@ export default {
           blue: '#004E89', // primary action (palette Primary)
           steel: '#1A659E', // secondary blue (palette Secondary)
           orange: '#FF6B35', // accent / CTA (palette Accent) — cta butonu, vurgular
+          'orange-hover': '#E85D2A', // cta hover — turuncunun elle seçilmiş koyu tonu (lacivert yazı kontrastını korur)
           peach: '#F7C59F', // yumuşak turuncu aksan (palette Hover Accent)
           cream: '#EFEFD0', // dekoratif / açık metin (palette Decorative)
         },
