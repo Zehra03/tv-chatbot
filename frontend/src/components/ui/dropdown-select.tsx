@@ -65,8 +65,14 @@ export function DropdownSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
+        // METİN RENGİ BİLEREK YOK — miras alınır (ui/label ile aynı desen). Bu
+        // bileşen iki farklı yüzeyde yaşıyor: normal sayfalarda Layout'un
+        // `text-foreground`'unu, hero'da SearchHero'nun `text-white`'ını alır.
+        // Sabit `text-foreground` yazılsaydı hero'nun lacivert örtüsünde açık
+        // temada siyaha dönerdi. Zemin/kenar token'lı kalır (sayfa yüzeyi için
+        // doğru); hero örneği bunları className ile ezer — heroFieldClass deseni.
         className={cn(
-          'flex h-9 items-center justify-between gap-2 rounded-xl border border-foreground/15 bg-foreground/5 px-3 text-sm text-foreground shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal',
+          'flex h-9 items-center justify-between gap-2 rounded-xl border border-foreground/15 bg-foreground/5 px-3 text-sm shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-foreground/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal',
           className,
         )}
       >
@@ -75,7 +81,9 @@ export function DropdownSelect({
           aria-hidden
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut', type: 'spring' }}
-          className="shrink-0 text-muted-foreground"
+          // Renk değil opaklık: miras alınan metin rengini takip eder, yani her
+          // yüzeyde (koyu hero / açık sayfa) doğru tonda kalır.
+          className="shrink-0 opacity-60"
         >
           <ChevronDown className="h-4 w-4" />
         </motion.span>

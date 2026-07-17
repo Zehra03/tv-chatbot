@@ -175,6 +175,9 @@ export function FlightsPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Skyscanner'daki gibi yön seçimi ve direkt uçuş tercihi alanların üstünde. */}
           <div className="flex flex-wrap items-center gap-4">
+            {/* Hero örneği: örtü her temada lacivert, o yüzden cam yüzeyi de
+                temadan bağımsız beyaz alfa (bkz. SearchHero / heroFieldClass).
+                Metin rengi verilmiyor — SearchHero'dan beyaz miras alınır. */}
             <DropdownSelect
               id="flight-triptype"
               aria-label="Yön"
@@ -184,6 +187,7 @@ export function FlightsPage() {
                 { value: 'round_trip', label: 'Gidiş-dönüş' },
               ]}
               onChange={(v) => setTripType(v as TripType)}
+              className="border-white/15 bg-white/10 hover:bg-white/20"
             />
             {/* Sonuç filtre çubuğuyla aynı uiSlice alanına yazar — ikisi senkron kalır. */}
             {/* Hero'nun lacivert örtüsü üstünde — renkler temadan bağımsız beyaz
