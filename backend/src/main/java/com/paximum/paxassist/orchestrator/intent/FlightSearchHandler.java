@@ -40,11 +40,9 @@ public class FlightSearchHandler implements IntentHandler {
     public FlightSearchHandler(SlotFillingService slotFilling,
             FlightCriteriaMapper mapper,
             FlightSearchService flightSearchService,
-            ClarificationCatalog clarifications,
+            ClarificationComposer clarifications,
             SlotGuard slotGuard,
             LocationGuard locationGuard) {
-            ClarificationComposer clarifications,
-            SlotGuard slotGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.flightSearchService = flightSearchService;

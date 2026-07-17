@@ -42,11 +42,9 @@ public class HotelSearchHandler implements IntentHandler {
     public HotelSearchHandler(SlotFillingService slotFilling,
                               HotelCriteriaMapper mapper,
                               HotelSearchService hotelSearchService,
-                              ClarificationCatalog clarifications,
+                              ClarificationComposer clarifications,
                               SlotGuard slotGuard,
                               LocationGuard locationGuard) {
-                              ClarificationComposer clarifications,
-                              SlotGuard slotGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.hotelSearchService = hotelSearchService;
