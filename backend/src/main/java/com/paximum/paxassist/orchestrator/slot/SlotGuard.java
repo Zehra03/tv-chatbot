@@ -45,6 +45,19 @@ public class SlotGuard {
         if (criteria == null) {
             return Optional.empty();
         }
+
+        // Invalid (unparsable) dates check
+        for (String raw : new String[] {
+                criteria.checkIn(), criteria.departureDate(), criteria.checkOut(), criteria.returnDate()}) {
+            if (raw != null && !raw.isBlank()) {
+                try {
+                    LocalDate.parse(raw.trim());
+                } catch (DateTimeParseException e) {
+                    return Optional.of("Girdiğin tarih geçerli değil. Lütfen geçerli bir tarih gir.");
+                }
+            }
+        }
+
         LocalDate today = LocalDate.now(clock);
         // Primary dates first so the message points at the field the user most likely meant.
         for (String raw : new String[] {
