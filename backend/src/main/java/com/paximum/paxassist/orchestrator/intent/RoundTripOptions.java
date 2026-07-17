@@ -21,9 +21,14 @@ final class RoundTripOptions {
     private RoundTripOptions() {
     }
 
-    /** True for a card that is a round trip (both legs), as opposed to a hotel or a one-way. */
+    /**
+     * True for a card that is a round trip (both legs), as opposed to a hotel or a one-way.
+     *
+     * <p>Keyed on the return leg, not on a second booking token: when the provider sells a trip as
+     * one result, a single token buys both legs and there is no return token to look for.
+     */
     static boolean isRoundTrip(Object card) {
-        return card instanceof FlightProduct flight && flight.getReturnOfferId() != null;
+        return card instanceof FlightProduct flight && flight.getReturnDepartTime() != null;
     }
 
     /**
