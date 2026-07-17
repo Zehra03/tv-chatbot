@@ -1,7 +1,6 @@
 package com.paximum.paxassist.orchestrator.intent;
 
 import java.text.Normalizer;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -124,14 +123,6 @@ public class HotelFacilityQaHandler implements IntentHandler {
         String question = fresh ? userMessage
                 : (pending != null && !pending.isBlank() ? pending : userMessage);
 
-        // "Filtreyi kaldır" while we're holding a question: dropping the filter is only half the job —
-        // the user asked something, so restore the unfiltered list AND answer the pending question
-        // instead of just re-listing everything.
-        if (pending != null && !pending.isBlank() && isFilterRemovalConfirmation(userMessage)
-                && isFilterActive(session)) {
-            return removeFilterAndAnswer(context, session, pending);
-        }
-
         // Bulk ("hepsinde ... var mı"): answer every shown hotel (<= MAX) or nudge to filter.
         if (isBulkReference(userMessage)) {
             return handleBulk(session, cards, question);
@@ -142,15 +133,26 @@ public class HotelFacilityQaHandler implements IntentHandler {
         HotelProduct hotel = resolveHotel(cards, explicitRef ? selRef : userMessage);
 
         if (hotel == null) {
+            if (explicitRef) {
+                // The user named a hotel that isn't in the SHOWN (filtered) list. If it exists in the raw
+                // results, just answer about it — asking "filtreyi kaldırayım mı?" would only add a step,
+                // and actually dropping the filter would desync the UI's card panel. The user's filter is
+                // deliberately left untouched so later bulk questions still apply to it.
+                HotelProduct outside = byName(session.getLastApiResultCards(), selRef);
+                if (outside != null) {
+                    session.setPendingFacilityQuestion(null);
+                    return OrchestrationResult.message("\"" + outside.hotelName() + "\" filtrelenmiş listede"
+                            + " yok, ama otelin bilgisine bakıyorum: "
+                            + answerSingle(context, outside, question).reply());
+                }
+            }
             // A fresh question that still needs a hotel becomes the new pending. A bare/meaningless answer
             // ("evet") must NOT overwrite or clear an existing pending — keep waiting on the same question.
             if (fresh) {
                 session.setPendingFacilityQuestion(userMessage);
             }
             if (selRef != null && !selRef.isBlank()) {
-                // The user named a specific hotel that isn't in the shown list — say so, don't treat it
-                // as "no reference given".
-                return OrchestrationResult.message(nameNotFoundMessage(session, selRef.trim()));
+                return OrchestrationResult.message(nameNotFoundMessage(selRef.trim()));
             }
             return OrchestrationResult.message(askWhichHotel(cards));
         }
@@ -187,45 +189,6 @@ public class HotelFacilityQaHandler implements IntentHandler {
         String grounding = buildDataBlock(hotel, details);
         String firstName = greetingNameService.firstNameOf(context.session().getUserId()).orElse(null);
         return OrchestrationResult.message(answerFromData(context, cleaned, hotel.hotelName(), grounding, firstName));
-    }
-
-    /**
-     * Natural ways of confirming "drop the filter" — kept deterministic (and deliberately broad:
-     * "kaldır", "kaldır da bak", "evet kaldır", "filtreyi kaldır bak", "filtreleri temizle") rather
-     * than relying on the model to classify the confirmation. A bare "evet" is NOT enough: per the
-     * pending rules it stays a meaningless answer that keeps the question waiting.
-     */
-    private static final Pattern FILTER_REMOVAL = Pattern.compile(
-            "kaldir|temizle|filtresiz|butun otel|tum otel",
-            Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
-
-    private static boolean isFilterRemovalConfirmation(String message) {
-        return message != null && FILTER_REMOVAL.matcher(fold(message)).find();
-    }
-
-    /** A filter is active when fewer cards are shown than the raw search returned. */
-    private static boolean isFilterActive(ChatSession session) {
-        List<Object> raw = session.getLastApiResultCards();
-        List<Object> shown = session.getLastResultCards();
-        return raw != null && shown != null && raw.size() > shown.size();
-    }
-
-    /**
-     * Restores the unfiltered result list and immediately answers the question we were holding — the
-     * hotel is resolved from the pending question itself (it carries the name the user asked about).
-     */
-    private OrchestrationResult removeFilterAndAnswer(OrchestrationContext context, ChatSession session,
-                                                      String pendingQuestion) {
-        List<Object> raw = new ArrayList<>(session.getLastApiResultCards());
-        session.setLastResultCards(raw);
-        session.setPendingFacilityQuestion(null);
-
-        HotelProduct hotel = resolveHotel(raw, pendingQuestion);
-        if (hotel == null) {
-            return OrchestrationResult.message("Filtreyi kaldırdım. " + askWhichHotel(raw));
-        }
-        return OrchestrationResult.message(
-                "Filtreyi kaldırdım. " + answerSingle(context, hotel, pendingQuestion).reply());
     }
 
     /** Deterministic, LLM-free answer for a hotel's specific facility group(s), grounded in real data. */
@@ -438,7 +401,7 @@ public class HotelFacilityQaHandler implements IntentHandler {
      */
     private static HotelProduct byName(List<Object> cards, String reference) {
         String needle = fold(reference);
-        if (needle.isEmpty()) {
+        if (cards == null || needle.isEmpty()) {
             return null;
         }
         for (Object card : cards) {
@@ -480,17 +443,10 @@ public class HotelFacilityQaHandler implements IntentHandler {
     }
 
     /**
-     * Message for when the user named a specific hotel that isn't in the SHOWN list. If that hotel is
-     * present in the unfiltered results ({@code lastApiResultCards}), it was filtered out — offer to keep
-     * the filter or drop it. Otherwise it's genuinely unknown — say we couldn't find it.
+     * Message for when the user named a hotel we can't find at all — neither in the shown list nor in the
+     * raw results (a hotel that was merely filtered out is answered directly instead, see {@link #handle}).
      */
-    private static String nameNotFoundMessage(ChatSession session, String name) {
-        List<Object> raw = session.getLastApiResultCards();
-        boolean inRaw = raw != null && byName(raw, name) != null;
-        if (inRaw) {
-            return "\"" + name + "\" oteli şu anki filtrelenmiş listede yok. Filtrelenmiş liste üzerinden mi"
-                    + " soruyorsun, yoksa filtreyi kaldırıp bu otele mi bakayım?";
-        }
+    private static String nameNotFoundMessage(String name) {
         return "\"" + name + "\" adıyla eşleşen bir otel bulamadım. Listedekilerden birini mi kastettin?"
                 + " Numarasını (\"1\") ya da adını yazabilirsin.";
     }

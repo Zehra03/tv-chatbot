@@ -216,15 +216,37 @@ class HotelFacilityQaHandlerTest {
     }
 
     @Test
-    void namedHotelFilteredOutOffersToDropFilter() {
-        OrchestrationContext ctx = context(List.of(HOTEL_A, HOTEL_B), "melihotel kemer",
-                "melihotel kemer'de havuz var mı");
-        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_B, HOTEL_C)); // present in raw, filtered out
+    void namedHotelOutsideFilterIsAnsweredDirectlyWithoutTouchingTheFilter() {
+        // Asking about a hotel the filter excluded must NOT trigger a "filtreyi kaldırayım mı?" step and
+        // must NOT mutate the shown list (that desynced the UI card panel) — just answer about it.
+        List<Object> shown = List.of(HOTEL_A, HOTEL_B);
+        OrchestrationContext ctx = context(shown, "melihotel kemer", "melihotel kemer'de havuz var mı");
+        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_B, HOTEL_C)); // C filtered out
 
         OrchestrationResult r = handler.handle(ctx);
 
-        assertTrue(r.reply().contains("filtrelenmiş listede yok"));
-        verify(detailsService, never()).getFeatureDetails(anyString(), any(), any());
+        assertTrue(r.reply().contains("filtrelenmiş listede yok"), "should say it is outside the filter");
+        assertTrue(r.reply().contains("bilgisine bakıyorum"), "and answer it anyway");
+        assertTrue(r.reply().toLowerCase().contains("havuz"));
+        verify(detailsService).getFeatureDetails("C", 1, "BB"); // resolved from the raw list
+        assertEquals(shown, ctx.session().getLastResultCards(), "user's filter must stay untouched");
+        assertNull(ctx.session().getPendingFacilityQuestion(), "no confirmation step is pending");
+    }
+
+    @Test
+    void filterSurvivesSoLaterBulkStillUsesIt() {
+        // After an out-of-filter question, a bulk question must still apply to the FILTERED list only.
+        List<Object> shown = List.of(HOTEL_A, HOTEL_B);
+        OrchestrationContext ctx = context(shown, "melihotel kemer", "melihotel kemer'de havuz var mı");
+        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_B, HOTEL_C));
+        handler.handle(ctx);
+
+        OrchestrationResult bulk = handler.handle(
+                new OrchestrationContext(ctx.session(), "hepsinde havuz var mı",
+                        IntentType.HOTEL_FACILITY_QA, sel(null)));
+
+        assertTrue(bulk.reply().contains("Rixos Premium") && bulk.reply().contains("TEST KARS2"));
+        assertFalse(bulk.reply().contains("melihotel kemer"), "bulk must not include the filtered-out hotel");
     }
 
     @Test
@@ -260,45 +282,6 @@ class HotelFacilityQaHandlerTest {
         List<Object> cards = List.of(HOTEL_A, HOTEL_C); // HOTEL_C = "melihotel kemer"
         handler.handle(context(cards, "MELIHOTEL KEMER", "MELIHOTEL KEMER'de havuz var mı"));
         verify(detailsService).getFeatureDetails("C", 1, "BB");
-    }
-
-    @Test
-    void filterRemovalConfirmationDropsFilterAndAnswersPendingQuestion() {
-        OrchestrationContext ctx = context(List.of(HOTEL_A), null, "kaldır da bak");
-        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_C)); // C filtered out
-        ctx.session().setPendingFacilityQuestion("melihotel kemer'de havuz var mı");
-
-        OrchestrationResult r = handler.handle(ctx);
-
-        assertTrue(r.reply().startsWith("Filtreyi kaldırdım."), "should confirm the filter was dropped");
-        assertTrue(r.reply().toLowerCase().contains("havuz"), "and answer the ORIGINAL question");
-        verify(detailsService).getFeatureDetails("C", 1, "BB"); // resolved from the restored raw list
-        assertEquals(2, ctx.session().getLastResultCards().size(), "unfiltered list restored");
-        assertNull(ctx.session().getPendingFacilityQuestion());
-    }
-
-    @Test
-    void filterRemovalRecognisesNaturalVariants() {
-        for (String confirm : List.of("kaldır", "kaldır da bak", "evet kaldır", "filtreyi kaldır bak",
-                "filtreleri temizle")) {
-            OrchestrationContext ctx = context(List.of(HOTEL_A), null, confirm);
-            ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_C));
-            ctx.session().setPendingFacilityQuestion("melihotel kemer'de havuz var mı");
-            assertTrue(handler.handle(ctx).reply().startsWith("Filtreyi kaldırdım."),
-                    "should accept as confirmation: " + confirm);
-        }
-    }
-
-    @Test
-    void bareEvetIsNotAFilterRemovalConfirmation() {
-        OrchestrationContext ctx = context(List.of(HOTEL_A), null, "evet");
-        ctx.session().setLastApiResultCards(List.of(HOTEL_A, HOTEL_C));
-        ctx.session().setPendingFacilityQuestion("melihotel kemer'de havuz var mı");
-
-        OrchestrationResult r = handler.handle(ctx);
-
-        assertFalse(r.reply().startsWith("Filtreyi kaldırdım."), "bare 'evet' must not drop the filter");
-        assertEquals("melihotel kemer'de havuz var mı", ctx.session().getPendingFacilityQuestion());
     }
 
     @Test
