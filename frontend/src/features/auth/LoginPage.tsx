@@ -77,6 +77,10 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
       setError('Şifre en az 8 karakter olmalıdır.')
       return
     }
+    if (/\d/.test(fullName)) {
+      setError('İsim alanı sayı içeremez.')
+      return
+    }
     setError('')
     onRegister({ fullName, email, password })
   }
