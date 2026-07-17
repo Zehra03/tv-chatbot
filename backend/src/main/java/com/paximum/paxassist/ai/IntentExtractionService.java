@@ -94,6 +94,11 @@ public class IntentExtractionService {
           departTimeRange: departure-time filter — EITHER a time-of-day bucket (one of
                            morning | afternoon | evening | night) OR an explicit 24h clock range
                            "HH:mm-HH:mm"; open-ended "HH:mm-" = at/after, "-HH:mm" = at/before (string)
+          checkedBaggage: true when the fare must include checked baggage ("bagajlı", "bagaj dahil",
+                          "valiz alacağım"), false when the user explicitly wants no checked baggage
+                          ("bagajsız", "sadece kabin bagajı", "el bagajı yeter") (boolean)
+          minCheckedBaggageKg: minimum checked baggage in kg the user asks for — "15 kilo bagajlı"
+                          → 15, "en az 20 kg bagaj" → 20 (integer)
 
         Shared fields (hotel + flight):
           adults        : number of adults (integer)
@@ -127,9 +132,15 @@ public class IntentExtractionService {
           zero count ("-2 yetişkin", "0 yetişkin"), extract it exactly as given
           (adults: -2 / adults: 0). Do not fix the sign, do not omit it, do not substitute a
           "reasonable" number. Validation and correction happen downstream, not here.
+          This applies to dates too: if the user states an impossible date ("32 temmuz", "30 şubat"),
+          do NOT leave it null — write exactly "INVALID" into the date field.
         - CONTINUATION (stickiness): if the history has an ongoing hotel/flight search AND the user
           is only answering a missing slot of THAT SAME search (nights, date, city, guest count, a
           feature), keep the SAME intent (do not drop to OTHER) and write the new value.
+        - NO PREFERENCE: "fark etmez", "sen seç", "önemli değil", "herhangi biri" in answer to a
+          question you asked IS a continuation — keep the SAME intent (HOTEL/FLIGHT), never OTHER.
+          It states no value, so leave the field null: do NOT pick a city/date/number on the user's
+          behalf. The system offers the user concrete options for that field.
         - DOMAIN SWITCH — this OVERRIDES the continuation rule: switch to the other search type
           (hotel↔flight) whenever the user signals it, whether EXPLICITLY ("uçuş bak", "otel bak",
           "boşver uçuşa geçelim", "bir de uçuş lazım", "otel değil uçuş") or IMPLICITLY through a
@@ -151,6 +162,10 @@ public class IntentExtractionService {
         - If there are ambiguous unlabelled multiple numbers ("2 2"), leave adults and children NULL
           (the assistant will clarify). Never fabricate a count.
         - "çocuksuz" / "çocuk yok" → children:0.
+        - AGE IN MONTHS: when a child's age is given in months ("6 aylık bebek", "18 aylık"), round
+          DOWN to whole years for childAges — "6 aylık" → 0, "18 aylık" → 1. Only when the user
+          actually states the age: "bebek" on its own is children:1 with NO childAges entry (the
+          system asks; a fare depends on the real age, so never guess one).
         - Budget is PER-DOMAIN: a budget in a HOTEL search → hotelMaxPrice, in a FLIGHT search →
           flightMaxPrice. Never fill both from one message; the user may state separate hotel and
           flight budgets and one must not overwrite the other.
@@ -165,6 +180,16 @@ public class IntentExtractionService {
         - When the user asks for an EXACT star rating without a range (e.g. "3 yıldızlı oteller", "5 yıldızlı"), specify BOTH "stars" and "maxStars" to that same number to enforce an exact match. E.g., "stars": 3, "maxStars": 3. If they say "en az 3 yıldız" or "3 yıldız ve üstü", only set "stars": 3.
         - When the user mentions board types like "all inclusive", "Herşey dahil", "ALL INCLUSIVE", "ai", normalize it to "boardType": "AI". For "yarım pansiyon", "half board", normalize to "boardType": "HB". Be tolerant of casing and spelling.
         - When the user asks for a direct flight ("aktarmasız", "direkt"), set "directFlight": true. If they ask for flights with layovers ("aktarmalı"), set "directFlight": false.
+        - BAGGAGE IS A SEARCH, NOT A FILTER: a baggage wish ("bagajlı olanları getir", "15 kilo
+          bagajlı", "bagajsız olsun") is intent FLIGHT — never FILTER — even when results are already
+          listed and even when the user says "getir"/"göster". The reason: baggage belongs to the
+          FARE, and one flight is sold at several fares (15 kg cheaper, 20 kg dearer), so the search
+          has to be redone to price the fare that carries the baggage. Keep the accumulated
+          route/date; only add the baggage fields.
+          "15 kilo bagajlı" → minCheckedBaggageKg:15 (do NOT also set checkedBaggage).
+          "bagajlı olsun" (no number) → checkedBaggage:true.
+          "bagajsız / kabin bagajı yeter" → checkedBaggage:false.
+          Never invent a kg number the user did not say.
         - When the user names a preferred airline ("THY ile", "Pegasus'la", "AJet olsun"), put it in "airline" exactly as stated ("THY", "Pegasus", "AJet"). Do NOT invent an airline the user did not mention.
         - When the user restricts the departure time, set "departTimeRange":
             - A bare TIME-OF-DAY WORD → a bucket: "sabah/sabahki" → morning, "öğlen/öğle" → afternoon, "akşam/akşamüstü" → evening, "gece/geceki" → night.
@@ -235,6 +260,7 @@ public class IntentExtractionService {
         Mesaj: "07/13/2026 tarihinde uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"departureDate":"2026-07-13"}}
 
+
         Mesaj: "Eylülde Antalya'da denize sıfır bir otel, 2 yetişkin"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":2,"features":["SEAFRONT"]}}
 
@@ -300,6 +326,17 @@ public class IntentExtractionService {
         Mesaj: "sadece aktarmalıları listele"
         Çıktı: {"intent":"FILTER","criteria":{"directFlight":false}}
 
+        Sohbet Geçmişi: assistant: Aramana uygun 5 uçuş buldum:
+        Mesaj: "15 kilo bagajlı olanları getir"
+        Çıktı: {"intent":"FLIGHT","criteria":{"minCheckedBaggageKg":15}}
+
+        Sohbet Geçmişi: assistant: Aramana uygun 5 uçuş buldum:
+        Mesaj: "bagajlı olsun"
+        Çıktı: {"intent":"FLIGHT","criteria":{"checkedBaggage":true}}
+
+        Mesaj: "İstanbul'dan Antalya'ya bagajsız en ucuz uçuş"
+        Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"Antalya","checkedBaggage":false,"sortBy":"price_asc"}}
+
         Mesaj: "İstanbul'dan İzmir'e THY ile sabah kalkan aktarmasız uçuş"
         Çıktı: {"intent":"FLIGHT","criteria":{"origin":"İstanbul","destination":"İzmir","airline":"THY","departTimeRange":"morning","directFlight":true}}
 
@@ -336,6 +373,9 @@ public class IntentExtractionService {
 
         Mesaj: "Merhaba"
         Çıktı: {"intent":"OTHER","criteria":null}
+
+        Mesaj: "32 temmuz uçuş arıyorum"
+        Çıktı: {"intent":"FLIGHT","criteria":{"departureDate":"INVALID"}}
 
         Mesaj: "Antalya"
         Çıktı: {"intent":"AMBIGUOUS","criteria":null}

@@ -9,11 +9,12 @@ import org.springframework.stereotype.Component;
 import com.paximum.paxassist.ai.IntentType;
 import com.paximum.paxassist.ai.SlotCriteria;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
+import com.paximum.paxassist.flight.domain.PassengerCount;
 import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 import com.paximum.paxassist.flight.service.FlightSearchService;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
-import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
+import com.paximum.paxassist.orchestrator.clarify.ClarificationComposer;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.slot.LocationGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
@@ -31,7 +32,7 @@ public class FlightSearchHandler implements IntentHandler {
     private final SlotFillingService slotFilling;
     private final FlightCriteriaMapper mapper;
     private final FlightSearchService flightSearchService;
-    private final ClarificationCatalog clarifications;
+    private final ClarificationComposer clarifications;
     private final SlotGuard slotGuard;
 
     private final LocationGuard locationGuard;
@@ -42,6 +43,8 @@ public class FlightSearchHandler implements IntentHandler {
             ClarificationCatalog clarifications,
             SlotGuard slotGuard,
             LocationGuard locationGuard) {
+            ClarificationComposer clarifications,
+            SlotGuard slotGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.flightSearchService = flightSearchService;
@@ -81,14 +84,34 @@ public class FlightSearchHandler implements IntentHandler {
 
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
 
-        FlightSearchCriteria criteria = mapper.toCriteria(merged);
-        FlightSearchOutcome outcome = flightSearchService.search(criteria);
-
         String carriedOver = TravellerCarryOver.note(switchedDomain, context.criteria(), merged);
+
+        // An accompanying child's fare depends on its age: under 2 it flies as a lap infant, from 12
+        // it pays the adult fare (see FlightCriteriaMapper). A bare count cannot be typed, so without
+        // the ages the search would price every child as a "child" — a quote the traveller cannot
+        // book at. Ask instead of guessing; the hotel side asks for the same reason.
+        if (merged.children() != null && merged.children() > 0
+                && (merged.childAges() == null || merged.childAges().size() < merged.children())) {
+            return OrchestrationResult.clarify(
+                    clarifications.forFlight(context.session(), context.userMessage(), List.of("childAges"))
+                            + carriedOver, "flight");
+        }
+
+        FlightSearchCriteria criteria = mapper.toCriteria(merged);
+
+        // Party-size rules the provider enforces anyway, but only after a booking is under way. The
+        // ages have been resolved by now, so this is the first point the real seat/lap counts exist.
+        Optional<String> partyProblem = partyLimitMessage(criteria.getPassengers());
+        if (partyProblem.isPresent()) {
+            return OrchestrationResult.clarify(partyProblem.get() + carriedOver, "flight");
+        }
+
+        FlightSearchOutcome outcome = flightSearchService.search(criteria);
 
         if (!outcome.complete()) {
             return OrchestrationResult.clarify(
-                    clarifications.questionForFlight(outcome.missingFields()) + carriedOver, "flight");
+                    clarifications.forFlight(context.session(), context.userMessage(), outcome.missingFields())
+                            + carriedOver, "flight");
         }
 
         // Post-search budget filter over REAL results (board type does not apply to
@@ -123,6 +146,28 @@ public class FlightSearchHandler implements IntentHandler {
                         + carriedOver, cards);
     }
 
+    /**
+     * Turns the flight domain's party-size rules into the wording the chat uses. The rules live on
+     * {@link PassengerCount} (they are the provider's, and the REST/MCP surfaces enforce the same
+     * ones); only the Turkish phrasing belongs here.
+     */
+    private Optional<String> partyLimitMessage(PassengerCount passengers) {
+        if (passengers == null) {
+            return Optional.empty();
+        }
+        if (passengers.exceedsSeatLimit()) {
+            return Optional.of("Tek aramada en fazla " + PassengerCount.MAX_SEATS + " koltuklu yolcu "
+                    + "arayabiliyorum (kucakta uçan bebekler sayılmaz), sen " + passengers.seatedCount()
+                    + " kişi belirttin. Grubu bölüp ayrı ayrı aramayı deneyebilir misin?");
+        }
+        if (passengers.hasMoreInfantsThanAdults()) {
+            return Optional.of("Her bebek bir yetişkinin kucağında uçtuğu için bebek sayısı yetişkin "
+                    + "sayısını geçemez (" + passengers.getInfants() + " bebek, " + passengers.getAdults()
+                    + " yetişkin). Yetişkin sayısını artırmak ister misin?");
+        }
+        return Optional.empty();
+    }
+
     private String flightReply(List<Object> cards, List<Object> rawCards, SlotCriteria merged,
                                boolean paired, boolean returnLegShown, String searchCurrency) {
         if (!cards.isEmpty() && paired) {
@@ -147,6 +192,27 @@ public class FlightSearchHandler implements IntentHandler {
             return merged.flightMaxPrice() + " " + searchCurrency
                     + " altında uygun uçuş bulamadım. Bütçeyi biraz artırmayı deneyebilir misin?";
         }
+        // The baggage request narrowed the fares inside the search itself, so an empty list here means
+        // no fare met it — name that instead of blaming the route/date the user did give us.
+        String baggageAsk = describeBaggageAsk(merged);
+        if (baggageAsk != null) {
+            return baggageAsk + " bir uçuş bulamadım. Bagaj koşulunu gevşetmeyi ya da farklı bir "
+                    + "tarih denemeyi ister misin?";
+        }
         return "Aradığın kriterlere uygun uçuş bulamadım. Farklı bir tarih veya güzergah deneyebilir misin?";
+    }
+
+    /** How the user's baggage request reads back to them, or null when they made none. */
+    private String describeBaggageAsk(SlotCriteria merged) {
+        if (merged.minCheckedBaggageKg() != null) {
+            return merged.minCheckedBaggageKg() + " kg ve üzeri kayıtlı bagaj içeren";
+        }
+        if (Boolean.TRUE.equals(merged.checkedBaggage())) {
+            return "kayıtlı bagaj içeren";
+        }
+        if (Boolean.FALSE.equals(merged.checkedBaggage())) {
+            return "kayıtlı bagaj içermeyen";
+        }
+        return null;
     }
 }

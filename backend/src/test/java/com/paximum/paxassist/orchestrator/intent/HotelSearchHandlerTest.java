@@ -22,6 +22,8 @@ import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
 import com.paximum.paxassist.orchestrator.slot.LocationGuard;
+import com.paximum.paxassist.orchestrator.clarify.ClarificationComposer;
+import com.paximum.paxassist.orchestrator.clarify.NoPreferenceDetector;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
@@ -51,6 +53,8 @@ class HotelSearchHandlerTest {
         org.mockito.Mockito.lenient().when(locationGuard.checkInvalidLocation(any(), any())).thenReturn(Optional.empty());
         return new HotelSearchHandler(
                 slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService, new ClarificationCatalog(), slotGuard, locationGuard);
+                slotFilling, new HotelCriteriaMapper(new GeoCountryResolver()), hotelSearchService,
+                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard);
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {

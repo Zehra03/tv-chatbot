@@ -37,7 +37,12 @@ public class ClarificationCatalog {
             "departDate", "Hangi tarihte gitmek istersin? (örn. 2026-08-01)",
             "returnDate", "Dönüş tarihin nedir?",
             "tripType", "Tek yön mü yoksa gidiş-dönüş mü olsun?",
-            "passengers", "Kaç yolcu seyahat edecek?"
+            "passengers", "Kaç yolcu seyahat edecek?",
+            // Not a field the flight module reports: FlightSearchHandler asks for it, because the
+            // fare depends on whether a child flies as an infant (0-1), a child (2-11) or pays the
+            // adult fare (12+).
+            "childAges", "Çocukların yaşları nedir? (örn. 1 ve 8) — 2 yaş altı bebek, 12 yaş ve üzeri "
+                    + "yetişkin ücretine tabi olduğu için fiyat değişir."
     );
 
     private static final String HOTEL_FALLBACK = "Otel araması için biraz daha bilgiye ihtiyacım var. Yardımcı olabilir misin?";

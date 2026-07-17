@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAccessor;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -19,7 +20,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import com.paximum.paxassist.flight.config.TourVisioProperties;
+import com.paximum.paxassist.flight.domain.BaggageAllowance;
 import com.paximum.paxassist.flight.domain.FlightProduct;
+import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioBaggageInfo;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightItem;
@@ -63,16 +66,21 @@ public class TourVisioFlightResponseMapper {
         this.tourVisioProperties = tourVisioProperties;
     }
 
-    public List<FlightProduct> toFlightProducts(TourVisioPriceSearchResponse response, TripType requestedTripType) {
+    /**
+     * @param criteria the search these results answer. Beyond the trip type, its baggage request
+     *                 decides WHICH fare of a flight becomes the card: see {@link #cheapestOffer}.
+     */
+    public List<FlightProduct> toFlightProducts(TourVisioPriceSearchResponse response,
+                                                FlightSearchCriteria criteria) {
         if (response == null || response.body() == null || response.body().flights() == null) {
             return List.of();
         }
         List<TourVisioFlightResult> flights = response.body().flights();
         List<TourVisioFlightResult> outbounds = legsOfRoute(flights, ROUTE_OUTBOUND);
 
-        if (requestedTripType != TripType.ROUND_TRIP) {
+        if (criteria.getTripType() != TripType.ROUND_TRIP) {
             return outbounds.stream()
-                    .map(outbound -> mapSafely(outbound, () -> toOneWay(outbound)))
+                    .map(outbound -> mapSafely(outbound, () -> toOneWay(outbound, criteria)))
                     .flatMap(Optional::stream)
                     .toList();
         }
@@ -84,7 +92,7 @@ public class TourVisioFlightResponseMapper {
                 .toList();
         if (!combined.isEmpty()) {
             return combined.stream()
-                    .map(trip -> mapSafely(trip, () -> toCombinedRoundTrip(trip)))
+                    .map(trip -> mapSafely(trip, () -> toCombinedRoundTrip(trip, criteria)))
                     .flatMap(Optional::stream)
                     .toList();
         }
@@ -96,14 +104,14 @@ public class TourVisioFlightResponseMapper {
             // nothing, but never dressed up as a round trip (no return times, outbound price only).
             log.warn("Round-trip search returned no return (route={}) legs; mapping outbounds only", ROUTE_RETURN);
             return outbounds.stream()
-                    .map(outbound -> mapSafely(outbound, () -> toOneWay(outbound)))
+                    .map(outbound -> mapSafely(outbound, () -> toOneWay(outbound, criteria)))
                     .flatMap(Optional::stream)
                     .toList();
         }
 
         return outbounds.stream()
                 .flatMap(outbound -> returns.stream()
-                        .map(returnLeg -> mapSafely(outbound, () -> toRoundTrip(outbound, returnLeg)))
+                        .map(returnLeg -> mapSafely(outbound, () -> toRoundTrip(outbound, returnLeg, criteria)))
                         .flatMap(Optional::stream))
                 .toList();
     }
@@ -167,15 +175,17 @@ public class TourVisioFlightResponseMapper {
         }
     }
 
-    private Optional<FlightProduct> toOneWay(TourVisioFlightResult outbound) {
-        TourVisioOffer offer = cheapestOffer(outbound.allOffers()).orElse(null);
-        if (offer == null || priceOf(offer) == null) {
-            log.warn("Skipping flight result {}: no priced offer", outbound.id());
-            return Optional.empty();
-        }
+    private Optional<FlightProduct> toOneWay(TourVisioFlightResult outbound, FlightSearchCriteria criteria) {
         // Outbound segments only: a one-way request can still be answered with a combined result,
         // and its return segments would otherwise land the card back where it started.
-        return baseBuilder(outbound, segmentsOfRoute(outbound, ROUTE_OUTBOUND), offer.offerIdFor(null))
+        List<TourVisioFlightItem> segments = segmentsOfRoute(outbound, ROUTE_OUTBOUND);
+        TourVisioOffer offer = cheapestOffer(outbound.allOffers(), segments, criteria).orElse(null);
+        if (offer == null || priceOf(offer) == null) {
+            log.debug("No offer of flight result {} is both priced and within the baggage request",
+                    outbound.id());
+            return Optional.empty();
+        }
+        return baseBuilder(outbound, segments, offer.offerIdFor(null), baggageLinesOf(offer, segments))
                 .map(builder -> builder
                         .price(priceOf(offer))
                         .currency(currencyOf(offer))
@@ -187,14 +197,16 @@ public class TourVisioFlightResponseMapper {
      * second token to carry and no group key to agree on. The card's origin/destination describe the
      * outbound; the return leg fills the return fields.
      */
-    private Optional<FlightProduct> toCombinedRoundTrip(TourVisioFlightResult trip) {
-        TourVisioOffer offer = cheapestOffer(trip.allOffers()).orElse(null);
+    private Optional<FlightProduct> toCombinedRoundTrip(TourVisioFlightResult trip, FlightSearchCriteria criteria) {
+        List<TourVisioFlightItem> outboundSegments = segmentsOfRoute(trip, ROUTE_OUTBOUND);
+        TourVisioOffer offer = cheapestOffer(trip.allOffers(), outboundSegments, criteria).orElse(null);
         if (offer == null || priceOf(offer) == null) {
-            log.warn("Skipping flight result {}: no priced offer", trip.id());
+            log.debug("No offer of flight result {} is both priced and within the baggage request", trip.id());
             return Optional.empty();
         }
         List<TourVisioFlightItem> returnSegments = segmentsOfRoute(trip, ROUTE_RETURN);
-        return baseBuilder(trip, segmentsOfRoute(trip, ROUTE_OUTBOUND), offer.offerIdFor(null))
+        return baseBuilder(trip, outboundSegments, offer.offerIdFor(null),
+                baggageLinesOf(offer, outboundSegments))
                 .map(builder -> builder
                         // Trips that fly the same outbound must share an outbound id, or the chat's
                         // "pick an outbound, then a return" step would offer one return per outbound.
@@ -228,11 +240,25 @@ public class TourVisioFlightResponseMapper {
      * combinable only when one of its offers shares a group key with an outbound offer, and that
      * shared key then names the booking token to use on each side.
      */
-    private Optional<FlightProduct> toRoundTrip(TourVisioFlightResult outbound, TourVisioFlightResult returnLeg) {
+    private Optional<FlightProduct> toRoundTrip(TourVisioFlightResult outbound, TourVisioFlightResult returnLeg,
+                                                FlightSearchCriteria criteria) {
+        List<TourVisioFlightItem> outboundSegments = segmentsOfRoute(outbound, ROUTE_OUTBOUND);
+        List<TourVisioFlightItem> returnSegments = segmentsOfRoute(returnLeg, ROUTE_RETURN);
+
         Pairing best = null;
         for (TourVisioOffer outboundOffer : outbound.allOffers()) {
+            // Both legs must meet the baggage request: a trip whose return drops to 15 kg is not a
+            // "20 kg" trip, and the traveller flies it in both directions.
+            if (!allowanceOf(outboundOffer, outboundSegments).satisfies(
+                    criteria.getCheckedBaggage(), criteria.getMinCheckedBaggageKg())) {
+                continue;
+            }
             for (TourVisioOffer returnOffer : returnLeg.allOffers()) {
-                Pairing pairing = pair(outboundOffer, returnLeg, returnOffer);
+                if (!allowanceOf(returnOffer, returnSegments).satisfies(
+                        criteria.getCheckedBaggage(), criteria.getMinCheckedBaggageKg())) {
+                    continue;
+                }
+                Pairing pairing = pair(outboundOffer, returnLeg, returnOffer, outboundSegments);
                 if (pairing != null && (best == null || pairing.total().compareTo(best.total()) < 0)) {
                     best = pairing;
                 }
@@ -242,9 +268,8 @@ public class TourVisioFlightResponseMapper {
             return Optional.empty();
         }
 
-        List<TourVisioFlightItem> returnSegments = segmentsOfRoute(returnLeg, ROUTE_RETURN);
         Pairing paired = best;
-        return baseBuilder(outbound, segmentsOfRoute(outbound, ROUTE_OUTBOUND), best.outboundOfferId())
+        return baseBuilder(outbound, outboundSegments, best.outboundOfferId(), best.outboundBaggage())
                 .map(builder -> builder
                         // A pair needs its own id: several returns share one outbound, and a card id
                         // that repeated across them could not tell the options apart.
@@ -260,8 +285,14 @@ public class TourVisioFlightResponseMapper {
                         .build());
     }
 
-    /** Null when these two offers may not be sold together, or either lacks a usable price/token. */
-    private Pairing pair(TourVisioOffer outboundOffer, TourVisioFlightResult returnLeg, TourVisioOffer returnOffer) {
+    /**
+     * Null when these two offers may not be sold together, or either lacks a usable price/token.
+     *
+     * @param outboundSegments the outbound leg's segments, the fallback source of its baggage lines
+     *                         when the offer states none (legacy payloads)
+     */
+    private Pairing pair(TourVisioOffer outboundOffer, TourVisioFlightResult returnLeg, TourVisioOffer returnOffer,
+                         List<TourVisioFlightItem> outboundSegments) {
         BigDecimal outboundPrice = priceOf(outboundOffer);
         BigDecimal returnPrice = priceOf(returnOffer);
         if (outboundPrice == null || returnPrice == null) {
@@ -289,7 +320,8 @@ public class TourVisioFlightResponseMapper {
                 ? outboundPrice.max(returnPrice)
                 : outboundPrice.add(returnPrice);
         String currency = currencyOf(outboundOffer) != null ? currencyOf(outboundOffer) : currencyOf(returnOffer);
-        return new Pairing(returnLeg, outboundOfferId, returnOfferId, total, currency);
+        return new Pairing(returnLeg, outboundOfferId, returnOfferId, total, currency,
+                baggageLinesOf(outboundOffer, outboundSegments));
     }
 
     private boolean grouped(TourVisioOffer offer) {
@@ -313,7 +345,8 @@ public class TourVisioFlightResponseMapper {
      */
     private Optional<FlightProduct.FlightProductBuilder> baseBuilder(TourVisioFlightResult outbound,
                                                                      List<TourVisioFlightItem> segments,
-                                                                     String offerId) {
+                                                                     String offerId,
+                                                                     List<TourVisioBaggageInfo> baggageLines) {
         if (offerId == null) {
             log.warn("Skipping flight result {}: offer carries no booking token", outbound.id());
             return Optional.empty();
@@ -343,14 +376,74 @@ public class TourVisioFlightResponseMapper {
                 .arriveTime(toInstant(last.arrival().date()))
                 .stops(stopsOf(segments))
                 .durationMinutes(durationOf(segments))
-                .baggage(summarizeBaggage(first.baggageInformations())));
+                .baggage(summarizeBaggage(baggageLines))
+                .baggageAllowance(toAllowance(baggageLines)));
     }
 
-    /** The cheapest fare for a leg — the "from" price a one-way card shows. */
-    private Optional<TourVisioOffer> cheapestOffer(List<TourVisioOffer> offers) {
+    /**
+     * The cheapest fare for a leg that also meets the traveller's baggage request — the "from" price
+     * a card shows.
+     *
+     * <p>The baggage request narrows the candidates rather than filtering the finished cards, because
+     * baggage belongs to the fare: the same flight sells as 15 kg for less and 20 kg for more. Asked
+     * for 20 kg, dropping the flight because its CHEAPEST fare carries 15 kg would hide a 20 kg fare
+     * that exists; so the cheapest fare that does carry 20 kg is priced instead. Every card therefore
+     * remains a real, buyable fare — no price or allowance is invented.
+     */
+    private Optional<TourVisioOffer> cheapestOffer(List<TourVisioOffer> offers,
+                                                   List<TourVisioFlightItem> segments,
+                                                   FlightSearchCriteria criteria) {
         return offers.stream()
                 .filter(offer -> priceOf(offer) != null)
+                .filter(offer -> allowanceOf(offer, segments)
+                        .satisfies(criteria.getCheckedBaggage(), criteria.getMinCheckedBaggageKg()))
                 .min((a, b) -> priceOf(a).compareTo(priceOf(b)));
+    }
+
+    /**
+     * The baggage lines that describe what this offer's price buys. The offer's own list wins; a
+     * legacy payload carries none, and then the leg's first segment is the only statement available.
+     */
+    private List<TourVisioBaggageInfo> baggageLinesOf(TourVisioOffer offer, List<TourVisioFlightItem> segments) {
+        if (offer.baggageInformations() != null && !offer.baggageInformations().isEmpty()) {
+            return offer.baggageInformations();
+        }
+        return segments.isEmpty() ? List.of() : nullSafe(segments.get(0).baggageInformations());
+    }
+
+    private BaggageAllowance allowanceOf(TourVisioOffer offer, List<TourVisioFlightItem> segments) {
+        return toAllowance(baggageLinesOf(offer, segments));
+    }
+
+    /**
+     * Reads the provider's baggage lines as the allowance a filter can act on. No lines at all means
+     * unknown — never "no baggage": the two are told apart so an unverifiable fare is not advertised
+     * as meeting a baggage request (see {@link BaggageAllowance}).
+     */
+    private BaggageAllowance toAllowance(List<TourVisioBaggageInfo> lines) {
+        if (lines == null || lines.isEmpty()) {
+            return BaggageAllowance.unknown();
+        }
+        List<TourVisioBaggageInfo> checked = lines.stream()
+                .filter(TourVisioBaggageInfo::isChecked)
+                .filter(TourVisioBaggageInfo::grantsAllowance)
+                .toList();
+        if (checked.isEmpty()) {
+            // The provider listed this fare's baggage and none of it is checked — a cabin-only fare.
+            return new BaggageAllowance(false, null);
+        }
+        // The largest stated allowance: several lines are the pieces of one fare's allowance, and a
+        // piece-based line contributes no kg to compare.
+        Integer kg = checked.stream()
+                .map(TourVisioBaggageInfo::weightInKg)
+                .filter(java.util.Objects::nonNull)
+                .max(Integer::compareTo)
+                .orElse(null);
+        return new BaggageAllowance(true, kg);
+    }
+
+    private List<TourVisioBaggageInfo> nullSafe(List<TourVisioBaggageInfo> lines) {
+        return lines == null ? List.of() : lines;
     }
 
     private BigDecimal priceOf(TourVisioOffer offer) {
@@ -427,6 +520,7 @@ public class TourVisioFlightResponseMapper {
 
     /** One outbound-offer/return-offer combination the provider allows, with its trip total. */
     private record Pairing(TourVisioFlightResult returnLeg, String outboundOfferId, String returnOfferId,
-                           BigDecimal total, String currency) {
+                           BigDecimal total, String currency,
+                           List<TourVisioBaggageInfo> outboundBaggage) {
     }
 }
