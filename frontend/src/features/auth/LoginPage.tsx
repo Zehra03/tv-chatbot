@@ -290,9 +290,13 @@ const AuthScreen: React.FC<AuthScreenProps> = ({
         <div className="w-full max-w-md p-8 bg-white/10 backdrop-blur-lg rounded-3xl border border-white/20 shadow-2xl relative z-10">
           <div className="flex justify-center mb-6">
             <div className="relative">
-              {/* Arka ışıltı — logoyu koyu kartta daha görünür kılar. */}
-              <div className="absolute inset-0 -m-6 rounded-full bg-gradient-to-r from-brand-iris via-brand-blue to-brand-teal blur-3xl opacity-30"></div>
-              <div className="absolute inset-0 -m-2 rounded-[2rem] bg-white/25 blur-2xl"></div>
+              {/* Halo, Layout/LandingPage ile aynı reçete: lacivert "Pax" koyu cam
+                  kartta okunur kalsın. Buradaki eski iki katmanlı renkli bloom
+                  (blur-3xl gradient + blur-2xl beyaz) dekoratifti, kaldırıldı. */}
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
+              />
               <img
                 src={logoSrc}
                 alt="PaxAssist Logo"
