@@ -9,6 +9,26 @@ import { cn } from '@/lib/utils'
 import type { HotelProduct, HotelSearchCriteria } from '@/types'
 
 /**
+ * Board (pansiyon) rozetinde gösterilecek temiz etiketi döndürür; TANINMAYAN ham metin için `null`.
+ * `boardType` TourVisio'dan serbest metin gelir ve test ortamında çöp olabilir ("lokal name deneme",
+ * "low level yerel dil"). Kullanıcıya yalnızca anlamlı, bilinen bir pansiyon tipi gösterilir; tanınmayan
+ * değerde rozet hiç basılmaz (kart rozetsiz de geçerli). Bilinen küme backend `BoardNormalizer` ile aynıdır.
+ */
+export function boardBadgeLabel(boardType?: string | null): string | null {
+  if (!boardType) return null
+  const b = boardType.trim().toLowerCase()
+  const hasToken = (code: string) => b.split(/[^a-z]+/).includes(code)
+  if (/all inclusive|all-inclusive|herşey dahil|her şey dahil|hersey dahil|ultra/.test(b) || hasToken('ai'))
+    return 'Herşey Dahil'
+  if (/full board|tam pansiyon/.test(b) || hasToken('fb')) return 'Tam Pansiyon'
+  if (/half board|yarım pansiyon|yarim pansiyon/.test(b) || hasToken('hb')) return 'Yarım Pansiyon'
+  if (/breakfast|kahvaltı|kahvalti|bed and breakfast|bed & breakfast|oda kahvaltı/.test(b) || hasToken('bb'))
+    return 'Oda Kahvaltı'
+  if (/room only|sadece oda/.test(b) || hasToken('ro')) return 'Sadece Oda'
+  return null
+}
+
+/**
  * Otel sonuç kartı — hem /hotels listesinde hem chat sonuç panelinde kullanılır.
  * Görsel dil login vitrinindeki otel kartından: cam yüzey, teal yıldız,
  * hover'da teal kenar. Otel görseli TourVisio'dan gelir (thumbnailFull);
@@ -36,6 +56,8 @@ export function HotelCard({
   // Taslak ürün + kriterden kurulur; kriter eksikse null → "Seç" kapalı (eksik zorunlu alanla
   // booking başlatılamaz). Her iki düzen de aynı taslağı yazar — chatbot booking yapmaz.
   const draft = buildHotelDraft(product, criteria)
+  // Anlamsız/çöp board metnini gizle: sadece tanınan pansiyon tipinde rozet göster.
+  const boardLabel = boardBadgeLabel(product.boardType)
   const onSelect = () => {
     if (draft) select(draft)
   }
@@ -78,9 +100,11 @@ export function HotelCard({
             <span className="sr-only"> yıldız</span>
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
-            <Badge variant="glass" className="px-1.5 py-0 text-[10px]">
-              {product.boardType}
-            </Badge>
+            {boardLabel && (
+              <Badge variant="glass" className="px-1.5 py-0 text-[10px]">
+                {boardLabel}
+              </Badge>
+            )}
             {!product.availability && (
               <Badge variant="destructive" className="px-1.5 py-0 text-[10px]">
                 Müsait değil
@@ -149,7 +173,7 @@ export function HotelCard({
             <span className="sr-only"> yıldız</span>
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <Badge variant="glass">{product.boardType}</Badge>
+            {boardLabel && <Badge variant="glass">{boardLabel}</Badge>}
             {!product.availability && <Badge variant="destructive">Müsait değil</Badge>}
           </div>
         </div>
