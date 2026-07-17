@@ -89,9 +89,12 @@ export function ChatPage() {
   }
 
   return (
-    <div className="flex min-h-0 w-full flex-1 gap-4">
+    // relative: SessionSidebar mobilde açılınca thread'i ezmek yerine BU kabın
+    // üstüne biner (absolute inset-y-0 left-0). Kabın kendisi oluksuz — geçmiş
+    // rayı sol kenara tam dayanır; oluğu aşağıdaki sütunlar tek tek verir.
+    <div className="relative flex min-h-0 w-full flex-1">
       <SessionSidebar />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-8">
         {!isEmpty && (
           <>
             <MessageList
@@ -119,7 +122,7 @@ export function ChatPage() {
           cards={activeCards}
           criteria={criteria}
           loading={searching}
-          className="hidden w-[360px] shrink-0 lg:flex xl:w-[400px]"
+          className="my-4 mr-4 hidden w-[360px] shrink-0 sm:mr-8 lg:flex xl:w-[400px]"
         />
       )}
 

@@ -6,6 +6,7 @@ import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { DatePicker } from '@/components/ui/date-picker'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
+import { ActiveFilterChips } from '@/components/ActiveFilterChips'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
@@ -16,6 +17,7 @@ import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { flightFiltersChanged } from '@/features/ui/uiSlice'
+import { flightFilterChips } from '@/features/ui/filterChips'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
 import { FlightList } from '@/features/flights/FlightList'
@@ -71,6 +73,18 @@ export function FlightsPage() {
       list = [...list].sort((a, b) => a.departTime.localeCompare(b.departTime))
     return list
   }, [query.data, filters])
+
+  // Aktif filtre çipleri: kaldırma, filtreyi boşa çeken kısmi güncellemeyi dispatch eder —
+  // `visible` memo'su yeniden hesaplanır, arama tekrar tetiklenmez (filtreler istemci tarafında).
+  const chips = useMemo(
+    () =>
+      flightFilterChips(filters).map((chip) => ({
+        key: chip.key,
+        label: chip.label,
+        onRemove: () => dispatch(flightFiltersChanged(chip.clear)),
+      })),
+    [filters, dispatch],
+  )
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault()
@@ -316,6 +330,7 @@ export function FlightsPage() {
       {query.data && (
         <>
           <FlightFilters airlines={airlines} />
+          <ActiveFilterChips chips={chips} />
           <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
           <FlightList products={visible} criteria={criteria ?? undefined} />
         </>

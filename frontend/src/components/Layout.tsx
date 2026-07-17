@@ -226,7 +226,8 @@ export function Layout() {
           böylece sayfa hiç kaymaz — geçmiş paneli ve mesaj thread'i yalnızca kendi
           içlerinde kayar. Diğer (sonuç/form) sayfaları uzun olabilir; onlarda main
           tek kaydırma kabı olarak kayar, header sabit kalır, arka plan sızmaz.
-          İç sarmalayıcı header'ın px-4/sm:px-8 oluklarıyla hizalı, max-w-7xl sınırlı. */}
+          Sohbet dışı sayfalarda iç sarmalayıcı header'ın px-4/sm:px-8 oluklarıyla
+          hizalı, max-w-7xl sınırlı. */}
       <main
         className={cn(
           'relative z-10 flex min-h-0 flex-1 flex-col',
@@ -235,11 +236,12 @@ export function Layout() {
       >
         <div
           className={cn(
-            // Chat = "uygulama" görünümü: tam genişlik (3 sütun tüm sayfaya
-            // yayılır, yanlarda boşluk kalmaz). Diğer sayfalar okunur genişlikte
-            // ortalı kalır (max-w-7xl). Yan oluk header ile hizalı (px-4/sm:px-8).
-            'mx-auto flex w-full min-h-0 flex-1 flex-col px-4 sm:px-8',
-            isChat ? 'max-w-none py-4' : 'max-w-7xl py-8',
+            // Chat = "uygulama" görünümü: tam genişlik VE oluksuz — geçmiş rayı
+            // sol kenara/header'ın hemen altına tam dayansın (Gemini deseni).
+            // Oluğu burada değil, ChatPage'in kendi sütunlarında veriyoruz.
+            // Diğer sayfalar okunur genişlikte ortalı + header ile hizalı kalır.
+            'mx-auto flex w-full min-h-0 flex-1 flex-col',
+            isChat ? 'max-w-none' : 'max-w-7xl px-4 py-8 sm:px-8',
           )}
         >
           {/* Rota geçişi: mode="wait" + pathname key — AnimatedOutlet ayrılan
