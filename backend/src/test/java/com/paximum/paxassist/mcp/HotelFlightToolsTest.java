@@ -53,7 +53,7 @@ class HotelFlightToolsTest {
         ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
         when(flightSearchService.search(captor.capture())).thenReturn(outcome);
 
-        FlightSearchOutcome result = tools.searchFlights("IST", "CDG", "2026-08-01", null, 2, 1, "TRY");
+        FlightSearchOutcome result = tools.searchFlights("IST", "CDG", "2026-08-01", null, 2, List.of(8), "TRY");
 
         assertThat(result).isSameAs(outcome);
         FlightSearchCriteria criteria = captor.getValue();
@@ -61,6 +61,19 @@ class HotelFlightToolsTest {
         assertThat(criteria.getDepartDate()).isEqualTo(LocalDate.of(2026, 8, 1));
         assertThat(criteria.getPassengers().getAdults()).isEqualTo(2);
         assertThat(criteria.getPassengers().getChildren()).isEqualTo(1);
+    }
+
+    @Test
+    void searchFlights_typesChildrenByAge() {
+        ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
+        when(flightSearchService.search(captor.capture())).thenReturn(FlightSearchOutcome.complete(List.of()));
+
+        tools.searchFlights("IST", "CDG", "2026-08-01", null, 1, List.of(1, 8, 12), "TRY");
+
+        FlightSearchCriteria criteria = captor.getValue();
+        assertThat(criteria.getPassengers().getInfants()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getChildren()).isEqualTo(1);
+        assertThat(criteria.getPassengers().getAdults()).isEqualTo(2);
     }
 
     @Test

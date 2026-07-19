@@ -13,6 +13,7 @@ import com.paximum.paxassist.flight.domain.TripType;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.FutureOrPresent;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -29,7 +30,8 @@ import jakarta.validation.constraints.Size;
  * <p>Unlike the chat path — where {@code TravelDateGuard} and slot-filling vet the criteria — this
  * REST boundary is reached directly by the search form, so it carries its own Bean Validation:
  * the fields a search cannot run without must be present, dates must not be in the past, currency
- * must be a 3-letter code, and origin/destination must differ. {@code @Valid} on the controller turns
+ * must be a 3-letter code, origin/destination must differ, and the party must fit one booking
+ * ({@link PassengerCount#MAX_SEATS} seats). {@code @Valid} on the controller turns
  * a violation into a 400 via {@code FlightExceptionHandler}.
  *
  * <p>The presence constraints are what make the value constraints bite: Bean Validation skips a null
@@ -43,7 +45,8 @@ public record FlightSearchApiRequest(
         @NotNull(message = "departDate is required")
         @FutureOrPresent(message = "departDate must not be in the past") LocalDate departDate,
         @NotNull(message = "passengers is required")
-        @Min(value = 1, message = "passengers must be at least 1") Integer passengers,
+        @Min(value = 1, message = "passengers must be at least 1")
+        @Max(value = PassengerCount.MAX_SEATS, message = "passengers must be at most 9") Integer passengers,
         @Size(min = 3, max = 3, message = "currency must be a 3-letter code") String currency,
         String tripType,
         @FutureOrPresent(message = "returnDate must not be in the past") LocalDate returnDate,

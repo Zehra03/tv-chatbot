@@ -108,7 +108,7 @@ public class TourVisioFlightSearchService implements FlightSearchService {
         // offset-less times into instants — otherwise "08:00–12:00" would silently mean 08:00–12:00 UTC.
         List<FlightProduct> products = FlightResultFilter.apply(
                 criteria,
-                responseMapper.toFlightProducts(response, criteria.getTripType()),
+                responseMapper.toFlightProducts(response, criteria),
                 ZoneId.of(tourVisioProperties.timezone()));
         eventPublisher.publishEvent(FlightSearchEvent.success(criteria, products.size()));
 
