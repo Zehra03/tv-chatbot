@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { format } from 'date-fns'
-import { ArrowRightLeft, Plane } from 'lucide-react'
+import { ArrowRightLeft, Plane, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -16,7 +16,7 @@ import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
-import { flightFiltersChanged } from '@/features/ui/uiSlice'
+import { flightFiltersChanged, flightFiltersReset } from '@/features/ui/uiSlice'
 import { flightFilterChips } from '@/features/ui/filterChips'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
@@ -340,7 +340,29 @@ export function FlightsPage() {
           <FlightFilters airlines={airlines} />
           <ActiveFilterChips chips={chips} />
           <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
-          <FlightList products={visible} criteria={criteria ?? undefined} />
+          {/* Filtreler tüm sonuçları eleyince pasif "bulunamadı" yerine tıklanabilir
+              kurtarma (§6): backend uçuş döndü ama filtreler 0'a indirdi → tek tıkla temizle. */}
+          {query.data.length > 0 && visible.length === 0 ? (
+            <EmptyState
+              tone="dark"
+              title="Filtrelerinizle eşleşen uçuş yok"
+              icon={<SlidersHorizontal className="h-5 w-5" />}
+              action={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => dispatch(flightFiltersReset())}
+                >
+                  Filtreleri temizle
+                </Button>
+              }
+            >
+              Toplam {query.data.length} uçuş bulundu ama seçili filtreler hepsini eledi.
+            </EmptyState>
+          ) : (
+            <FlightList products={visible} criteria={criteria ?? undefined} />
+          )}
         </>
       )}
     </div>

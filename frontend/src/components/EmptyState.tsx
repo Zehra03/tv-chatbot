@@ -13,13 +13,15 @@ interface EmptyStateProps {
   title?: string
   tone?: 'light' | 'dark'
   className?: string
+  /** Kurtarma aksiyonu (§6) — gövdenin altında render edilir (ör. "Filtreleri temizle"). */
+  action?: ReactNode
 }
 
-export function EmptyState({ children, icon, title, tone = 'light', className }: EmptyStateProps) {
+export function EmptyState({ children, icon, title, tone = 'light', className, action }: EmptyStateProps) {
   const dark = tone === 'dark'
   const bodyClass = dark ? 'text-muted-foreground' : 'text-muted-foreground'
 
-  if (!icon && !title) {
+  if (!icon && !title && !action) {
     return <p className={cn('text-sm', bodyClass, className)}>{children}</p>
   }
 
@@ -40,6 +42,7 @@ export function EmptyState({ children, icon, title, tone = 'light', className }:
         <p className={cn('font-semibold', dark ? 'text-foreground' : 'text-foreground')}>{title}</p>
       )}
       <p className={cn('max-w-sm text-sm', bodyClass)}>{children}</p>
+      {action && <div className="mt-2">{action}</div>}
     </div>
   )
 }

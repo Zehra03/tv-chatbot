@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Hotel } from 'lucide-react'
+import { Hotel, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ActiveFilterChips } from '@/components/ActiveFilterChips'
 import { EmptyState } from '@/components/EmptyState'
@@ -14,7 +14,7 @@ import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { CHILD_MAX_AGE, CHILD_MIN_AGE } from '@/features/reservation/reservationFormSchema'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
-import { hotelFiltersChanged } from '@/features/ui/uiSlice'
+import { hotelFiltersChanged, hotelFiltersReset } from '@/features/ui/uiSlice'
 import { hotelFilterChips } from '@/features/ui/filterChips'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
 import { HotelFilters } from '@/features/hotels/HotelFilters'
@@ -305,7 +305,29 @@ export function HotelsPage() {
           <HotelFilters boardTypes={boardTypes} />
           <ActiveFilterChips chips={chips} />
           <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
-          <HotelList products={visible} criteria={criteria ?? undefined} />
+          {/* Filtreler tüm sonuçları eleyince pasif "bulunamadı" yerine tıklanabilir
+              kurtarma (§6): backend otel döndü ama filtreler 0'a indirdi → tek tıkla temizle. */}
+          {query.data.length > 0 && visible.length === 0 ? (
+            <EmptyState
+              tone="dark"
+              title="Filtrelerinizle eşleşen otel yok"
+              icon={<SlidersHorizontal className="h-5 w-5" />}
+              action={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => dispatch(hotelFiltersReset())}
+                >
+                  Filtreleri temizle
+                </Button>
+              }
+            >
+              Toplam {query.data.length} otel bulundu ama seçili filtreler hepsini eledi.
+            </EmptyState>
+          ) : (
+            <HotelList products={visible} criteria={criteria ?? undefined} />
+          )}
         </>
       )}
     </div>
