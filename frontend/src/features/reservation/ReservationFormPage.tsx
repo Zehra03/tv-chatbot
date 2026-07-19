@@ -138,6 +138,10 @@ export function ReservationFormPage() {
     formState: { errors, isSubmitted },
   } = useForm<ReservationFormValues>({
     resolver: zodResolver(schema),
+    // Blur'da doğrula (§8): alandan çıkınca hata görünsün, her tuş vuruşunda değil
+    // (yazarken "geçersiz e-posta" demek saldırgandır); submit'te hepsi doğrulanır.
+    // onTouched = ilk blur'dan sonra onChange ile takip eder.
+    mode: 'onTouched',
     // Yolcu satırları teklifin pax'ına göre önden doldurulur (TourVisio sayı-eşleşmesi şart).
     defaultValues: {
       passengers: draft ? initialPassengers(draft) : [emptyPassenger],
@@ -589,6 +593,7 @@ export function ReservationFormPage() {
                     <Label htmlFor={`passenger-${index}-firstName`}>Ad</Label>
                     <Input
                       id={`passenger-${index}-firstName`}
+                      autoComplete="given-name"
                       aria-invalid={!!pErr?.firstName}
                       aria-describedby={
                         pErr?.firstName ? `passenger-${index}-firstName-error` : undefined
@@ -609,6 +614,7 @@ export function ReservationFormPage() {
                     <Label htmlFor={`passenger-${index}-lastName`}>Soyad</Label>
                     <Input
                       id={`passenger-${index}-lastName`}
+                      autoComplete="family-name"
                       aria-invalid={!!pErr?.lastName}
                       aria-describedby={
                         pErr?.lastName ? `passenger-${index}-lastName-error` : undefined
@@ -651,6 +657,7 @@ export function ReservationFormPage() {
                         <Input
                           id={`passenger-${index}-birthDate`}
                           type="date"
+                          autoComplete="bday"
                           aria-invalid={!!pErr?.birthDate}
                           aria-describedby={
                             pErr?.birthDate ? `passenger-${index}-birthDate-error` : undefined
@@ -708,6 +715,7 @@ export function ReservationFormPage() {
               <Input
                 id="contact-email"
                 type="email"
+                autoComplete="email"
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? 'contact-email-error' : undefined}
                 className={darkFieldClass}
