@@ -19,6 +19,8 @@ export const hotelFixtures: HotelProduct[] = [
     availability: true,
     // Placeholder görsel (picsum) — gerçek otel fotoğrafı DEĞİL, yalnızca kart düzenini doldurur.
     image: 'https://picsum.photos/seed/htl-mock-001/400/300',
+    // Özellik etiketleri (TourVisio facilities ∪ themes paritesi) — MAX'tan fazla: kart kırpar.
+    features: ['Deniz Manzaralı', 'Aqua Park', 'Spa & Wellness', 'Ücretsiz Wi-Fi', 'Fitness Merkezi'],
   },
   {
     id: 'htl-mock-002',
@@ -31,6 +33,7 @@ export const hotelFixtures: HotelProduct[] = [
     boardType: 'HB',
     availability: true,
     image: 'https://picsum.photos/seed/htl-mock-002/400/300',
+    features: ['Özel Plaj', 'Açık Havuz', 'Balayı Konsepti'],
   },
   {
     id: 'htl-mock-003',
@@ -43,6 +46,7 @@ export const hotelFixtures: HotelProduct[] = [
     boardType: 'BB',
     availability: true,
     image: 'https://picsum.photos/seed/htl-mock-003/400/300',
+    features: ['Şehir Merkezi', 'Ücretsiz Otopark'],
   },
   {
     id: 'htl-mock-004',
@@ -56,6 +60,8 @@ export const hotelFixtures: HotelProduct[] = [
     availability: false,
     // Görselsiz — kartın placeholder davranışını gösterir (TourVisio'da görseli olmayan otel gibi).
     image: null,
+    // Özelliksiz (features yok) — sağlayıcının tesis/tema verisi dönmediği oteli temsil eder:
+    // kart özellik satırını hiç göstermez (boş kutu kalmaz).
   },
   {
     id: 'htl-mock-005',
@@ -68,6 +74,7 @@ export const hotelFixtures: HotelProduct[] = [
     boardType: 'UAI',
     availability: true,
     image: 'https://picsum.photos/seed/htl-mock-005/400/300',
+    features: ['Deniz Kenarında', 'Kapalı Havuz', 'Ücretsiz İptal', 'Restoran'],
   },
 ]
 
