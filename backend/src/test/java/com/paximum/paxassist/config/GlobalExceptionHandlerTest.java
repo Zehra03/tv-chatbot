@@ -8,6 +8,11 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.validation.MapBindingResult;
+import org.springframework.validation.FieldError;
+import java.util.Collections;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -50,6 +55,30 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.timestamp").exists())
                 // The errorId is the only handle on the cause, and it resolves to a log line, not to data.
                 .andExpect(jsonPath("$.details.errorId").isNotEmpty());
+    }
+
+    @Test
+    void handleValidation_elevatesOutOfCalendarRangeToTopLevelError() {
+        var handler = new GlobalExceptionHandler();
+        
+        var bindingResult = new MapBindingResult(Collections.emptyMap(), "fake");
+        bindingResult.addError(new FieldError("fake", "date", "OUT_OF_CALENDAR_RANGE"));
+        // Create an exception by using a dummy method parameter. Since MethodArgumentNotValidException 
+        // usually requires a MethodParameter, we can just pass null if it's not strictly used by the handler,
+        // but spring's exception requires a non-null MethodParameter.
+        // Wait, instead of directly creating the exception, maybe I can use mockMvc?
+        // Let's create the exception by mocking the MethodParameter.
+        var methodParameter = org.mockito.Mockito.mock(org.springframework.core.MethodParameter.class);
+        var ex = new MethodArgumentNotValidException(methodParameter, bindingResult);
+
+        var response = handler.handleValidation(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(org.springframework.http.HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().error()).isEqualTo("OUT_OF_CALENDAR_RANGE");
+        
+        @SuppressWarnings("unchecked")
+        Map<String, String> details = (Map<String, String>) response.getBody().details();
+        assertThat(details).containsEntry("date", "OUT_OF_CALENDAR_RANGE");
     }
 
     @Test
