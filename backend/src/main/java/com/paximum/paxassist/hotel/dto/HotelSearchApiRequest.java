@@ -37,6 +37,7 @@ public record HotelSearchApiRequest(
 
         @NotNull(message = "Giriş tarihi zorunludur.")
         @FutureOrPresent(message = "Geçmiş tarih seçilemez.")
+        @com.paximum.paxassist.validator.MaxSearchDate
         LocalDate checkIn,
 
         @NotNull(message = "Çıkış tarihi zorunludur.")
@@ -46,10 +47,10 @@ public record HotelSearchApiRequest(
         @Min(value = 1, message = "En az 1 yetişkin olmalıdır.")
         Integer adults,
 
+        Integer children,
         /** Requested rooms; null means one (older clients / chat criteria that never asked). */
         @Min(value = 1, message = "En az 1 oda olmalıdır.")
         Integer rooms,
-
         List<Integer> childAges,
         String nationality,
         String currency) {
