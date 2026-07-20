@@ -30,7 +30,8 @@ class HotelSearchApiRequestTest {
                 farFuture.plusDays(3),
                 2,
                 0,
-                java.util.Collections.emptyList(),
+                1,
+                java.util.Collections.<Integer>emptyList(),
                 "TR",
                 "TRY"
         );

@@ -51,7 +51,6 @@ public record HotelSearchApiRequest(
         /** Requested rooms; null means one (older clients / chat criteria that never asked). */
         @Min(value = 1, message = "En az 1 oda olmalıdır.")
         Integer rooms,
-
         List<Integer> childAges,
         String nationality,
         String currency) {
