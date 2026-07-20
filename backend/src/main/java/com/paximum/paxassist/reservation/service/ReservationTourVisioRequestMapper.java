@@ -26,9 +26,13 @@ import com.paximum.paxassist.reservation.service.command.PreviewReservationComma
 @Component
 public class ReservationTourVisioRequestMapper {
 
-    private static final String DEFAULT_CULTURE = "en-US";
+    private final String defaultCulture;
     private static final DateTimeFormatter TV_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
     private static final DateTimeFormatter TV_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
+
+    public ReservationTourVisioRequestMapper(@org.springframework.beans.factory.annotation.Value("${tourvisio.culture:en-US}") String defaultCulture) {
+        this.defaultCulture = defaultCulture;
+    }
 
     public BeginTransactionWithOfferRequest toBeginRequest(PreviewReservationCommand command) {
         return new BeginTransactionWithOfferRequest(command.offerIds(), command.currency(), culture(command));
@@ -163,7 +167,7 @@ public class ReservationTourVisioRequestMapper {
     }
 
     private String culture(PreviewReservationCommand command) {
-        return command.culture() != null ? command.culture() : DEFAULT_CULTURE;
+        return command.culture() != null ? command.culture() : defaultCulture;
     }
 
     /**
