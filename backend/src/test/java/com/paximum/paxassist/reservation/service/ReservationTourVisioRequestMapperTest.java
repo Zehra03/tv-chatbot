@@ -22,8 +22,7 @@ import com.paximum.paxassist.reservation.service.command.PreviewReservationComma
 class ReservationTourVisioRequestMapperTest {
 
     private static final DateTimeFormatter TV_DATE_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
-
-    private final ReservationTourVisioRequestMapper mapper = new ReservationTourVisioRequestMapper();
+    private final ReservationTourVisioRequestMapper mapper = new ReservationTourVisioRequestMapper("en-US");
 
     private PreviewReservationCommand.Traveller traveller(PassengerType type, Integer age, LocalDate birthDate) {
         return new PreviewReservationCommand.Traveller(null, "Max", "Yılmaz", type, age,
