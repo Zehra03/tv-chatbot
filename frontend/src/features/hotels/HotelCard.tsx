@@ -46,6 +46,58 @@ export function boardBadgeLabel(boardType?: string | null): string | null {
 /** Kartta en fazla gösterilecek rozet (§5) — fazlası öncelik sırasına göre kırpılır. */
 const MAX_BADGES = 2
 
+/** Kartta en fazla gösterilecek özellik çipi — fazlası kırpılır ki arayüz boğulmasın (§5). */
+const MAX_FEATURES = 4
+
+/**
+ * Ham TourVisio özellik adlarını (`product.features`) çipe hazırlar: boşları at, tekrarları
+ * (dil-duyarlı) ele, en fazla `max` tane döndür. Sağlayıcı verisi board metni gibi düzensiz
+ * gelebilir (boş string, yinelenen ad) — savunmacı temizlenir. Boş/tanımsızsa boş dizi:
+ * çağıran özellik satırını hiç render etmez (boş kutu kalmaz).
+ */
+function featureChips(features: string[] | undefined, max: number): string[] {
+  if (!features?.length) return []
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const raw of features) {
+    const label = raw?.trim()
+    if (!label) continue
+    const key = label.toLocaleLowerCase('tr')
+    if (seen.has(key)) continue
+    seen.add(key)
+    out.push(label)
+    if (out.length >= max) break
+  }
+  return out
+}
+
+/**
+ * Otelin öne çıkan özellikleri — nötr `bg-muted` çipler (durum rozetlerinden görsel olarak
+ * ayrı; onlar renkli/anlamsal, bunlar bilgilendirici). `flex-wrap` ile uzun etiketler yatayda
+ * taşmaz, alt satıra sarar; tek başına aşırı uzun bir ad için çip `truncate` + `title` ile
+ * kırpılır. Liste boşsa hiç render edilmez (boş satır bırakmaz).
+ */
+function FeatureChips({ features, compact }: { features: string[]; compact?: boolean }) {
+  if (features.length === 0) return null
+  return (
+    <div className={cn('flex flex-wrap', compact ? 'mt-1 gap-1' : 'mt-2 gap-1.5')}>
+      {features.map((f) => (
+        <Badge
+          key={f}
+          variant="outline"
+          title={f}
+          className={cn(
+            'border-transparent bg-muted font-normal text-muted-foreground',
+            compact && 'px-1.5 py-0 text-[10px]',
+          )}
+        >
+          <span className={cn('truncate', compact ? 'max-w-[7rem]' : 'max-w-[11rem]')}>{f}</span>
+        </Badge>
+      ))}
+    </div>
+  )
+}
+
 /**
  * Konaklama gecesi — kriterdeki checkIn/checkOut farkından; ikisi yoksa `nights`
  * alanından (chat "5 gece" der ama checkOut taşımaz, buildHotelDraft ile simetrik).
@@ -153,6 +205,7 @@ export function HotelCard({
             <StarRating count={product.stars} size={11} className="shrink-0" />
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">{badges}</div>
+          <FeatureChips features={featureChips(product.features, 3)} compact />
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">
           <div className="text-right">
@@ -246,6 +299,7 @@ export function HotelCard({
           <p className="mt-0.5 truncate text-lg font-semibold text-foreground">{product.hotelName}</p>
           <StarRating count={product.stars} className="mt-1" />
           <div className="mt-2 flex flex-wrap gap-2">{badges}</div>
+          <FeatureChips features={featureChips(product.features, MAX_FEATURES)} />
         </div>
       </div>
       {/* Mobilde fiyat solda / Seç sağda tek satır; sm+ sağa yaslı sütun. */}

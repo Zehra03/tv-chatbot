@@ -33,6 +33,15 @@ export interface HotelProduct {
    * görsel yoksa null/undefined gelir; kart placeholder gösterir. Asla uydurulmaz.
    */
   image?: string | null
+  /**
+   * Otelin öne çıkan gerçek özellik adları — TourVisio pricesearch
+   * `hotel.facilities[].name ∪ hotel.themes[].name` (backend `HotelProduct.java` `features`),
+   * ör. "Deniz Kenarında", "Outdoor Pool", "Private Beach", "Spa". Sağlayıcı tesis/tema
+   * verisi döndürmediyse boş dizi (backend garanti eder) ya da eski/chat kaynaklarında
+   * undefined gelir → kart özellik satırını hiç göstermez. Asla uydurulmaz; kartta yalnız
+   * ilk birkaçı chip olarak listelenir.
+   */
+  features?: string[]
 }
 
 export interface FlightProduct {

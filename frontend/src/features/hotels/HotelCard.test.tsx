@@ -72,6 +72,31 @@ describe('HotelCard', () => {
     expect(screen.queryByRole('img', { name: /otel görseli/i })).toBeNull()
   })
 
+  it('özellik etiketlerini chip olarak render eder ve en fazla MAX_FEATURES (4) gösterir', () => {
+    renderCard({
+      ...hotel,
+      features: ['Deniz Manzaralı', 'Aqua Park', 'Spa & Wellness', 'Ücretsiz Wi-Fi', 'Fitness Merkezi'],
+    })
+    expect(screen.getByText('Deniz Manzaralı')).toBeTruthy()
+    expect(screen.getByText('Ücretsiz Wi-Fi')).toBeTruthy()
+    // 5. özellik kırpılır (arayüzü boğmasın) — kart başına en fazla 4 çip.
+    expect(screen.queryByText('Fitness Merkezi')).toBeNull()
+  })
+
+  it('özellikler boşsa özellik çipi hiç render edilmez (boş kutu kalmaz)', () => {
+    renderCard({ ...hotel, features: [] })
+    // Nötr özellik çipi yok; yalnız pansiyon rozeti (Herşey Dahil) kalır.
+    expect(screen.queryByText('Deniz Manzaralı')).toBeNull()
+    expect(screen.getByText('Herşey Dahil')).toBeTruthy()
+  })
+
+  it('tekrarlayan/boş özellik adlarını temizler (dil-duyarlı dedup)', () => {
+    renderCard({ ...hotel, features: ['Açık Havuz', '  ', 'açık havuz', 'Spa'] })
+    // "açık havuz" tekrarı ve boş metin elenir → yalnız iki farklı çip.
+    expect(screen.getAllByText(/açık havuz/i)).toHaveLength(1)
+    expect(screen.getByText('Spa')).toBeTruthy()
+  })
+
   it('müsait olmayan otelde rozet gösterir ve Seç devre dışıdır', () => {
     renderCard({ ...hotel, availability: false })
     expect(screen.getByText('Müsait değil')).toBeTruthy()
