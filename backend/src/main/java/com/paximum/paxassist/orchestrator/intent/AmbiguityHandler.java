@@ -35,8 +35,8 @@ public class AmbiguityHandler implements IntentHandler {
     public OrchestrationResult handle(OrchestrationContext context) {
         String message = context.userMessage().trim();
         List<ChoiceOption> options = List.of(
-                new ChoiceOption("Otel ara", message + " için otel arıyorum"),
-                new ChoiceOption("Uçuş ara", message + " için uçuş arıyorum"));
+                new ChoiceOption("Otel ara", "Otel aramak istiyorum (Seçim: " + message + ")"),
+                new ChoiceOption("Uçuş ara", "Uçuş aramak istiyorum (Seçim: " + message + ")"));
         return OrchestrationResult.choices(INTENT_QUESTION, options);
     }
 }

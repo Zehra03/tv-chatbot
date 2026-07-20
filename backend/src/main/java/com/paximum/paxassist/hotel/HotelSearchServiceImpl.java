@@ -205,6 +205,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         // dropdown stays usable.
         String needle = fold(query.trim());
         return byId.values().stream()
+                .filter(loc -> fold(loc.name()).contains(needle) || needle.contains(fold(loc.name())))
                 .sorted(Comparator.comparingInt(loc -> fold(loc.name()).startsWith(needle) ? 0 : 1))
                 .limit(MAX_SUGGESTIONS)
                 .toList();
