@@ -55,7 +55,8 @@ describe('HotelCard', () => {
     // Yıldız artık paylaşılan StarRating ile (detay sayfasıyla tek dil, §4): metin değil,
     // role="img" + aria-label taşır.
     expect(screen.getByLabelText('5 yıldız')).toBeTruthy()
-    expect(screen.getByText('AI')).toBeTruthy()
+    // Pansiyon rozeti ham "AI" değil, boardBadgeLabel ile temiz etiket gösterir.
+    expect(screen.getByText('Herşey Dahil')).toBeTruthy()
     expect(screen.getByText(/1\.200/)).toBeTruthy()
   })
 

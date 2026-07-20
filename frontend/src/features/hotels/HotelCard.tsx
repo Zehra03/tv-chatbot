@@ -107,9 +107,11 @@ export function HotelCard({
           En uygun
         </Badge>
       ),
-      <Badge key="board" variant="secondary" className="px-1.5 py-0 text-[10px]">
-        {product.boardType}
-      </Badge>,
+      boardLabel && (
+        <Badge key="board" variant="secondary" className="px-1.5 py-0 text-[10px]">
+          {boardLabel}
+        </Badge>
+      ),
     ]
       .filter(Boolean)
       .slice(0, MAX_BADGES)
@@ -196,9 +198,11 @@ export function HotelCard({
         En uygun fiyat
       </Badge>
     ),
-    <Badge key="board" variant="secondary">
-      {product.boardType}
-    </Badge>,
+    boardLabel && (
+      <Badge key="board" variant="secondary">
+        {boardLabel}
+      </Badge>
+    ),
   ]
     .filter(Boolean)
     .slice(0, MAX_BADGES)
