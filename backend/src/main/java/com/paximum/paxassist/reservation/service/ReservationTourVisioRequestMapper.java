@@ -16,11 +16,15 @@ import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.Se
 import com.paximum.paxassist.reservation.service.command.PreviewReservationCommand;
 
 /**
- * Maps a frozen {@link PreviewReservationCommand} snapshot into the TourVisio booking request DTOs
+ * Maps a frozen {@link PreviewReservationCommand} snapshot into the TourVisio
+ * booking request DTOs
  * (ticket 2). Pure mapping — no I/O, no persistence.
  *
- * <p>TourVisio-only fields that have no equivalent in our validated input are filled with the fixed
- * defaults seen in the confirmed samples (documented inline). A couple of numeric enum mappings are
+ * <p>
+ * TourVisio-only fields that have no equivalent in our validated input are
+ * filled with the fixed
+ * defaults seen in the confirmed samples (documented inline). A couple of
+ * numeric enum mappings are
  * best-effort and flagged (see {@link #passengerType}).
  */
 @Component
@@ -38,7 +42,9 @@ public class ReservationTourVisioRequestMapper {
         return new BeginTransactionWithOfferRequest(command.offerIds(), command.currency(), culture(command));
     }
 
-    /** One AddServices call batching all additional offers; empty if there are none. */
+    /**
+     * One AddServices call batching all additional offers; empty if there are none.
+     */
     public Optional<AddServicesRequest> toAddServicesRequest(PreviewReservationCommand command, String transactionId) {
         List<PreviewReservationCommand.AddOffer> extras = command.additionalOffers();
         if (extras == null || extras.isEmpty()) {
@@ -50,7 +56,8 @@ public class ReservationTourVisioRequestMapper {
         return Optional.of(new AddServicesRequest(transactionId, offers, command.currency(), culture(command)));
     }
 
-    public SetReservationInfoRequest toSetReservationInfoRequest(PreviewReservationCommand command, String transactionId) {
+    public SetReservationInfoRequest toSetReservationInfoRequest(PreviewReservationCommand command,
+            String transactionId) {
         List<SetReservationInfoRequest.Traveller> travellers = mapTravellers(command);
         SetReservationInfoRequest.CustomerInfo customer = mapCustomer(command.customer());
         return new SetReservationInfoRequest(
@@ -62,13 +69,15 @@ public class ReservationTourVisioRequestMapper {
     }
 
     /**
-     * Commit request with the fixed dummy {@code PaymentInformation} block — no real payment is
-     * captured (SanTSG test account). Amount/currency come from the frozen snapshot; Reference/Token
+     * Commit request with the fixed dummy {@code PaymentInformation} block — no
+     * real payment is
+     * captured (SanTSG test account). Amount/currency come from the frozen
+     * snapshot; Reference/Token
      * are fresh UUIDs.
      */
     public CommitTransactionRequest toCommitRequest(PreviewReservationCommand command, String transactionId) {
-        CommitTransactionRequest.PaymentPrice price =
-                new CommitTransactionRequest.PaymentPrice(command.totalAmount(), command.currency());
+        CommitTransactionRequest.PaymentPrice price = new CommitTransactionRequest.PaymentPrice(command.totalAmount(),
+                command.currency());
         CommitTransactionRequest.PaymentInformation payment = new CommitTransactionRequest.PaymentInformation(
                 "SanTSG",
                 1,
@@ -81,7 +90,8 @@ public class ReservationTourVisioRequestMapper {
         return new CommitTransactionRequest(transactionId, payment);
     }
 
-    // --- helpers -----------------------------------------------------------------------------
+    // --- helpers
+    // -----------------------------------------------------------------------------
 
     private List<SetReservationInfoRequest.Traveller> mapTravellers(PreviewReservationCommand command) {
         List<PreviewReservationCommand.Traveller> src = command.travellers();
@@ -118,7 +128,8 @@ public class ReservationTourVisioRequestMapper {
             return null;
         }
         return new SetReservationInfoRequest.PassportInfo(
-                p.serial(), p.number(), formatDateTime(p.expireDate()), formatDateTime(p.issueDate()), p.citizenshipCountryCode());
+                p.serial(), p.number(), formatDateTime(p.expireDate()), formatDateTime(p.issueDate()),
+                p.citizenshipCountryCode());
     }
 
     private SetReservationInfoRequest.TravellerAddress mapTravellerAddress(PreviewReservationCommand.Traveller t) {
@@ -127,7 +138,8 @@ public class ReservationTourVisioRequestMapper {
         SetReservationInfoRequest.ContactPhone phone = cp == null ? null
                 : new SetReservationInfoRequest.ContactPhone(cp.countryCode(), cp.areaCode(), cp.phoneNumber());
         if (a == null) {
-            return phone == null ? null : new SetReservationInfoRequest.TravellerAddress(phone, null, null, null, null, null);
+            return phone == null ? null
+                    : new SetReservationInfoRequest.TravellerAddress(phone, null, null, null, null, null);
         }
         return new SetReservationInfoRequest.TravellerAddress(
                 phone,
@@ -149,14 +161,15 @@ public class ReservationTourVisioRequestMapper {
                 c.phone(),
                 c.line(),
                 c.zipCode());
-        SetReservationInfoRequest.TaxInfo taxInfo =
-                new SetReservationInfoRequest.TaxInfo(c.taxOffice(), c.taxNumber());
+        SetReservationInfoRequest.TaxInfo taxInfo = new SetReservationInfoRequest.TaxInfo(c.taxOffice(), c.taxNumber());
         return new SetReservationInfoRequest.CustomerInfo(
-                c.company(), address, taxInfo, c.title(), c.name(), c.surname(), formatDate(c.birthDate()), c.identityNumber());
+                c.company(), address, taxInfo, c.title(), c.name(), c.surname(), formatDate(c.birthDate()),
+                c.identityNumber());
     }
 
     /**
-     * TourVisio numeric passengerType. Best-effort mapping (ADULT=1, CHILD=2) — flagged; confirm the
+     * TourVisio numeric passengerType. Best-effort mapping (ADULT=1, CHILD=2) —
+     * flagged; confirm the
      * numeric codes against TourVisio docs.
      */
     private Integer passengerType(PassengerType type) {
@@ -171,13 +184,20 @@ public class ReservationTourVisioRequestMapper {
     }
 
     /**
-     * The birth date to send for a traveller. TourVisio requires a date of birth for non-adult
-     * travellers — a null one is rejected mid-transaction with {@code ParameterCanNotBeNull}, which is
-     * why child bookings failed while adult-only ones went through. The booking form collects only an
-     * age (not a real DOB) for children/infants, so when the birth date is absent we derive a nominal
-     * one from the age: a traveller who is {@code age} years old as of today. Only the age band matters
-     * to the provider, and the exact age we actually store lives on the {@link com.paximum.paxassist.reservation.domain.Passenger}
-     * entity — this derived date never leaves the TourVisio request. Adults are left untouched (their
+     * The birth date to send for a traveller. TourVisio requires a date of birth
+     * for non-adult
+     * travellers — a null one is rejected mid-transaction with
+     * {@code ParameterCanNotBeNull}, which is
+     * why child bookings failed while adult-only ones went through. The booking
+     * form collects only an
+     * age (not a real DOB) for children/infants, so when the birth date is absent
+     * we derive a nominal
+     * one from the age: a traveller who is {@code age} years old as of today. Only
+     * the age band matters
+     * to the provider, and the exact age we actually store lives on the
+     * {@link com.paximum.paxassist.reservation.domain.Passenger}
+     * entity — this derived date never leaves the TourVisio request. Adults are
+     * left untouched (their
      * request already works and needs no DOB).
      */
     private LocalDate effectiveBirthDate(PreviewReservationCommand.Traveller t) {
@@ -190,12 +210,18 @@ public class ReservationTourVisioRequestMapper {
         return null;
     }
 
-    /** LocalDate -> "yyyy-MM-ddT00:00:00" (the datetime format the traveller/passport fields use). */
+    /**
+     * LocalDate -> "yyyy-MM-ddT00:00:00" (the datetime format the
+     * traveller/passport fields use).
+     */
     private String formatDateTime(LocalDate date) {
         return date == null ? null : date.atStartOfDay().format(TV_DATE_TIME);
     }
 
-    /** LocalDate -> "yyyy-MM-dd" (customerInfo.birthDate uses a plain date in the sample). */
+    /**
+     * LocalDate -> "yyyy-MM-dd" (customerInfo.birthDate uses a plain date in the
+     * sample).
+     */
     private String formatDate(LocalDate date) {
         return date == null ? null : date.format(TV_DATE);
     }
