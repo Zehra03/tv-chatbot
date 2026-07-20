@@ -25,4 +25,33 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // §1 token hijyeni: bileşenlerde ham hex renk yasak — semantic Tailwind sınıfı,
+    // index.css token'ı veya brand-* kullanılmalı. Gerçek string/template literal'leri
+    // yakalar (yorumlar AST literal'i olmadığından etkilenmez). Kaynak: docs/audit.md §1.
+    files: ['src/**/*.{ts,tsx}'],
+    // Zorunlu istisnalar: marka hex kaynağı, tema-color meta değeri, tasarım swatch
+    // etiketleri ve GLSL shader (DarkVeil — `#define`/`#ifdef` direktifleri hex renk DEĞİL).
+    ignores: [
+      'src/lib/brand.ts',
+      'src/app/theme.tsx',
+      'src/pages/Design.tsx',
+      'src/components/DarkVeil.tsx',
+    ],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/#[0-9a-fA-F]{3,8}/]',
+          message:
+            'Ham hex renk yasak (§1) — semantic Tailwind sınıfı, index.css token veya brand-* kullan. Zorunlu istisna: lib/brand.ts.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/#[0-9a-fA-F]{3,8}/]',
+          message:
+            'Ham hex renk yasak (§1) — semantic Tailwind sınıfı, index.css token veya brand-* kullan. Zorunlu istisna: lib/brand.ts.',
+        },
+      ],
+    },
+  },
 )

@@ -22,13 +22,16 @@ export default {
       colors: {
         // Fixed brand identity palette (does NOT theme-switch). Single source of
         // truth for the dark auth/hero surfaces — use `bg-brand-navy`,
-        // `text-brand-ice`, `from-brand-blue`, etc. instead of raw hex.
+        // `text-brand-cream`, `from-brand-blue`, etc. instead of raw hex.
+        // Yeni 5-renk paleti (206° mavi ailesi + turuncu vurgu). lib/brand.ts ile senkron.
         brand: {
-          navy: '#0B234A', // deep background
-          blue: '#2E8FFF', // primary action / smoke
-          teal: '#17D6C3', // accent / focus
-          iris: '#8B8CFF', // periwinkle highlight
-          ice: '#A9E9FF', // light text / labels on dark
+          navy: '#00243F', // deep background — primary'nin koyu türevi
+          blue: '#004E89', // primary action (palette Primary)
+          steel: '#1A659E', // secondary blue (palette Secondary)
+          orange: '#FF6B35', // accent / CTA (palette Accent) — cta butonu, vurgular
+          'orange-hover': '#E85D2A', // cta hover — turuncunun elle seçilmiş koyu tonu (lacivert yazı kontrastını korur)
+          peach: '#F7C59F', // yumuşak turuncu aksan (palette Hover Accent)
+          cream: '#EFEFD0', // dekoratif / açık metin (palette Decorative)
         },
         border: 'hsl(var(--border))',
         input: 'hsl(var(--input))',
@@ -44,8 +47,19 @@ export default {
           foreground: 'hsl(var(--secondary-foreground))',
         },
         destructive: {
+          // Zemin rolü: `bg-destructive` + `text-destructive-foreground`.
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
+          // Yazı/ikon rolü: yüzey üstünde okunan hata rengi (`text-destructive-emphasis`).
+          emphasis: 'hsl(var(--destructive-emphasis))',
+        },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          foreground: 'hsl(var(--success-foreground))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          foreground: 'hsl(var(--warning-foreground))',
         },
         muted: {
           DEFAULT: 'hsl(var(--muted))',
@@ -68,6 +82,12 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+      },
+      boxShadow: {
+        // Yumuşak premium SaaS gölgesi (düz kartlar için — cam yok). İki katman:
+        // ince yakın gölge + geniş yumuşak ambient. Koyu temada border taşır.
+        soft: '0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px rgb(15 23 42 / 0.06)',
+        'soft-lg': '0 2px 4px rgb(15 23 42 / 0.05), 0 8px 32px rgb(15 23 42 / 0.08)',
       },
       keyframes: {
         'accordion-down': {

@@ -52,9 +52,10 @@ describe('HotelCard', () => {
     renderCard(hotel)
     expect(screen.getByText('MOCK Grand Antalya Resort')).toBeTruthy()
     expect(screen.getByText('Antalya')).toBeTruthy()
-    expect(screen.getByText('5')).toBeTruthy()
-    // Board rozeti artık ham kodu değil, tanınan pansiyon etiketini gösterir ("AI" → "Herşey Dahil");
-    // tanınmayan çöp board değerlerinde rozet hiç basılmaz (boardBadgeLabel → null).
+    // Yıldız artık paylaşılan StarRating ile (detay sayfasıyla tek dil, §4): metin değil,
+    // role="img" + aria-label taşır.
+    expect(screen.getByLabelText('5 yıldız')).toBeTruthy()
+    // Pansiyon rozeti ham "AI" değil, boardBadgeLabel ile temiz etiket gösterir.
     expect(screen.getByText('Herşey Dahil')).toBeTruthy()
     expect(screen.getByText(/1\.200/)).toBeTruthy()
   })
@@ -67,7 +68,8 @@ describe('HotelCard', () => {
 
   it('image yoksa görsel yerine placeholder gösterir', () => {
     renderCard({ ...hotel, image: null })
-    expect(screen.queryByRole('img')).toBeNull()
+    // StarRating da role="img" taşır; sorguyu otel görseline daralt (yalnız otel fotoğrafı yok).
+    expect(screen.queryByRole('img', { name: /otel görseli/i })).toBeNull()
   })
 
   it('müsait olmayan otelde rozet gösterir ve Seç devre dışıdır', () => {

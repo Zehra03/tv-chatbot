@@ -225,6 +225,7 @@ const ROWS: Row[] = [
   ['SR', 'Surinam', '597', [6, 7]],
   ['SY', 'Suriye', '963', [9, 9]],
   ['SA', 'Suudi Arabistan', '966', [8, 9]],
+  ['CL', 'Şili', '56', [9, 9]],
   ['KN', 'Saint Kitts ve Nevis', '1', NANP],
   ['LC', 'Saint Lucia', '1', NANP],
   ['VC', 'Saint Vincent ve Grenadinler', '1', NANP],

@@ -47,19 +47,19 @@ function ResultSummaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="glass-card group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all duration-300 hover:border-brand-teal/60 hover:shadow-[0_8px_30px_theme(colors.brand.teal/15%)]"
+      className="glass-card group flex w-full items-center gap-3 rounded-xl p-3 text-left transition-all duration-300 hover:border-primary/60 hover:shadow-soft"
     >
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-teal/15 text-brand-teal">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
         <Icon className="h-4 w-4" aria-hidden />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block text-sm font-semibold text-white">
+        <span className="block text-sm font-semibold text-foreground">
           {cards.length} {noun} sonucu
         </span>
-        <span className="block text-xs text-brand-ice/60">Sonuçları göster</span>
+        <span className="block text-xs text-muted-foreground">Sonuçları göster</span>
       </span>
       <ChevronRight
-        className="h-4 w-4 shrink-0 text-brand-ice/50 transition-transform group-hover:translate-x-0.5"
+        className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
         aria-hidden
       />
     </button>
@@ -82,9 +82,9 @@ function Bubble({ message }: { message: ChatMessage }) {
     <div className={cn('flex', isUser ? 'justify-end' : 'justify-start')}>
       <div
         className={cn(
-          'max-w-[80%] whitespace-pre-wrap break-words px-4 py-2.5 text-sm text-white',
+          'max-w-[80%] whitespace-pre-wrap break-words px-4 py-2.5 text-sm text-foreground',
           isUser
-            ? 'rounded-2xl rounded-br-md bg-gradient-to-br from-brand-blue to-brand-teal shadow-[0_4px_20px_theme(colors.brand.blue/25%)]'
+            ? 'rounded-2xl rounded-br-md bg-primary text-primary-foreground shadow-soft'
             : 'glass-card rounded-bl-md',
         )}
       >
@@ -105,12 +105,18 @@ export function MessageList({
   onShowResults,
 }: MessageListProps) {
   const messages = useAppSelector((s) => s.chat.messages)
+  // Konuşma kimliği: sessionLoaded/chatReset her geçişte epoch'u artırır.
+  const epoch = useAppSelector((s) => s.chat.epoch)
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     // jsdom'da scrollIntoView yok — testte sessizce atlanır.
     bottomRef.current?.scrollIntoView?.({ behavior: 'smooth' })
-  }, [messages.length, pending])
+    // `epoch` şart: yalnız uzunluğa bakmak, AYNI mesaj sayısına sahip bir geçmiş oturuma
+    // geçildiğinde effect'i hiç çalıştırmıyordu (6 mesajdan 6 mesaja: uzunluk aynı, pending
+    // boyunca false). Yeni konuşma eski scrollTop'la render olup kullanıcıyı ortasında
+    // bırakıyordu. epoch her oturum yüklemesinde/yeni sohbette artar.
+  }, [messages.length, pending, epoch])
 
   // overflow-x-hidden: kart hover animasyonları yatay scrollbar titretmesin.
   // relative ŞART: mesaj balonlarındaki sr-only etiketleri position:absolute'tur;
@@ -123,7 +129,7 @@ export function MessageList({
     <div
       role="log"
       aria-label="Sohbet mesajları"
-      className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:theme(colors.white/25%)_transparent] [scrollbar-width:thin]"
+      className="relative flex-1 space-y-3 overflow-y-auto overflow-x-hidden pr-1 [scrollbar-color:theme(colors.foreground/25%)_transparent] [scrollbar-width:thin]"
     >
       {messages.length === 0 && (
         <div className="flex h-full flex-col items-center justify-center gap-2 text-center">
@@ -134,12 +140,12 @@ export function MessageList({
           <SplitText
             text="Merhaba! Size nasıl yardımcı olabilirim?"
             tag="p"
-            className="text-2xl font-bold tracking-tight text-white"
+            className="text-2xl font-bold tracking-tight text-foreground"
             splitType="chars"
             delay={30}
             duration={0.9}
           />
-          <p className="max-w-sm text-sm text-brand-ice/70">
+          <p className="max-w-sm text-sm text-muted-foreground">
             Otel veya uçuş aramak için yazın — örn. &quot;Antalya&apos;da 2026-08-01 /
             2026-08-05 arası 2 kişilik otel&quot;.
           </p>

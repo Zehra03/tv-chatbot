@@ -8,8 +8,8 @@ import { ShieldCheck } from 'lucide-react'
  */
 export function AiOffBanner() {
   return (
-    <div className="flex items-start gap-3 rounded-xl border border-brand-teal/30 bg-brand-teal/10 p-4 text-white backdrop-blur-sm">
-      <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-teal" aria-hidden />
+    <div className="flex items-start gap-3 rounded-xl border border-primary/30 bg-primary/10 p-4 text-foreground">
+      <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" aria-hidden />
       <p className="text-sm">
         <span className="font-semibold">Bu adımda yapay zekâ devre dışı</span> — rezervasyonu siz
         kontrol ediyor ve siz onaylıyorsunuz.

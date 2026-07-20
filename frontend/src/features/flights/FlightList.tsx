@@ -21,11 +21,21 @@ export function FlightList({
   if (products.length === 0) {
     return <EmptyState tone="dark">Kriterlere uyan uçuş bulunamadı.</EmptyState>
   }
+  // En düşük fiyatlı uçuş "En uygun" peach rozeti alır (tek sonuçta vurgulanmaz).
+  const bestValueId =
+    products.length > 1
+      ? products.reduce((best, p) => (p.price < best.price ? p : best)).id
+      : undefined
   return (
     <div className="space-y-3">
       <div className="grid gap-3">
         {visible.map((flight) => (
-          <FlightCard key={flight.id} product={flight} criteria={criteria} />
+          <FlightCard
+            key={flight.id}
+            product={flight}
+            criteria={criteria}
+            recommended={flight.id === bestValueId}
+          />
         ))}
       </div>
       {hasMore && <ShowMoreButton remaining={remaining} onClick={showMore} />}

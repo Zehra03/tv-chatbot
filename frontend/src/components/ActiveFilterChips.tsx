@@ -39,7 +39,7 @@ export function ActiveFilterChips({ chips }: { chips: FilterChip[] }) {
               type="button"
               aria-label={`${chip.label} filtresini kaldır`}
               onClick={chip.onRemove}
-              className="rounded-full p-0.5 text-brand-ice/70 transition-colors hover:bg-white/20 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-teal/60"
+              className="rounded-full p-0.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <X className="h-3 w-3" aria-hidden />
             </button>

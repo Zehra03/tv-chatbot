@@ -32,6 +32,7 @@ export type {
   NeedsConfirmationResponse,
   OutcomeResponse,
   CancelRequest,
+  CancelResult,
 } from './reservationApi'
 
 export { authApi } from './authApi'

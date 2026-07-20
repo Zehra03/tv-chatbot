@@ -98,7 +98,7 @@ export function PeoplePicker({
               // w-[min(...)]: dar ekranda sabit 18rem viewport'u taşıyordu.
               // max-h + overflow: çocuk yaşları açıldığında (6 çocuk → 3 sıra
               // select) panel ekran dışına uzamak yerine kendi içinde kayar.
-              'absolute top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain rounded-xl border border-white/15 bg-brand-navy/95 p-4 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md',
+              'pax-popover absolute top-full z-50 mt-2 w-[min(18rem,calc(100vw-2rem))] max-h-[min(28rem,calc(100vh-8rem))] overflow-y-auto overscroll-contain rounded-xl p-4',
               // Mantıksal konum: dir="rtl" altında panel karşı kenara hizalanır.
               align === 'right' ? 'end-0' : 'start-0',
             )}
@@ -107,8 +107,8 @@ export function PeoplePicker({
               {rows.map((row) => (
                 <div key={row.key} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium text-white">{row.label}</p>
-                    {row.hint && <p className="text-xs text-brand-ice/60">{row.hint}</p>}
+                    <p className="text-sm font-medium text-foreground">{row.label}</p>
+                    {row.hint && <p className="text-xs text-muted-foreground">{row.hint}</p>}
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -116,19 +116,28 @@ export function PeoplePicker({
                       aria-label={`${row.label} sayısını azalt`}
                       disabled={row.value <= row.min}
                       onClick={() => onRowChange(row.key, row.value - 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent"
                     >
                       <Minus className="h-4 w-4" aria-hidden="true" />
                     </button>
-                    <span className="w-5 text-center text-sm font-semibold tabular-nums text-white">
+                    {/* Canlı bölge: +/- düğmelerinin ADI var ama basınca odak düğmede kaldığı
+                        için değişen SAYI hiç duyurulmuyordu — ekran okuyucu kullanıcısı "artır"a
+                        basıp mutlak sessizlik duyuyor, kaçta olduğunu ya da sınıra dayandığını
+                        bilemiyordu. sr-only etiket hangi satırın değiştiğini söyler. */}
+                    <span
+                      aria-live="polite"
+                      aria-atomic="true"
+                      className="w-5 text-center text-sm font-semibold tabular-nums text-foreground"
+                    >
                       {row.value}
+                      <span className="sr-only"> {row.label}</span>
                     </span>
                     <button
                       type="button"
                       aria-label={`${row.label} sayısını artır`}
                       disabled={row.value >= row.max}
                       onClick={() => onRowChange(row.key, row.value + 1)}
-                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/20 text-white transition-colors hover:bg-white/10 disabled:opacity-30 disabled:hover:bg-transparent"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-muted disabled:opacity-30 disabled:hover:bg-transparent"
                     >
                       <Plus className="h-4 w-4" aria-hidden="true" />
                     </button>

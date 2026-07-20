@@ -65,8 +65,13 @@ export const authApi = {
     return res.data
   },
 
+  /**
+   * Oturumu SUNUCUDA kapatır (refresh jetonunu iptal eder). Kullanıcı çıkışı bunu beklediği
+   * için kısa timeout: sunucu asılırsa genel 60 sn'lik sınır "Çıkış"ı bir dakika kilitlerdi.
+   * Süre dolarsa çağıran yutar ve yerel oturumu yine de kapatır (useLogout).
+   */
   async logout(): Promise<void> {
-    await apiClient.post('/api/v1/auth/logout')
+    await apiClient.post('/api/v1/auth/logout', undefined, { timeout: 5000 })
   },
 
   /**

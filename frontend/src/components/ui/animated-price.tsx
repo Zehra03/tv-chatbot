@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import NumberFlow from '@number-flow/react'
 import { formatPrice } from '@/utils/format'
+import { cn } from '@/lib/utils'
 
 /**
  * Animasyonlu fiyat — girişte 0'dan gerçek tutara sayar (NumberFlow;
@@ -29,11 +30,13 @@ export function AnimatedPrice({ amount, currency, className }: AnimatedPriceProp
   }, [amount])
 
   if (!supportsNumberFlow) {
-    return <span className={className}>{formatPrice(amount, currency)}</span>
+    return <span className={cn('tabular-nums', className)}>{formatPrice(amount, currency)}</span>
   }
 
   return (
-    <span className={className}>
+    // tabular-nums: fiyat kolonu boyunca rakamlar zıplamasın (§3); font-variant-numeric
+    // kalıtımla NumberFlow'un rakamlarına da geçer.
+    <span className={cn('tabular-nums', className)}>
       <span className="sr-only">{formatPrice(amount, currency)}</span>
       <span aria-hidden="true">
         <NumberFlow
