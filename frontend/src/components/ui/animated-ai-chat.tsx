@@ -10,7 +10,6 @@ import {
     SendIcon,
     LoaderIcon,
     Sparkles,
-    Command,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as React from "react"
@@ -191,11 +190,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             const target = event.target as Node;
-            const commandButton = document.querySelector('[data-command-button]');
-
-            if (commandPaletteRef.current &&
-                !commandPaletteRef.current.contains(target) &&
-                !commandButton?.contains(target)) {
+            if (commandPaletteRef.current && !commandPaletteRef.current.contains(target)) {
                 setShowCommandPalette(false);
             }
         };
@@ -479,36 +474,9 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                             )}
                         </div>
 
-                        <div className="px-3 py-2 border-t border-border flex items-center justify-between gap-4">
-                            <div className="flex items-center gap-3">
-                                {/* İkon-only: erişilebilir isim OLMADAN ekran okuyucuya yalnız
-                                    "button" diye duyuluyordu — komut paletini (/otel, /ucus,
-                                    /rezervasyon, /oneri) açtığı hiç anlaşılmıyordu. */}
-                                <motion.button
-                                    type="button"
-                                    data-command-button
-                                    aria-label="Komutlar"
-                                    aria-haspopup="listbox"
-                                    aria-expanded={showCommandPalette}
-                                    aria-controls={commandPaletteId}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        setShowCommandPalette(prev => !prev);
-                                    }}
-                                    whileTap={{ scale: 0.94 }}
-                                    className={cn(
-                                        "p-2 text-foreground/40 hover:text-foreground/90 rounded-lg transition-colors relative group",
-                                        showCommandPalette && "bg-muted text-foreground/90"
-                                    )}
-                                >
-                                    <Command className="w-4 h-4" aria-hidden />
-                                    <motion.span
-                                        className="absolute inset-0 bg-accent rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
-                                        layoutId="button-highlight"
-                                    />
-                                </motion.button>
-                            </div>
-                            
+                        {/* Komut butonu kaldırıldı — palet "/" ile ve alttaki hızlı-eylem
+                            kartlarıyla açılır; alt çubukta yalnız Gönder kalır (sağa yaslı). */}
+                        <div className="px-3 py-2 border-t border-border flex items-center justify-end gap-4">
                             <motion.button
                                 type="button"
                                 onClick={handleSendMessage}

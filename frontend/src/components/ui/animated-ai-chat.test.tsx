@@ -50,19 +50,6 @@ describe('AnimatedAIChat — karakter sınırı', () => {
 })
 
 describe('AnimatedAIChat — komut paleti erişilebilirliği', () => {
-  it('komut düğmesinin erişilebilir adı var ve durumunu duyurur', async () => {
-    const user = userEvent.setup()
-    render(<AnimatedAIChat onSend={vi.fn()} />)
-
-    // Regresyonda bu düğme yalnız bir ikondu: ekran okuyucu "button" diyordu.
-    const button = screen.getByRole('button', { name: 'Komutlar' })
-    expect(button.getAttribute('aria-expanded')).toBe('false')
-
-    await user.click(button)
-    expect(button.getAttribute('aria-expanded')).toBe('true')
-    expect(screen.getByRole('listbox', { name: 'Sohbet komutları' })).toBeTruthy()
-  })
-
   it('ok tuşuyla gezilen komut aria-activedescendant ile duyurulur', async () => {
     const user = userEvent.setup()
     render(<AnimatedAIChat onSend={vi.fn()} />)
