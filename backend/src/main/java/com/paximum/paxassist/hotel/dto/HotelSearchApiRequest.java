@@ -32,6 +32,7 @@ public record HotelSearchApiRequest(
 
         @NotNull(message = "Giriş tarihi zorunludur.")
         @FutureOrPresent(message = "Geçmiş tarih seçilemez.")
+        @com.paximum.paxassist.validator.MaxSearchDate
         LocalDate checkIn,
 
         @NotNull(message = "Çıkış tarihi zorunludur.")

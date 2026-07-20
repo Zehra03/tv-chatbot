@@ -11,8 +11,8 @@ import jakarta.validation.constraints.Size;
 public record FlightSearchRequestDto(
         String origin,
         String destination,
-        @FutureOrPresent LocalDate departDate,
-        @FutureOrPresent LocalDate returnDate,
+        @FutureOrPresent @com.paximum.paxassist.validator.MaxSearchDate LocalDate departDate,
+        @FutureOrPresent @com.paximum.paxassist.validator.MaxSearchDate LocalDate returnDate,
         TripType tripType,
         @Valid PassengerCountDto passengers,
         @Size(min = 3, max = 3) String currency,
