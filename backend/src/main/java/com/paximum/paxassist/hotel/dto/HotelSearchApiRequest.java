@@ -42,6 +42,8 @@ public record HotelSearchApiRequest(
         @Min(value = 1, message = "En az 1 yetişkin olmalıdır.")
         Integer adults,
 
+        Integer children,
+
         List<Integer> childAges,
         String nationality,
         String currency) {
