@@ -3,6 +3,7 @@ package com.paximum.paxassist.flight.domain;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Set;
 
 import org.junit.jupiter.api.Test;
 
@@ -29,7 +30,27 @@ class FlightSearchCriteriaTest {
         String cacheKey = criteria.toCacheKey();
 
         assertThat(cacheKey)
-                .isEqualTo("IST|LHR|2026-08-10|2026-08-20|ROUND_TRIP|USD|true|TK|08:00|12:00|2A1C0I");
+                .isEqualTo("IST|LHR|2026-08-10|2026-08-20|ROUND_TRIP|USD|true|TK|08:00|12:00|null|null|2A1C0I");
+    }
+
+    @Test
+    void toCacheKey_separatesDifferentBaggageRequests() {
+        // The baggage request decides WHICH fare of a flight is priced, so two requests that differ
+        // only here have genuinely different results and must not share one cache entry.
+        FlightSearchCriteria.FlightSearchCriteriaBuilder base = FlightSearchCriteria.builder()
+                .origin("IST")
+                .destination("LHR")
+                .departDate(LocalDate.of(2026, 8, 10))
+                .tripType(TripType.ONE_WAY)
+                .currency("USD")
+                .passengers(PassengerCount.builder().adults(1).build());
+
+        String noRequest = base.build().toCacheKey();
+        String needsChecked = base.checkedBaggage(true).build().toCacheKey();
+        String needs20Kg = base.checkedBaggage(null).minCheckedBaggageKg(20).build().toCacheKey();
+        String needs15Kg = base.minCheckedBaggageKg(15).build().toCacheKey();
+
+        assertThat(Set.of(noRequest, needsChecked, needs20Kg, needs15Kg)).hasSize(4);
     }
 
     @Test

@@ -31,7 +31,7 @@ services:
       - ollama-data:/root/.ollama
     # Image ships no curl/wget; `ollama list` returns 0 only when the local server answers.
     healthcheck:
-      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      test: [ "CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -74,7 +74,7 @@ services:
     # observed up to ~170s (springdoc init + JIT). Probe failures during start_period don't flip
     # the container to unhealthy, so err large to avoid false-unhealthy during a slow boot.
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:${BACKEND_PORT}/actuator/health || exit 1"]
+      test: [ "CMD-SHELL", "curl -fsS http://localhost:${BACKEND_PORT}/actuator/health || exit 1" ]
       interval: 15s
       timeout: 5s
       retries: 5
@@ -89,11 +89,10 @@ services:
     volumes:
       - redis-data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: [ "CMD", "redis-cli", "ping" ]
       interval: 5s
       timeout: 3s
       retries: 5
-
   # frontend:
   #   build:
   #     context: ./frontend

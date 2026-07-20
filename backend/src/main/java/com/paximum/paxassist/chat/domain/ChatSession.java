@@ -30,6 +30,11 @@ public class ChatSession {
     private List<Object> roundTripOptions = new ArrayList<>();
     // Set once the user has picked an outbound and is choosing the return; null at every other time.
     private String pendingOutboundLegId;
+    // The original facility question ("havuz var mı") the assistant is still waiting on a hotel for,
+    // after it asked "hangi otel?". While set, the next turn's answer ("1", "ilk", a name) is routed
+    // back to the facility Q&A with THIS question rather than being mistaken for a booking (SELECT).
+    // Null whenever no facility clarification is pending.
+    private String pendingFacilityQuestion;
     private final List<ChatMessage> messages = new ArrayList<>();
     // "HOTEL" | "FLIGHT" | null — the domain of the last search, so FILTER/SELECT know
     // which result list they are acting on. Kept as a String so this domain type does not
@@ -78,6 +83,11 @@ public class ChatSession {
         this.pendingOutboundLegId = pendingOutboundLegId;
     }
 
+    public String getPendingFacilityQuestion() { return pendingFacilityQuestion; }
+    public void setPendingFacilityQuestion(String pendingFacilityQuestion) {
+        this.pendingFacilityQuestion = pendingFacilityQuestion;
+    }
+
     /**
      * Criteria that describe the traveller rather than the search, so they stay true after the user
      * switches from hotels to flights ("vazgeçtim, uçak arıyorum") and must not be asked again.
@@ -103,6 +113,7 @@ public class ChatSession {
         lastResultCards = new ArrayList<>();
         roundTripOptions = new ArrayList<>();
         pendingOutboundLegId = null;
+        pendingFacilityQuestion = null;
         activeDomain = domain;
     }
 }

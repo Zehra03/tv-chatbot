@@ -125,7 +125,7 @@ public class ChatViewMapper {
     /** SlotCriteria fields that only a flight search fills. */
     private static final List<String> FLIGHT_SIGNALS = List.of(
             "origin", "destination", "departureDate", "returnDate", "cabinClass", "flightMaxPrice",
-            "directFlight", "airline", "departTimeRange");
+            "directFlight", "airline", "departTimeRange", "checkedBaggage", "minCheckedBaggageKg");
 
     /**
      * Best-effort domain guess from the persisted criteria (used when GET has no live domain).

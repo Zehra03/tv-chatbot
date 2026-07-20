@@ -108,7 +108,7 @@ class FlightSearchServiceTest {
         resolveLocationsIdentity();
         when(requestMapper.toRequest(any())).thenReturn(request);
         when(tourVisioFlightClient.priceSearch(request)).thenReturn(response);
-        when(responseMapper.toFlightProducts(response, TripType.ONE_WAY)).thenReturn(mappedProducts);
+        when(responseMapper.toFlightProducts(response, criteria)).thenReturn(mappedProducts);
 
         FlightSearchOutcome outcome = service().search(criteria);
 
@@ -131,7 +131,7 @@ class FlightSearchServiceTest {
         resolveLocationsIdentity();
         when(requestMapper.toRequest(any())).thenReturn(request);
         when(tourVisioFlightClient.priceSearch(request)).thenReturn(response);
-        when(responseMapper.toFlightProducts(response, TripType.ONE_WAY)).thenReturn(mapped);
+        when(responseMapper.toFlightProducts(response, criteria)).thenReturn(mapped);
 
         return service().search(criteria);
     }
@@ -221,7 +221,7 @@ class FlightSearchServiceTest {
         when(tourVisioFlightClient.priceSearch(request))
                 .thenThrow(unauthorized)
                 .thenReturn(response);
-        when(responseMapper.toFlightProducts(response, TripType.ONE_WAY)).thenReturn(List.of());
+        when(responseMapper.toFlightProducts(response, criteria)).thenReturn(List.of());
 
         FlightSearchOutcome outcome = service().search(criteria);
 

@@ -117,6 +117,11 @@ public class SlotNormalizer {
                 criteria.directFlight(),
                 criteria.airline(),
                 criteria.departTimeRange(),
+                criteria.checkedBaggage(),
+                // A non-positive kg threshold is not a threshold; drop it rather than let it reach
+                // the search, where every fare would trivially "meet" it.
+                criteria.minCheckedBaggageKg() != null && criteria.minCheckedBaggageKg() > 0
+                        ? criteria.minCheckedBaggageKg() : null,
                 adults,
                 children,
                 childAges,

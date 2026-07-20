@@ -18,11 +18,11 @@ import com.paximum.paxassist.flight.domain.TripType;
  *       {@link TripType#ONE_WAY}. (Phase-1 simplification: we can't detect a round-trip
  *       intent when the user hasn't given a return date — see the note below.)</li>
  *   <li><b>passengers</b>: built only when an adult count exists; otherwise left null so the
- *       flight module reports "passengers" as a missing required field (single source of truth).</li>
+ *       flight module reports "passengers" as a missing required field (single source of truth).
+ *       Each accompanying child is typed by its age — see {@link #toPassengerCount}.</li>
  * </ul>
  *
- * <p>Not yet mapped (Phase 1): {@code cabinClass}, {@code childAges}→infant split — the flight
- * criteria has no cabin field and treats all children as {@code children} (infants=0).
+ * <p>Not yet mapped: {@code cabinClass} — the flight criteria has no cabin field.
  */
 @Component
 public class FlightCriteriaMapper {
@@ -38,14 +38,10 @@ public class FlightCriteriaMapper {
         LocalDate returnDate = parse(c.returnDate());
         TripType tripType = (returnDate != null) ? TripType.ROUND_TRIP : TripType.ONE_WAY;
 
-        PassengerCount passengers = null;
-        if (c.adults() != null) {
-            passengers = PassengerCount.builder()
-                    .adults(c.adults())
-                    .children(c.children() != null ? c.children() : 0)
-                    .infants(0)
-                    .build();
-        }
+        // Each accompanying child is typed by its age (infant / child / adult fare) — the flight
+        // domain owns that rule, since it is the provider's, not this adapter's.
+        PassengerCount passengers =
+                (c.adults() == null) ? null : PassengerCount.ofChildAges(c.adults(), c.childAges());
 
         // The user is never asked for a currency; it follows from where the request came from
         // unless they explicitly named one.
@@ -61,6 +57,11 @@ public class FlightCriteriaMapper {
                 .currency(currency)
                 .nonstop(null)
                 .preferredAirline(null)
+                // Baggage reaches the SEARCH rather than the card filters: it decides which fare of a
+                // flight is priced, so it cannot be applied to finished cards (see
+                // TourVisioFlightResponseMapper#cheapestOffer).
+                .checkedBaggage(c.checkedBaggage())
+                .minCheckedBaggageKg(c.minCheckedBaggageKg())
                 .build();
     }
 

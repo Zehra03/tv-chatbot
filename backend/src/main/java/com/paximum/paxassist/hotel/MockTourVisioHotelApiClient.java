@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 /**
  * Static hotel data for offline runs — active under the {@code mock} (CI/context tests) and
@@ -63,6 +64,42 @@ public class MockTourVisioHotelApiClient implements TourVisioHotelApiClient {
         // Return real HotelProduct cards (not raw TourVisio JSON) so the whole pipeline — the
         // /api/v1/hotels/search endpoint AND the chat HOTEL handler — produces usable results offline.
         return filterByRegion(criteria != null ? criteria.destination() : null);
+    }
+
+    /**
+     * A GetProductInfo-shaped sample payload (raw provider JSON structure, not HotelProduct cards) so
+     * the hotel-detail feature model can be exercised end-to-end offline. Mirrors the real shape the
+     * {@code HotelFeatureMapper} walks: hotel-level {@code facilities[]}, {@code themes[]} and a
+     * room {@code boardName}. Facility ids match {@code facility-mapping.json}.
+     */
+    @Override
+    public Object getProductInfo(String productId, Integer ownerProvider) {
+        Map<String, Object> hotel = new java.util.LinkedHashMap<>();
+        hotel.put("id", productId);
+        hotel.put("name", "Mock Resort " + productId);
+        hotel.put("themes", List.of(
+                Map.of("id", "1", "name", "FAMILY"),
+                Map.of("id", "2", "name", "BEACH"),
+                Map.of("id", "3", "name", "ALL INCLUSIVE")
+        ));
+        hotel.put("seasons", List.of(Map.of(
+                "facilityCategories", List.of(Map.of(
+                        "facilities", List.of(
+                                Map.of("id", "46", "name", "Pets Allowed"),
+                                Map.of("id", "47", "name", "Pool"),
+                                Map.of("id", "17", "name", "Indoor Pool"),
+                                Map.of("id", "53", "name", "Sauna"),
+                                Map.of("id", "40", "name", "Massage Center"),
+                                Map.of("id", "35", "name", "Kids Club"),
+                                Map.of("id", "48", "name", "Private Beach"),
+                                Map.of("id", "51", "name", "Restaurant")
+                        )
+                ))
+        )));
+        hotel.put("offers", List.of(Map.of(
+                "rooms", List.of(Map.of("boardName", "ALL INCLUSIVE"))
+        )));
+        return Map.of("body", Map.of("hotel", hotel));
     }
 
     /** Match the requested destination against a hotel's region (case-insensitive); all hotels when no match. */
