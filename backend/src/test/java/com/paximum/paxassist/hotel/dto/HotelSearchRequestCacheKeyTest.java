@@ -60,6 +60,29 @@ class HotelSearchRequestCacheKeyTest {
     }
 
     @Test
+    void differentRoomCount_producesDifferentKey() {
+        // Four adults in one room and four adults in two rooms are different products at different
+        // prices. Sharing a key would serve whichever search ran first to the other guest.
+        HotelSearchRequest oneRoom = new HotelSearchRequest(
+                "Antalya", "2026-08-01", 7, 4, 1, List.of(), "TR", "TRY", "tr-TR");
+        HotelSearchRequest twoRooms = new HotelSearchRequest(
+                "Antalya", "2026-08-01", 7, 4, 2, List.of(), "TR", "TRY", "tr-TR");
+
+        assertThat(oneRoom.cacheKey()).isNotEqualTo(twoRooms.cacheKey());
+    }
+
+    @Test
+    void missingRoomCountMeansOneRoom() {
+        // The 8-arg form (callers with no room count) must key identically to an explicit 1 room.
+        HotelSearchRequest implicit = new HotelSearchRequest(
+                "Antalya", "2026-08-01", 7, 2, List.of(), "TR", "TRY", "tr-TR");
+        HotelSearchRequest explicit = new HotelSearchRequest(
+                "Antalya", "2026-08-01", 7, 2, 1, List.of(), "TR", "TRY", "tr-TR");
+
+        assertThat(implicit.cacheKey()).isEqualTo(explicit.cacheKey());
+    }
+
+    @Test
     void incompleteRequest_stillProducesAKeyInsteadOfThrowing() {
         // @Cacheable builds the key before the method runs, so a half-filled slot must not NPE —
         // otherwise the service could never answer with its missing-parameter prompt.

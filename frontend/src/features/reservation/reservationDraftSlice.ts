@@ -1,7 +1,7 @@
 import { createSlice, isAnyOf, type PayloadAction } from '@reduxjs/toolkit'
 import type { FlightSnapshotInput, HotelSnapshotInput } from '@/api'
 import type { ProductType } from '@/types'
-import { guestSessionStarted, logout, sessionStarted } from '@/features/auth/authSlice'
+import { guestSessionStarted, logout } from '@/features/auth/authSlice'
 
 export type { ProductType }
 
@@ -60,10 +60,28 @@ const reservationDraftSlice = createSlice({
       state.draft = null
     },
   },
-  /** Kimlik sınırında taslağı düşür: bir hesabın seçtiği ürün, çıkış/misafir/giriş
-   * sonrası bir sonraki kimliğe taşınmasın (chatSlice ile aynı gerekçe). */
+  /**
+   * Kimlik sınırında taslağı düşür: bir hesabın seçtiği ürün bir sonraki kimliğe taşınmasın.
+   *
+   * `sessionStarted` bilinçli olarak DIŞARIDA: misafirin hesaba yükselmesi kimlik sınırı değil,
+   * aynı kişinin devamıdır. Misafir "Seç"e basınca RequireAccount onu /login'e `from:
+   * '/reservation/new'` ile yolluyor ve giriş sonrası goToApp() tam oraya geri getiriyor —
+   * `sessionStarted` burada taslağı silseydi akış kendini imha eder, kullanıcı döndüğü formda
+   * "Önce bir ürün seçmelisiniz" görürdü.
+   *
+   * Hesap→hesap sızıntısı yine kapalı: oturumu açık gerçek bir kullanıcı /login'e giremiyor
+   * (LoginPage real oturumu /chat'e bounce ediyor), yani B giriş yapmadan önce A'nın `logout`'u
+   * zorunlu olarak geçiyor — ve `logout` taslağı siliyor. Süresi dolan oturum da 401 →
+   * UNAUTHORIZED_EVENT → logout yolundan aynı yere düşüyor.
+   *
+   * chatSlice'tan bilerek AYRILIR (o `sessionStarted`'da da sıfırlar): sohbet thread'i sunucuda
+   * kimliğe bağlı yaşıyor — misafirin oturumları X-Guest-Id ile sahipleniliyor ve giriş anında
+   * guestId düştüğü için sunucu onları yeni kimliğe zaten servis etmiyor; thread'i tutmak
+   * erişilemeyen veriyi ekranda bırakırdı. Taslak ise tamamen istemci-taraflı, kullanıcının az
+   * önce seçtiği ürün — hiçbir kimliğe ait değil, taşınması doğru.
+   */
   extraReducers: (builder) => {
-    builder.addMatcher(isAnyOf(logout, sessionStarted, guestSessionStarted), () => initialState)
+    builder.addMatcher(isAnyOf(logout, guestSessionStarted), () => initialState)
   },
 })
 

@@ -160,8 +160,8 @@ export function CountrySelect({
         aria-describedby={ariaDescribedBy}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          'flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-sm text-white shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal aria-[invalid=true]:border-red-400/70',
-          !selected && 'text-white/40',
+          'flex h-9 w-full items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 text-sm text-foreground shadow-soft transition-colors hover:border-primary/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring aria-[invalid=true]:border-destructive',
+          !selected && 'text-foreground/40',
           className,
         )}
       >
@@ -170,7 +170,7 @@ export function CountrySelect({
           aria-hidden
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut', type: 'spring' }}
-          className="shrink-0 text-brand-ice/70"
+          className="shrink-0 text-muted-foreground"
         >
           <ChevronDown className="h-4 w-4" />
         </motion.span>
@@ -183,11 +183,11 @@ export function CountrySelect({
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: -5, scale: 0.95, filter: 'blur(10px)' }}
             transition={{ duration: 0.25, type: 'spring', bounce: 0.15 }}
-            className="absolute left-0 top-full z-50 mt-2 w-max min-w-full max-w-[20rem] rounded-xl border border-white/15 bg-brand-navy/95 p-1 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+            className="pax-popover absolute left-0 top-full z-50 mt-2 w-max min-w-full max-w-[20rem] rounded-xl p-1"
           >
             <div className="relative">
               <Search
-                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-brand-ice/50"
+                className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
                 aria-hidden
               />
               <input
@@ -198,7 +198,7 @@ export function CountrySelect({
                 aria-label="Ülke ara"
                 aria-controls={listboxId}
                 placeholder="Ülke ya da kod ara…"
-                className="mb-1 w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-8 pr-2.5 text-sm text-white placeholder:text-white/40 focus:border-brand-teal/60 focus:outline-none"
+                className="mb-1 w-full rounded-lg border border-border bg-muted py-2 pl-8 pr-2.5 text-sm text-foreground placeholder:text-foreground/40 focus:border-primary/60 focus:outline-none"
               />
             </div>
 
@@ -210,7 +210,7 @@ export function CountrySelect({
               className="flex max-h-56 flex-col gap-0.5 overflow-y-auto"
             >
               {matches.length === 0 ? (
-                <p className="px-2.5 py-3 text-sm text-brand-ice/60">Ülke bulunamadı.</p>
+                <p className="px-2.5 py-3 text-sm text-muted-foreground">Ülke bulunamadı.</p>
               ) : (
                 matches.map((country, index) => {
                   const isSelected = country.code === value
@@ -226,14 +226,14 @@ export function CountrySelect({
                       className={cn(
                         'flex w-full shrink-0 items-center justify-between gap-3 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
                         index === activeIndex
-                          ? 'bg-white/10 text-white'
-                          : 'text-brand-ice/80 hover:text-white',
+                          ? 'bg-muted text-foreground'
+                          : 'text-muted-foreground hover:text-foreground',
                       )}
                     >
                       <span className="truncate">{country.name}</span>
-                      <span className="flex shrink-0 items-center gap-2 text-xs text-brand-ice/60">
+                      <span className="flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
                         {variant === 'dial' ? `+${country.dial}` : country.code}
-                        {isSelected && <Check className="h-4 w-4 text-brand-teal" aria-hidden />}
+                        {isSelected && <Check className="h-4 w-4 text-primary" aria-hidden />}
                       </span>
                     </button>
                   )

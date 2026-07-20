@@ -22,7 +22,7 @@ export function ShowMoreButton({
       variant="outline"
       onClick={onClick}
       className={cn(
-        'w-full gap-2 rounded-full border-white/15 bg-white/5 text-brand-ice hover:border-brand-teal/50 hover:text-white',
+        'w-full gap-2 rounded-full border-border bg-muted text-muted-foreground hover:border-primary/50 hover:text-foreground',
         className,
       )}
     >

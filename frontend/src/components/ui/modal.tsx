@@ -22,12 +22,21 @@ export function Modal({ open, onClose, title, children, className }: ModalProps)
 
   useEffect(() => {
     if (!open) return
+    // Açan öğeyi sakla ve KAPANIŞTA ona geri dön. Eskiden odak diyaloğa taşınıyor ama geri
+    // verilmiyordu: modal unmount olunca odak <body>'ye düşüyor, klavye kullanıcısı
+    // ("Şifremi unuttum?" ile açan kişi) belgenin en başına atılıyor ve tüm sayfayı yeniden
+    // Tab'lamak zorunda kalıyordu.
+    const opener = document.activeElement as HTMLElement | null
     dialogRef.current?.focus()
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      // Öğe hâlâ belgedeyse odağı iade et (kapanışta DOM'dan çıkmış olabilir).
+      if (opener?.isConnected) opener.focus()
+    }
   }, [open, onClose])
 
   if (!open) return null

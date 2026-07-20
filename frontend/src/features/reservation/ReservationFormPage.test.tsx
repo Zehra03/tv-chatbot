@@ -305,6 +305,68 @@ describe('ReservationFormPage', () => {
     ).toBeTruthy()
   })
 
+  /**
+   * K21: TourVisio önizleme kurulurken canlı fiyatı yeniden okur. Fiyat oynadıysa kullanıcı
+   * YENİ tutarı görmeden ve AYRICA kabul etmeden onaylayamamalı. Backend priceChanged +
+   * previousAmount gönderiyordu ama frontend tipinde bu alanlar yoktu (ve mock istemcinin
+   * kendi tutarını yankılıyordu) — kullanıcı %30 zamlanmış bir rezervasyonu farkı hiç
+   * görmeden onaylıyordu.
+   */
+  it('fiyat değiştiyse eski/yeni farkı gösterir ve AYRI kabul olmadan onay göndermez', async () => {
+    const user = userEvent.setup()
+    // offerId 'OFFER-REPRICE' → mock canlı fiyatı %30 artırır (priceChanged: true).
+    renderPage(makeHotelDraft('OFFER-REPRICE'))
+
+    await fillAndPreview(user)
+
+    // Fark açıkça görünür: uyarı + eski tutar (üstü çizili) + yeni tutar.
+    expect(await screen.findByText('Fiyat güncellendi', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText('€1.200')).toBeTruthy() // aramada görülen eski tutar
+    expect(screen.getAllByText(/€1\.560/).length).toBeGreaterThan(0) // 1200 * 1.3 → canlı tutar
+
+    // Genel onay TEK BAŞINA yetmez — fiyat kabulü ayrı.
+    const [priceCheckbox, confirmCheckbox] = screen.getAllByRole('checkbox')
+    await user.click(confirmCheckbox)
+    const submit = () => screen.getByRole('button', { name: 'Rezervasyonu onayla' }) as HTMLButtonElement
+    expect(submit().disabled).toBe(true)
+
+    // Fiyat kabul edilince onay açılır.
+    await user.click(priceCheckbox)
+    expect(submit().disabled).toBe(false)
+  })
+
+  /**
+   * Uyarıdan SONRA 202 (COMMIT_OUTCOME_UNKNOWN) gelirse: booking geçmiş OLABİLİR. Kullanıcıya
+   * "Sonuç doğrulanıyor" gösterilmeli — uyarı ekranı değil. Regresyonda `warning` temizlenmediği
+   * ve `warning` dalı `pending` dalından önce geldiği için kullanıcı "Yine de onayla"ya geri
+   * düşüyordu: sonucu bilinmeyen bir rezervasyonu ikinci kez onaylamaya davet.
+   */
+  it('uyarıdan sonra gelen 202 belirsiz sonucu gösterir — ikinci onaya geri DÜŞMEZ', async () => {
+    const user = userEvent.setup()
+    renderPage(makeHotelDraft('OFFER-DUP'))
+
+    await fillAndPreview(user)
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Rezervasyonu onayla' }))
+    expect(await screen.findByText('Onayınız gerekiyor', {}, { timeout: 3000 })).toBeTruthy()
+
+    // İkinci onay bu kez 202 döner (TourVisio yanıtsız kaldı).
+    server.use(
+      http.post('*/api/v1/reservations', () =>
+        HttpResponse.json(
+          { outcome: 'COMMIT_OUTCOME_UNKNOWN', message: 'Sonuç doğrulanamadı.' },
+          { status: 202 },
+        ),
+      ),
+    )
+    await user.click(screen.getByRole('button', { name: 'Yine de onayla' }))
+
+    expect(await screen.findByText('Sonuç doğrulanıyor', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.queryByText('Onayınız gerekiyor')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Yine de onayla' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Rezervasyonlarım' })).toBeTruthy()
+  })
+
   it('geçersiz snapshot (oda > yetişkin) istemcide uyarır, önizleme isteği gönderilmez', async () => {
     const requests: string[] = []
     server.events.on('request:start', ({ request }) => {

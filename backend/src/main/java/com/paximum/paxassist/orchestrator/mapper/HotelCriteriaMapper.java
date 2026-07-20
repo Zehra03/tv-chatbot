@@ -21,9 +21,9 @@ import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
  * through and let the hotel module report it as a missing parameter — completeness stays a
  * single source of truth in the hotel module.
  *
- * <p>Not yet mapped (Phase 1): {@code rooms}, {@code stars}, {@code boardType} — the current
- * {@code HotelSearchRequest} has no fields for them; {@code stars}/{@code boardType} are applied
- * as post-search filters via the FILTER intent instead.
+ * <p>Not yet mapped: {@code stars}, {@code boardType} — applied as post-search filters via the
+ * FILTER intent instead. {@code rooms} IS mapped now: it is a pricing input, not a filter, and
+ * leaving it out made a "2 oda" conversation quote a single room holding the whole party.
  */
 @Component
 public class HotelCriteriaMapper {
@@ -44,6 +44,7 @@ public class HotelCriteriaMapper {
                 c.checkIn(),       // checkIn (YYYY-MM-DD)
                 night,             // night = (checkOut - checkIn) or explicit nights count
                 c.adults(),        // adult
+                c.rooms(),         // rooms (null → 1; SlotNormalizer already drops non-positive)
                 c.childAges(),     // childAges
                 c.nationality(),   // nationality
                 CurrencyByCountry.resolve(c.currency(), geoCountry.currentCountry().orElse(null)),

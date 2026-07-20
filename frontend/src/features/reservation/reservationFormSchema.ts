@@ -31,6 +31,18 @@ const ADULT_MIN_AGE = 18
 const INFANT_MAX_AGE = 2
 const MAX_AGE = 120
 
+/**
+ * Çocuk yolcunun kabul edilen yaş aralığı — ARAMA formu da bunu kullanır (HotelsPage).
+ * Tek kaynak olması şart: aralık iki yerde ayrı ayrı yazılıydı ve ayrışmıştı. Arama 0–17
+ * sunarken şema 3–17 dayatıyordu, arada kalan 0–2 yaş "bebek" seçimi rezervasyon formunu
+ * GÖNDERİLEMEZ hâle getiriyordu (satır teklifin pax'ına sabit olduğu için silinemiyor da).
+ *
+ * 0–2 (INFANT) otelde hiç geçerli değil: backend PassengerType'a göre INFANT bir havayolu
+ * ücret tipidir (kucakta bebek) ve uçuşu olmayan bir rezervasyon INFANT taşıyamaz.
+ */
+export const CHILD_MIN_AGE = INFANT_MAX_AGE + 1
+export const CHILD_MAX_AGE = ADULT_MIN_AGE - 1
+
 /** DB sütun sınırları (passengers.first_name/last_name varchar(100), email varchar(254)). */
 const NAME_MAX = 50
 const EMAIL_MAX = 254
@@ -64,13 +76,18 @@ export function ageFromBirthDate(value: string, today = new Date()): number {
  * T.C. kimlik numarası algoritması: 11 hane, ilk hane 0 olamaz, 10. hane
  * ((tekler×7) − çiftler) mod 10, 11. hane ilk 10 hanenin toplamının mod 10'u.
  * Yalnız TR uyruklu yolcuya uygulanır — yabancı yolcunun TCKN'si yoktur.
+ *
+ * `(x % 10 + 10) % 10`: kural MATEMATİKSEL modulo ister, JS'in `%` operatörü ise kalanın
+ * işaretini korur. odds*7 < evens olduğunda (ör. 19090909018 → 7 − 36 = −29) düz `% 10`
+ * negatif döner ve 0–9 aralığındaki kontrol hanesiyle ASLA eşleşemez; gerçek TCKN'lerin
+ * ~binde 0,1'i bu yüzden sessizce reddediliyordu (uçuş rezervasyonu tümden bloke).
  */
 export function isValidTcKimlikNo(value: string): boolean {
   if (!/^\d{11}$/.test(value) || value[0] === '0') return false
   const d = value.split('').map(Number)
   const odds = d[0] + d[2] + d[4] + d[6] + d[8]
   const evens = d[1] + d[3] + d[5] + d[7]
-  const tenth = (odds * 7 - evens) % 10
+  const tenth = ((odds * 7 - evens) % 10 + 10) % 10
   if (tenth !== d[9]) return false
   const sumOfFirstTen = d.slice(0, 10).reduce((total, digit) => total + digit, 0)
   return sumOfFirstTen % 10 === d[10]
@@ -122,11 +139,11 @@ export const makePassengerSchema = (productType: ReservationDraft['productType']
       if (p.passengerType === 'child') {
         if (age === null) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['age'], message: 'Çocuk için yaş gerekli' })
-        } else if (age <= INFANT_MAX_AGE || age >= ADULT_MIN_AGE) {
+        } else if (age < CHILD_MIN_AGE || age > CHILD_MAX_AGE) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['age'],
-            message: `Çocuk yaşı ${INFANT_MAX_AGE + 1}–${ADULT_MIN_AGE - 1} arasında olmalı`,
+            message: `Çocuk yaşı ${CHILD_MIN_AGE}–${CHILD_MAX_AGE} arasında olmalı`,
           })
         }
       } else if (age !== null && age < ADULT_MIN_AGE) {

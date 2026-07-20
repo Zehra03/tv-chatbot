@@ -106,12 +106,24 @@ export interface PreviewResponse {
   previewId: string
   expiresAt: string // Instant ISO
   productType: ReservationProductType
+  /** TourVisio'nun CANLI fiyatı — önizleme kurulurken yeniden okunur. */
   totalAmount: number
   currency: string
   leadGuestName: string
   passengerNames: string[]
   hasHotel: boolean
   hasFlight: boolean
+  /**
+   * Canlı fiyat aramada gösterilenden farklıysa true; `previousAmount` eski tutarı taşır
+   * (fiyat oynamadıysa null). Backend bunları K21 için gönderiyor: ekran eski/yeni farkını
+   * göstermeli ve onaydan ÖNCE ayrı bir açık kabul almalı. Tipte yoklardı, yani hiçbir şey
+   * okumuyordu — kullanıcı yeniden fiyatlanmış bir rezervasyonu farkı hiç görmeden onaylıyordu.
+   */
+  priceChanged: boolean
+  previousAmount?: number | null
+  /** Önizleme yalnız TourVisio'nun fiyatlamayı kabul ettiği teklif için oluşur; sözleşmede
+   * uygunluğu ima etmek yerine açıkça söyleyebilmek için var. */
+  available: boolean
 }
 
 /** `/` (onay) gövdesi — normalde `previewId`; uyarı sonrası ikinci onayda `confirmationToken`. */
@@ -137,6 +149,17 @@ export interface CancelRequest {
   reason: string
   serviceIds?: string[]
 }
+
+/**
+ * İptalin çok-durumlu sonucu — `ConfirmResult` ile aynı gerekçe. Axios her 2xx'i resolve eder,
+ * ama 202 "iptal edildi" DEMEK DEĞİLDİR: TourVisio yanıtsız kaldığında backend
+ * CANCEL_OUTCOME_UNKNOWN + 202 döner ve iptalin geçip geçmediğini bilmediğini söyler
+ * (ReservationController: "the cancellation MAY have gone through — do not claim it failed").
+ * Durum tipe taşınır ki çağıran 202'yi yanlışlıkla başarı sanmasın.
+ */
+export type CancelResult =
+  | { kind: 'cancelled'; outcome: OutcomeResponse } // 200 — kesin iptal
+  | { kind: 'pending'; outcome: OutcomeResponse } // 202 CANCEL_OUTCOME_UNKNOWN — sonuç belirsiz
 
 /**
  * `/` (onay) çok-durumlu sonucu. Backend duruma göre farklı gövde + HTTP kodu döner; axios 2xx'i
@@ -181,8 +204,11 @@ export const reservationApi = {
     return res.data
   },
 
-  async cancel(id: number, body: CancelRequest): Promise<OutcomeResponse> {
+  async cancel(id: number, body: CancelRequest): Promise<CancelResult> {
+    // confirm() ile aynı okuma: durum kodu sonucun ANLAMINI taşır, gövde yalnız detayı.
     const res = await apiClient.patch<OutcomeResponse>(`/api/v1/reservations/${id}/cancel`, body)
-    return res.data
+    return res.status === 202
+      ? { kind: 'pending', outcome: res.data }
+      : { kind: 'cancelled', outcome: res.data }
   },
 }

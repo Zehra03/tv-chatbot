@@ -114,12 +114,19 @@ public class TourVisioHotelApiClientImpl implements TourVisioHotelApiClient {
         location.put("type", 2);
         requestBody.put("arrivalLocations", List.of(location));
 
-        Map<String, Object> room = new HashMap<>();
-        room.put("adult", criteria.adult());
-        if (criteria.childAges() != null && !criteria.childAges().isEmpty()) {
-            room.put("childAges", criteria.childAges());
+        // One roomCriteria entry PER REQUESTED ROOM. This used to be a single entry holding the whole
+        // party, so "4 adults, 2 rooms" was quoted as one quad room while the reservation recorded
+        // two — the guest was shown a price for something they had not searched for.
+        List<Map<String, Object>> roomCriteria = new ArrayList<>();
+        for (RoomParty party : criteria.roomParties()) {
+            Map<String, Object> room = new HashMap<>();
+            room.put("adult", party.adult());
+            if (!party.childAges().isEmpty()) {
+                room.put("childAges", party.childAges());
+            }
+            roomCriteria.add(room);
         }
-        requestBody.put("roomCriteria", List.of(room));
+        requestBody.put("roomCriteria", roomCriteria);
 
         requestBody.put("nationality", criteria.nationality());
         requestBody.put("checkIn", criteria.checkIn());

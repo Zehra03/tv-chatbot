@@ -85,13 +85,14 @@ describe('HotelsPage (MSW ile)', () => {
     expect(screen.getByText('1 sonuç')).toBeTruthy()
     expect(screen.queryByText('MOCK Palace İzmir')).toBeNull()
 
-    // İmkânsız fiyat → boş liste mesajı.
+    // İmkânsız fiyat → filtreler tüm sonuçları eler → pasif mesaj değil, tıklanabilir
+    // kurtarma aksiyonu (§6): "Filtrelerinizle eşleşen otel yok" + "Filtreleri temizle".
     await user.clear(screen.getByLabelText('En yüksek fiyat'))
     await user.type(screen.getByLabelText('En yüksek fiyat'), '10')
-    expect(screen.getByText('Kriterlere uyan otel bulunamadı.')).toBeTruthy()
+    expect(screen.getByText('Filtrelerinizle eşleşen otel yok')).toBeTruthy()
 
-    // Temizle → yine 5 sonuç.
-    await user.click(screen.getByRole('button', { name: 'Temizle' }))
+    // Kurtarma butonu tüm filtreleri sıfırlar → yine 5 sonuç.
+    await user.click(screen.getByRole('button', { name: 'Filtreleri temizle' }))
     expect(screen.getByText('5 sonuç')).toBeTruthy()
   })
 

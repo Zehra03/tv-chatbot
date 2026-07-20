@@ -160,8 +160,10 @@ public class HotelSearchServiceImpl implements HotelSearchService {
                 continue; // never suggest a past/today date
             }
             String checkIn = candidate.toString();
+            // Carry the room count: a suggestion is only useful if the date is available for the
+            // party the guest actually asked for, not for a single room holding all of them.
             HotelSearchRequest probe = new HotelSearchRequest(
-                    base.destination(), checkIn, base.night(), base.adult(),
+                    base.destination(), checkIn, base.night(), base.adult(), base.rooms(),
                     base.childAges(), base.nationality(), base.currency(), base.culture());
             try {
                 if (hasResults(tourVisioHotelApiClient.priceSearch(probe, locationId))) {
