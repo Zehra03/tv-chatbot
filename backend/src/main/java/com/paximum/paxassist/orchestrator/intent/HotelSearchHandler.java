@@ -13,8 +13,9 @@ import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
-import com.paximum.paxassist.orchestrator.clarify.ClarificationCatalog;
+import com.paximum.paxassist.orchestrator.clarify.ClarificationComposer;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
+import com.paximum.paxassist.orchestrator.slot.LocationGuard;
 import com.paximum.paxassist.orchestrator.mapper.HotelCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
@@ -33,19 +34,23 @@ public class HotelSearchHandler implements IntentHandler {
     private final SlotFillingService slotFilling;
     private final HotelCriteriaMapper mapper;
     private final HotelSearchService hotelSearchService;
-    private final ClarificationCatalog clarifications;
+    private final ClarificationComposer clarifications;
     private final SlotGuard slotGuard;
+
+    private final LocationGuard locationGuard;
 
     public HotelSearchHandler(SlotFillingService slotFilling,
                               HotelCriteriaMapper mapper,
                               HotelSearchService hotelSearchService,
-                              ClarificationCatalog clarifications,
-                              SlotGuard slotGuard) {
+                              ClarificationComposer clarifications,
+                              SlotGuard slotGuard,
+                              LocationGuard locationGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.hotelSearchService = hotelSearchService;
         this.clarifications = clarifications;
         this.slotGuard = slotGuard;
+        this.locationGuard = locationGuard;
     }
 
     @Override
@@ -69,6 +74,12 @@ public class HotelSearchHandler implements IntentHandler {
             return OrchestrationResult.clarify(invalidSlot.get(), "hotel");
         }
 
+        Optional<String> invalidLocation = locationGuard.checkInvalidLocation(unnormalizedMerged, "HOTEL");
+        if (invalidLocation.isPresent()) {
+            context.session().getAccumulatedCriteria().remove("location");
+            return OrchestrationResult.clarify(invalidLocation.get(), "hotel");
+        }
+
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
         String carriedOver = TravellerCarryOver.note(switchedDomain, context.criteria(), merged);
 
@@ -79,7 +90,8 @@ public class HotelSearchHandler implements IntentHandler {
         if (merged.children() != null && merged.children() > 0
                 && (merged.childAges() == null || merged.childAges().size() < merged.children())) {
             return OrchestrationResult.clarify(
-                    clarifications.questionForHotel(List.of("childAges")) + carriedOver, "hotel");
+                    clarifications.forHotel(context.session(), context.userMessage(), List.of("childAges"))
+                            + carriedOver, "hotel");
         }
 
         HotelSearchRequest request = mapper.toRequest(merged);
@@ -87,7 +99,8 @@ public class HotelSearchHandler implements IntentHandler {
 
         if ("INCOMPLETE".equals(response.status())) {
             return OrchestrationResult.clarify(
-                    clarifications.questionForHotel(response.missingParameters()) + carriedOver, "hotel");
+                    clarifications.forHotel(context.session(), context.userMessage(),
+                            response.missingParameters()) + carriedOver, "hotel");
         }
         
         if ("INVALID_LOCATION".equals(response.status())) {

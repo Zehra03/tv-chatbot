@@ -3,14 +3,17 @@ package com.paximum.paxassist.hotel.controller;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.paximum.paxassist.hotel.HotelDetailsService;
 import com.paximum.paxassist.hotel.HotelProduct;
 import com.paximum.paxassist.hotel.HotelSearchService;
+import com.paximum.paxassist.hotel.dto.HotelFeatureDetails;
 import com.paximum.paxassist.hotel.dto.HotelLocationDto;
 import com.paximum.paxassist.hotel.dto.HotelSearchApiRequest;
 import com.paximum.paxassist.hotel.dto.HotelSearchResponse;
@@ -33,15 +36,35 @@ public class HotelController {
     private static final int MIN_QUERY_LENGTH = 2;
 
     private final HotelSearchService hotelSearchService;
+    private final HotelDetailsService hotelDetailsService;
 
-    public HotelController(HotelSearchService hotelSearchService) {
+    public HotelController(HotelSearchService hotelSearchService, HotelDetailsService hotelDetailsService) {
         this.hotelSearchService = hotelSearchService;
+        this.hotelDetailsService = hotelDetailsService;
     }
 
     @PostMapping("/search")
     public List<HotelProduct> search(@Valid @RequestBody HotelSearchApiRequest request) {
         HotelSearchResponse response = hotelSearchService.searchHotels(request.toInternal());
         return toProducts(response.results());
+    }
+
+    /**
+     * Detail-screen hotel feature model (pet-friendliness, grouped facilities, normalized board
+     * options, theme filters) for a single hotel. Uses one {@code GetProductInfo} call — never
+     * invoked per-result on the listing screen. See {@code HotelFeatureDetails}.
+     *
+     * <p>{@code ownerProvider} is the {@code provider} the search card carried
+     * ({@code HotelProduct#provider()}); TourVisio GetProductInfo requires it, so the frontend passes
+     * it straight back from the selected result. {@code boardType} is likewise the board the card
+     * already showed ({@code HotelProduct#boardType()}) — passed back so the detail model can list it
+     * without an extra provider call (GetProductInfo has no board data). It is optional.
+     */
+    @GetMapping("/{id}/details")
+    public HotelFeatureDetails details(@PathVariable("id") String id,
+                                       @RequestParam("ownerProvider") Integer ownerProvider,
+                                       @RequestParam(value = "boardType", required = false) String boardType) {
+        return hotelDetailsService.getFeatureDetails(id, ownerProvider, boardType);
     }
 
     /**

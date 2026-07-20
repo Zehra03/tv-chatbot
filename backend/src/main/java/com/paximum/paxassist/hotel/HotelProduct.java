@@ -23,7 +23,12 @@ public record HotelProduct(
     List<String> features,
     // The explicit offer token required by the reservation (BeginTransaction) API.
     // Omitted in old constructors and mocks.
-    String offerId
+    String offerId,
+    // TourVisio "owner provider" of this hotel (pricesearch hotel.provider, e.g. 1). Required as
+    // ownerProvider by GetProductInfo, so the detail screen (GET /hotels/{id}/details) must send it
+    // back — it is surfaced here so the search card carries it. Null when the provider omitted it
+    // or for mock/demo cards; never fabricated.
+    Integer provider
 ) {
     /** Null-safe features so filters can iterate without guarding (missing provider data → empty). */
     public HotelProduct {
@@ -33,12 +38,22 @@ public record HotelProduct(
     }
 
     /**
+     * Backwards-compatible constructor for call sites that carry an offerId but no provider
+     * (mocks/demo data and pre-provider call sites).
+     */
+    public HotelProduct(String id, String hotelName, String region, int stars,
+                        BigDecimal price, String currency, String boardType, boolean availability,
+                        String image, List<String> features, String offerId) {
+        this(id, hotelName, region, stars, price, currency, boardType, availability, image, features, offerId, null);
+    }
+
+    /**
      * Backwards-compatible constructor for call sites that carry features but no offerId.
      */
     public HotelProduct(String id, String hotelName, String region, int stars,
                         BigDecimal price, String currency, String boardType, boolean availability,
                         String image, List<String> features) {
-        this(id, hotelName, region, stars, price, currency, boardType, availability, image, features, null);
+        this(id, hotelName, region, stars, price, currency, boardType, availability, image, features, null, null);
     }
 
     /**

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.paximum.paxassist.flight.config.TourVisioProperties;
 import com.paximum.paxassist.flight.domain.FlightProduct;
+import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioFlightResult;
 import com.paximum.paxassist.flight.infrastructure.dto.response.TourVisioOffer;
@@ -34,6 +35,15 @@ class TourVisioFlightResponseMapperContractTest {
             new TourVisioFlightResponseMapper(new TourVisioProperties(
                     "http://localhost", "tr-TR", "Europe/Istanbul", "agency", "user", "password"));
 
+    /** A search with no baggage request, so every priced fare stays a candidate. */
+    private static FlightSearchCriteria criteriaFor(TripType tripType) {
+        return FlightSearchCriteria.builder().tripType(tripType).build();
+    }
+
+    private static FlightSearchCriteria criteriaWithMinBaggage(TripType tripType, int minKg) {
+        return FlightSearchCriteria.builder().tripType(tripType).minCheckedBaggageKg(minKg).build();
+    }
+
     private TourVisioPriceSearchResponse fixture(String name) throws Exception {
         try (var stream = getClass().getResourceAsStream("/tourvisio/" + name)) {
             assertThat(stream).as("fixture %s", name).isNotNull();
@@ -55,7 +65,7 @@ class TourVisioFlightResponseMapperContractTest {
     void buildsOneRoundTripPerOutbound_pairingItWithAReturnLeg() throws Exception {
         TourVisioPriceSearchResponse response = fixture("pricesearch-roundtrip-listtype3.json");
 
-        List<FlightProduct> products = mapper.toFlightProducts(response, TripType.ROUND_TRIP);
+        List<FlightProduct> products = mapper.toFlightProducts(response, criteriaFor(TripType.ROUND_TRIP));
 
         // The payload holds one outbound leg and one return leg — that is ONE trip, not two flights.
         assertThat(products).hasSize(1);
@@ -69,7 +79,7 @@ class TourVisioFlightResponseMapperContractTest {
     void carriesTheReturnLeg() throws Exception {
         TourVisioPriceSearchResponse response = fixture("pricesearch-roundtrip-listtype3.json");
 
-        FlightProduct trip = mapper.toFlightProducts(response, TripType.ROUND_TRIP).get(0);
+        FlightProduct trip = mapper.toFlightProducts(response, criteriaFor(TripType.ROUND_TRIP)).get(0);
 
         assertThat(trip.getReturnDepartTime()).isEqualTo(Instant.parse("2021-08-27T07:50:00Z"));
         assertThat(trip.getReturnArriveTime()).isEqualTo(Instant.parse("2021-08-27T09:00:00Z"));
@@ -82,7 +92,7 @@ class TourVisioFlightResponseMapperContractTest {
     void carriesABookingTokenForEachLeg_takenFromTheRightLeg() throws Exception {
         TourVisioPriceSearchResponse response = fixture("pricesearch-roundtrip-listtype3.json");
 
-        FlightProduct trip = mapper.toFlightProducts(response, TripType.ROUND_TRIP).get(0);
+        FlightProduct trip = mapper.toFlightProducts(response, criteriaFor(TripType.ROUND_TRIP)).get(0);
 
         assertThat(trip.getOfferId()).isIn(offerIdsOfLeg(response, 1));
         assertThat(trip.getReturnOfferId()).isIn(offerIdsOfLeg(response, 2));
@@ -94,7 +104,7 @@ class TourVisioFlightResponseMapperContractTest {
     void pricesTheTripAsTheSumOfBothLegsWhenTheFareIsNotPackaged() throws Exception {
         TourVisioPriceSearchResponse response = fixture("pricesearch-roundtrip-listtype3.json");
 
-        FlightProduct trip = mapper.toFlightProducts(response, TripType.ROUND_TRIP).get(0);
+        FlightProduct trip = mapper.toFlightProducts(response, criteriaFor(TripType.ROUND_TRIP)).get(0);
 
         assertThat(trip.getPrice()).isEqualByComparingTo(new BigDecimal("218.21"));
         assertThat(trip.getCurrency()).isEqualTo("EUR");
@@ -104,7 +114,7 @@ class TourVisioFlightResponseMapperContractTest {
     void pricesAPackagedTripAsTheDearerLegRatherThanTheSum() throws Exception {
         TourVisioPriceSearchResponse response = packagedVariantOf("pricesearch-roundtrip-listtype3.json");
 
-        FlightProduct trip = mapper.toFlightProducts(response, TripType.ROUND_TRIP).get(0);
+        FlightProduct trip = mapper.toFlightProducts(response, criteriaFor(TripType.ROUND_TRIP)).get(0);
 
         // A packaged offer already covers the whole trip on each leg: max(107.78, 110.43).
         assertThat(trip.getPrice()).isEqualByComparingTo(new BigDecimal("110.43"));
@@ -114,7 +124,7 @@ class TourVisioFlightResponseMapperContractTest {
     void mapsEachOneWayFlightWithNoReturnLeg() throws Exception {
         TourVisioPriceSearchResponse response = fixture("pricesearch-oneway.json");
 
-        List<FlightProduct> products = mapper.toFlightProducts(response, TripType.ONE_WAY);
+        List<FlightProduct> products = mapper.toFlightProducts(response, criteriaFor(TripType.ONE_WAY));
 
         assertThat(products).hasSize(2);
         assertThat(products).allSatisfy(product -> {
@@ -125,12 +135,54 @@ class TourVisioFlightResponseMapperContractTest {
         });
     }
 
+    /**
+     * The provider's own one-way payload sells TK7516 three ways: ECO FLY 21.27 with 15 kg,
+     * EXTRA FLY 24.76 with 20 kg, PRIME FLY 29.41 with 20 kg. With no baggage asked for, the card is
+     * the cheapest fare — and its baggage must be that fare's 15 kg, not another's.
+     */
+    @Test
+    void withNoBaggageRequest_pricesTheCheapestFareAndReportsThatFaresBaggage() throws Exception {
+        TourVisioPriceSearchResponse response = fixture("pricesearch-oneway.json");
+
+        FlightProduct flight = mapper.toFlightProducts(response, criteriaFor(TripType.ONE_WAY)).get(0);
+
+        assertThat(flight.getPrice()).isEqualByComparingTo(new BigDecimal("21.27"));
+        assertThat(flight.getBaggageAllowance().checkedIncluded()).isTrue();
+        assertThat(flight.getBaggageAllowance().checkedKg()).isEqualTo(15);
+    }
+
+    /**
+     * The point of doing this in the search rather than over the finished cards: the cheapest fare
+     * carries 15 kg, so filtering cards would have dropped TK7516 entirely and reported "no 20 kg
+     * flight" — while a 20 kg fare for it exists at 24.76.
+     */
+    @Test
+    void withA20KgRequest_pricesTheCheapestFareThatActuallyCarries20Kg() throws Exception {
+        TourVisioPriceSearchResponse response = fixture("pricesearch-oneway.json");
+
+        List<FlightProduct> products = mapper.toFlightProducts(response, criteriaWithMinBaggage(TripType.ONE_WAY, 20));
+
+        assertThat(products).isNotEmpty();
+        assertThat(products).allSatisfy(product -> {
+            assertThat(product.getBaggageAllowance().checkedKg()).isGreaterThanOrEqualTo(20);
+            // EXTRA FLY (24.76), not PRIME FLY (29.41): still the cheapest fare that qualifies.
+            assertThat(product.getPrice()).isEqualByComparingTo(new BigDecimal("24.76"));
+        });
+    }
+
+    @Test
+    void aThresholdNoFareMeets_yieldsNoFlightRatherThanADearerOne() throws Exception {
+        TourVisioPriceSearchResponse response = fixture("pricesearch-oneway.json");
+
+        assertThat(mapper.toFlightProducts(response, criteriaWithMinBaggage(TripType.ONE_WAY, 30))).isEmpty();
+    }
+
     /** The legacy payload states no group keys and one flat token per leg; pairing still works. */
     @Test
     void stillPairsTheLegsOfALegacyPayload() throws Exception {
         TourVisioPriceSearchResponse response = fixture("pricesearch-roundtrip-legacy.json");
 
-        List<FlightProduct> products = mapper.toFlightProducts(response, TripType.ROUND_TRIP);
+        List<FlightProduct> products = mapper.toFlightProducts(response, criteriaFor(TripType.ROUND_TRIP));
 
         assertThat(products).hasSize(1);
         FlightProduct trip = products.get(0);
@@ -141,8 +193,8 @@ class TourVisioFlightResponseMapperContractTest {
 
     @Test
     void returnsNothingForAnEmptyOrBrokenPayload() {
-        assertThat(mapper.toFlightProducts(null, TripType.ONE_WAY)).isEmpty();
-        assertThat(mapper.toFlightProducts(new TourVisioPriceSearchResponse(null, null), TripType.ONE_WAY)).isEmpty();
+        assertThat(mapper.toFlightProducts(null, criteriaFor(TripType.ONE_WAY))).isEmpty();
+        assertThat(mapper.toFlightProducts(new TourVisioPriceSearchResponse(null, null), criteriaFor(TripType.ONE_WAY))).isEmpty();
     }
 
     /** Same payload, every offer flagged as packaged. */
@@ -155,7 +207,8 @@ class TourVisioFlightResponseMapperContractTest {
                         flight.offer(),
                         flight.allOffers().stream()
                                 .map(offer -> new TourVisioOffer(offer.offerId(), offer.offerIds(),
-                                        offer.groupKeys(), true, offer.price()))
+                                        offer.groupKeys(), true, offer.price(),
+                                        offer.baggageInformations()))
                                 .toList()))
                 .toList();
         return new TourVisioPriceSearchResponse(

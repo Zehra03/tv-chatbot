@@ -61,6 +61,8 @@ public class SlotMerger {
                 pick(update.directFlight(), base.directFlight()),
                 pick(update.airline(), base.airline()),
                 pick(update.departTimeRange(), base.departTimeRange()),
+                pick(update.checkedBaggage(), base.checkedBaggage()),
+                pick(update.minCheckedBaggageKg(), base.minCheckedBaggageKg()),
                 pick(update.adults(), base.adults()),
                 pick(update.children(), base.children()),
                 pick(update.childAges(), base.childAges()),
