@@ -113,16 +113,6 @@ erDiagram
         timestamptz created_at
     }
 
-    app_logs {
-        bigint id PK
-        varchar log_level "DEBUG | INFO | WARN | ERROR"
-        varchar module "orchestrator / guard / hotel / flight / reservation"
-        varchar event_type
-        text message
-        jsonb context "structured, PII-free"
-        bigint session_id "in `logging` schema; correlation only, NO FK"
-        timestamptz created_at
-    }
 ```
 
 ---
@@ -136,12 +126,11 @@ physical `paxassist` database:
 |---|---|
 | **Chat & Session DB** | `chat_sessions`, `chat_messages` |
 | **Reservation DB** | `reservations`, `passengers`, `hotel_reservation_details`, `flight_reservation_details` |
-| **Log DB** | `logging.app_logs` (separate `logging` schema) |
 | **Shared** | `users` |
 
-Chat & Session and Reservation tables live in the `public` schema; the Log DB is isolated in a
-dedicated **`logging`** schema. `app_logs` therefore has **no relationship edge** in the diagram
-(its `session_id` is a loose correlation value, not a foreign key).
+All tables live in the `public` schema. There is no Log DB: logs are **not kept in the database**
+(V8 dropped the `logging` schema and its `app_logs` table, which no code had ever written to). Log
+events go to SLF4J/stdout; a durable destination, if one is chosen, will be outside Postgres.
 
 Live TourVisio search results are cached in **Redis**, not in any of these tables.
 
@@ -165,9 +154,6 @@ Live TourVisio search results are cached in **Redis**, not in any of these table
 - **`hotel_reservation_details`** / **`flight_reservation_details`** — 1:0..1 snapshots of the booked
   product and stay/itinerary parameters. Each uses a **shared primary key** (`reservation_id` is both
   PK and FK to `reservations`), which structurally guarantees at most one detail row per reservation.
-- **`logging.app_logs`** — asynchronous system & error logs (PII-free), isolated in the separate
-  `logging` schema. `session_id` is a loose correlation column with **no foreign key** to
-  `chat_sessions`: logs are written asynchronously and must survive after a session is deleted.
 
 ---
 
@@ -175,7 +161,7 @@ Live TourVisio search results are cached in **Redis**, not in any of these table
 
 - **Surrogate keys:** `BIGINT GENERATED ALWAYS AS IDENTITY` on every table (not UUID). This is a
   single, internal database with no sharding or offline ID generation; BIGINT gives smaller indexes
-  and better write locality on the high-volume tables (`chat_messages`, `app_logs`). The only value
+  and better write locality on the high-volume tables (`chat_messages`). The only value
   exposed externally is `reservations.reservation_number`, a separate human-readable code.
 - **Enums as `VARCHAR` + `CHECK`:** portable, Flyway/Hibernate-friendly (maps cleanly to
   `@Enumerated(EnumType.STRING)`), and easy to extend in a later migration — preferred over native
@@ -191,10 +177,9 @@ Live TourVisio search results are cached in **Redis**, not in any of these table
 - **Cascade rules:** child rows that cannot exist without their parent (`chat_messages`, `passengers`,
   the two detail tables) use `ON DELETE CASCADE`; the loose `reservations.user_id` link uses
   `ON DELETE SET NULL`.
-- **Log isolation:** `app_logs` lives in a separate `logging` schema and carries **no foreign key**
-  to `chat_sessions`. This honours the architecture's distinct "Log DB" store, keeps high-volume
-  append-only logs out of the operational tables, and lets logs be written asynchronously and survive
-  session deletion. `session_id` is kept only as a correlation value.
+- **Logs are not in the database:** the original design isolated them in a `logging` schema; that
+  store has been removed entirely (V8) rather than isolated, so high-volume append-only log traffic
+  never touches this database at all. Log events go to SLF4J/stdout.
 - **Types:** money is `numeric(12,2)` always paired with a `char(3)` ISO-4217 `currency`; stay/flight
   calendar dates use `date`; all instants (including flight depart/arrive times) use `timestamptz`.
   - **`flight_reservation_details` stores precise instants only (no separate date columns):** each leg
@@ -224,8 +209,7 @@ Live TourVisio search results are cached in **Redis**, not in any of these table
 The `product_type` ↔ detail-table consistency is enforced at the application layer (the service
 inserts the matching detail row); a DB-level trigger would be over-engineering for this MVP.
 
-`logging.app_logs` has no relationship in this list by design — it sits in the isolated `logging`
-schema and references no operational table.
+Logs appear nowhere in this list by design — they are not stored in this database (see above).
 
 ---
 
