@@ -12,6 +12,7 @@ import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSeriali
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 
@@ -64,6 +65,11 @@ public class RedisCacheConfig {
         serializer.configure(mapper -> {
             mapper.registerModule(new JavaTimeModule());
             mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+            // A cached value is disposable: if its JSON carries a property the current class no longer
+            // maps (a renamed/removed field, or a derived getter that leaked in), treat it as a cache
+            // miss and re-fetch — never let a stale entry 500 the whole search. This is what turned a
+            // BaggageAllowance "unknown" field left in Redis into an INTERNAL_ERROR on every cache hit.
+            mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
         });
         return serializer;
     }

@@ -9,6 +9,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import com.paximum.paxassist.flight.domain.BaggageAllowance;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 
@@ -89,5 +90,39 @@ class RedisCacheConfigTest {
         assertThat(r.getArriveTime()).isEqualTo(Instant.parse("2026-11-15T10:50:00Z"));
         assertThat(r.getPrice()).isEqualByComparingTo(new BigDecimal("21.27"));
         assertThat(r.getCurrency()).isEqualTo("USD");
+    }
+
+    /**
+     * Guards the BaggageAllowance cache fix. A fare with an <em>unknown</em> allowance
+     * ({@code checkedIncluded == null}) exposes the derived {@code isUnknown()} getter: before the fix
+     * Jackson wrote it as an {@code "unknown"} property the two-arg record constructor cannot read
+     * back, so every cache hit on such a result threw {@code SerializationException} → the flight
+     * search 500'd (only round trips visibly, since one-way keys were cache-missing). The round trip
+     * must now survive, and the restored allowance must keep meaning "unknown".
+     */
+    @Test
+    void jsonRedisSerializer_roundTripsFlightWithUnknownBaggageAllowance() {
+        GenericJackson2JsonRedisSerializer serializer = RedisCacheConfig.jsonRedisSerializer();
+
+        FlightProduct flight = FlightProduct.builder()
+                .id("TK2101")
+                .airline("TK")
+                .origin("AYT")
+                .destination("IST")
+                .departTime(Instant.parse("2026-07-22T18:20:00Z"))
+                .arriveTime(Instant.parse("2026-07-22T19:35:00Z"))
+                .stops(0)
+                .baggageAllowance(BaggageAllowance.unknown())
+                .price(new BigDecimal("1450.00"))
+                .currency("TRY")
+                .build();
+        FlightSearchOutcome outcome = FlightSearchOutcome.complete(List.of(flight));
+
+        Object restored = serializer.deserialize(serializer.serialize(outcome));
+
+        assertThat(restored).isInstanceOf(FlightSearchOutcome.class);
+        FlightProduct r = ((FlightSearchOutcome) restored).results().get(0);
+        assertThat(r.getBaggageAllowance()).isNotNull();
+        assertThat(r.getBaggageAllowance().isUnknown()).isTrue();
     }
 }
