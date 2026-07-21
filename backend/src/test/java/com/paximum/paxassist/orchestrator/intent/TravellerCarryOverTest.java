@@ -18,6 +18,7 @@ class TravellerCarryOverTest {
                 empty.origin(), empty.destination(), empty.departureDate(), empty.returnDate(),
                 empty.cabinClass(), empty.flightMaxPrice(), empty.directFlight(), empty.airline(),
                 empty.departTimeRange(), empty.checkedBaggage(), empty.minCheckedBaggageKg(),
+                empty.tripType(),
                 adults, children, childAges,
                 empty.nationality(), empty.currency(), empty.sortBy(), empty.limit(),
                 empty.selectionReference());

@@ -97,7 +97,7 @@ class ChatViewMapperTest {
         // Regression: a pure hotel search, serialized exactly as the session stores it.
         SlotCriteria hotelSearch = new SlotCriteria(
                 "Antalya", "2026-08-01", "2026-08-05", null, 1, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 2, 0, null, "TR", "EUR",
                 null, null, null);
 
@@ -118,7 +118,7 @@ class ChatViewMapperTest {
     void infersFlightFromRealSlotShapeWhereEveryHotelKeyIsPresentButNull() {
         SlotCriteria flightSearch = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                "IST", "LHR", "2026-08-01", null, null, null, null, null, null, null, null,
+                "IST", "LHR", "2026-08-01", null, null, null, null, null, null, null, null, null,
                 1, 0, null, "TR", "EUR",
                 null, null, null);
 
@@ -135,7 +135,7 @@ class ChatViewMapperTest {
         // adults/nationality/currency belong to both domains → no honest guess.
         SlotCriteria sharedOnly = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 2, 0, null, "TR", "EUR",
                 null, null, null);
 
@@ -174,7 +174,7 @@ class ChatViewMapperTest {
         // The hotel draft needs the breakdown (adult rows + child rows with ages) — fold flight only.
         SlotCriteria hotelSearch = new SlotCriteria(
                 "Antalya", "2026-08-01", "2026-08-05", null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 2, 1, List.of(7), "TR", "EUR",
                 null, null, null);
 
@@ -198,7 +198,7 @@ class ChatViewMapperTest {
     private static SlotCriteria flightSlots(Integer adults, Integer children) {
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                "IST", "LHR", "2026-08-01", null, null, null, null, null, null, null, null,
+                "IST", "LHR", "2026-08-01", null, null, null, null, null, null, null, null, null,
                 adults, children, null, "TR", "EUR",
                 null, null, null);
     }

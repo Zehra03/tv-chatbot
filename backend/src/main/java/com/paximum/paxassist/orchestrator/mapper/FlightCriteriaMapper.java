@@ -9,14 +9,15 @@ import com.paximum.paxassist.ai.SlotCriteria;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
 import com.paximum.paxassist.flight.domain.PassengerCount;
 import com.paximum.paxassist.flight.domain.TripType;
+import com.paximum.paxassist.orchestrator.slot.SlotNormalizer;
 
 /**
  * Adapter translating the AI layer's {@link SlotCriteria} into the flight module's
  * {@link FlightSearchCriteria}. Two inferences happen here:
  * <ul>
- *   <li><b>tripType</b>: a present return date implies {@link TripType#ROUND_TRIP}, else
- *       {@link TripType#ONE_WAY}. (Phase-1 simplification: we can't detect a round-trip
- *       intent when the user hasn't given a return date — see the note below.)</li>
+ *   <li><b>tripType</b>: the trip type the user stated ({@code SlotCriteria#tripType}, filled by
+ *       {@code TripTypeDetector} / extraction) if any; otherwise inferred from the dates — a present
+ *       return date means {@link TripType#ROUND_TRIP}, else {@link TripType#ONE_WAY}.</li>
  *   <li><b>passengers</b>: built only when an adult count exists; otherwise left null so the
  *       flight module reports "passengers" as a missing required field (single source of truth).
  *       Each accompanying child is typed by its age — see {@link #toPassengerCount}.</li>
@@ -36,7 +37,7 @@ public class FlightCriteriaMapper {
     public FlightSearchCriteria toCriteria(SlotCriteria c) {
         LocalDate departDate = parse(c.departureDate());
         LocalDate returnDate = parse(c.returnDate());
-        TripType tripType = (returnDate != null) ? TripType.ROUND_TRIP : TripType.ONE_WAY;
+        TripType tripType = tripType(c.tripType(), returnDate);
 
         // Each accompanying child is typed by its age (infant / child / adult fare) — the flight
         // domain owns that rule, since it is the provider's, not this adapter's.
@@ -63,6 +64,25 @@ public class FlightCriteriaMapper {
                 .checkedBaggage(c.checkedBaggage())
                 .minCheckedBaggageKg(c.minCheckedBaggageKg())
                 .build();
+    }
+
+    /**
+     * The trip the user asked for wins over what the dates happen to show. A stated round trip with
+     * no return date yet therefore stays {@link TripType#ROUND_TRIP}, which is exactly what makes the
+     * flight module report {@code returnDate} as missing so the chat asks for it — before this, the
+     * absent date silently turned the request into a one-way search.
+     *
+     * <p>A return date still implies a round trip when the user never named a direction, and an
+     * explicit "tek yön" wins over a leftover date (the handler also clears it).
+     */
+    private TripType tripType(String statedTripType, LocalDate returnDate) {
+        if (SlotNormalizer.TRIP_TYPE_ROUND.equals(statedTripType)) {
+            return TripType.ROUND_TRIP;
+        }
+        if (SlotNormalizer.TRIP_TYPE_ONE_WAY.equals(statedTripType)) {
+            return TripType.ONE_WAY;
+        }
+        return (returnDate != null) ? TripType.ROUND_TRIP : TripType.ONE_WAY;
     }
 
     private LocalDate parse(String date) {

@@ -16,6 +16,8 @@ import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationComposer;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
+import com.paximum.paxassist.orchestrator.slot.SlotNormalizer;
+import com.paximum.paxassist.orchestrator.slot.TripTypeDetector;
 import com.paximum.paxassist.orchestrator.slot.LocationGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
@@ -37,18 +39,22 @@ public class FlightSearchHandler implements IntentHandler {
 
     private final LocationGuard locationGuard;
 
+    private final TripTypeDetector tripTypeDetector;
+
     public FlightSearchHandler(SlotFillingService slotFilling,
             FlightCriteriaMapper mapper,
             FlightSearchService flightSearchService,
             ClarificationComposer clarifications,
             SlotGuard slotGuard,
-            LocationGuard locationGuard) {
+            LocationGuard locationGuard,
+            TripTypeDetector tripTypeDetector) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.flightSearchService = flightSearchService;
         this.clarifications = clarifications;
         this.slotGuard = slotGuard;
         this.locationGuard = locationGuard;
+        this.tripTypeDetector = tripTypeDetector;
     }
 
     @Override
@@ -63,7 +69,22 @@ public class FlightSearchHandler implements IntentHandler {
             context.session().switchDomain("FLIGHT");
         }
         
-        SlotCriteria unnormalizedMerged = slotFilling.peekMerge(context.session(), context.criteria());
+        // What the user said about the DIRECTION of the trip, read deterministically from this turn's
+        // message. It has to be settled before the search runs: the trip type is what makes a return
+        // date required, so "gidiş-dönüş" arriving unnoticed means one-way results for a round-trip
+        // request. Turns that say nothing about direction leave the accumulated value alone.
+        SlotCriteria incoming = context.criteria() == null ? SlotCriteria.empty() : context.criteria();
+        Optional<String> statedTripType = tripTypeDetector.detect(context.userMessage());
+        if (statedTripType.isPresent()) {
+            incoming = incoming.withTripType(statedTripType.get());
+            if (SlotNormalizer.TRIP_TYPE_ONE_WAY.equals(statedTripType.get())) {
+                // "Tek yön olsun" after a round-trip turn: the old return date is no longer part of
+                // the request, and keeping it would re-derive ROUND_TRIP on the next merge.
+                context.session().getAccumulatedCriteria().remove("returnDate");
+            }
+        }
+
+        SlotCriteria unnormalizedMerged = slotFilling.peekMerge(context.session(), incoming);
 
         // Deterministic guard over the newly extracted criteria to catch past dates and
         // invalid
@@ -80,7 +101,7 @@ public class FlightSearchHandler implements IntentHandler {
             return OrchestrationResult.clarify(invalidLocation.get(), "flight");
         }
 
-        SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());
+        SlotCriteria merged = slotFilling.accumulate(context.session(), incoming);
 
         String carriedOver = TravellerCarryOver.note(switchedDomain, context.criteria(), merged);
 

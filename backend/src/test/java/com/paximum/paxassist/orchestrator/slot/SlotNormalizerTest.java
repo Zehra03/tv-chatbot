@@ -24,7 +24,7 @@ class SlotNormalizerTest {
         String checkOut = LocalDate.now().plusDays(5).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, checkIn, checkOut, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
@@ -41,7 +41,7 @@ class SlotNormalizerTest {
         String checkOut = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, checkIn, checkOut, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
@@ -58,7 +58,7 @@ class SlotNormalizerTest {
         String returnDate = LocalDate.now().plusDays(2).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, depart, returnDate, null, null, null, null, null, null, null,
+                null, null, depart, returnDate, null, null, null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
@@ -66,6 +66,34 @@ class SlotNormalizerTest {
         SlotCriteria normalized = normalizer.normalize(criteria);
 
         assertThat(normalized.returnDate()).isNull();
+    }
+
+    @Test
+    void keepsAStatedRoundTripEvenWithoutAReturnDate() {
+        // "Gidiş-dönüş arıyorum" with no date yet: the trip type must survive normalization, since
+        // it is what makes the search ask for the return date instead of running one-way.
+        SlotCriteria criteria = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, LocalDate.now().plusDays(5).toString(), null, null, null, null, null,
+                null, null, null, "GIDIŞ-DÖNÜŞ",
+                null, null, null, null, null,
+                null, null, null
+        );
+
+        assertThat(normalizer.normalize(criteria).tripType()).isEqualTo(SlotNormalizer.TRIP_TYPE_ROUND);
+    }
+
+    @Test
+    void aReturnDateMakesItARoundTripEvenIfTheUserNeverSaidSo() {
+        SlotCriteria criteria = new SlotCriteria(
+                null, null, null, null, null, null, null, null, null, null,
+                null, null, LocalDate.now().plusDays(5).toString(), LocalDate.now().plusDays(9).toString(),
+                null, null, null, null, null, null, null, null,
+                null, null, null, null, null,
+                null, null, null
+        );
+
+        assertThat(normalizer.normalize(criteria).tripType()).isEqualTo(SlotNormalizer.TRIP_TYPE_ROUND);
     }
 
     @Test
@@ -77,7 +105,7 @@ class SlotNormalizerTest {
 
         SlotCriteria criteria = new SlotCriteria(
                 null, pastCheckIn, pastCheckOut, null, null, null, null, null, null, null,
-                null, null, pastDepart, pastReturn, null, null, null, null, null, null, null,
+                null, null, pastDepart, pastReturn, null, null, null, null, null, null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
@@ -94,7 +122,7 @@ class SlotNormalizerTest {
     void shouldClearInvalidNumericValues() {
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, 0, null, null, null, null, -100,
-                null, null, null, null, null, -50, null, null, null, null, null,
+                null, null, null, null, null, -50, null, null, null, null, null, null,
                 0, -1, java.util.List.of(5, -2, 8), null, null,
                 null, null, null
         );
@@ -113,7 +141,7 @@ class SlotNormalizerTest {
     void shouldDropChildAgesOutsideZeroToSeventeen() {
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null,
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 null, null, java.util.List.of(5, 25, 17, -3), null, null,
                 null, null, null
         );
@@ -130,7 +158,7 @@ class SlotNormalizerTest {
         String depart = LocalDate.now().plusDays(3).toString();
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
-                "İstanbul", "İzmir", depart, null, null, null, Boolean.TRUE, "THY", "morning", null, null,
+                "İstanbul", "İzmir", depart, null, null, null, Boolean.TRUE, "THY", "morning", null, null, null,
                 null, null, null, null, null,
                 null, null, null
         );
