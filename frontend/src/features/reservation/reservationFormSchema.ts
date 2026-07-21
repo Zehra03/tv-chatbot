@@ -26,10 +26,15 @@ export const TITLE_OPTIONS = [
   { value: '2', label: 'Bayan' },
 ] as const
 
-/** Backend PreviewReservationCommand ile aynı sınırlar (ADULT 18+, CHILD 3-17, INFANT 0-2). */
-const ADULT_MIN_AGE = 18
+/**
+ * Backend `PassengerType` bantlarının (ADULT 18+, CHILD 3–17, INFANT 0–2) istemci kopyası.
+ * Ağdan gelmediği için gerçek anlamda "tek kaynak" DEĞİL — elle senkron tutulan bir kopya; bu
+ * yüzden `passengerAgeBands.contract.test.ts` backend enum'ını okuyup değerleri karşılaştırır ve
+ * ayrışırlarsa CI'yı kırar (aksi hâlde form, sunucunun reddedeceği bir yaşı kabul etmeye başlar).
+ */
+export const ADULT_MIN_AGE = 18
 const INFANT_MAX_AGE = 2
-const MAX_AGE = 120
+export const MAX_AGE = 120
 
 /**
  * Çocuk yolcunun kabul edilen yaş aralığı — ARAMA formu da bunu kullanır (HotelsPage).
@@ -116,13 +121,13 @@ export const makePassengerSchema = (productType: ReservationDraft['productType']
       passengerType: z.enum(['adult', 'child']),
       // Ünvan zorunlu (TourVisio setReservationInfo şartı).
       title: z.enum(['1', '2']),
-      age: z
-        .string()
-        .optional()
-        .refine(
-          (v) => !v || (/^\d{1,3}$/.test(v) && Number(v) <= MAX_AGE),
-          `Geçerli bir yaş girin (0–${MAX_AGE})`,
-        ),
+      /**
+       * Aralık kontrolü burada DEĞİL, superRefine'da yapılır: sınır yolcu tipine bağlı
+       * (yetişkin 18–120, çocuk 3–17) ve tip bu alandan görünmez. Tek aşamalı kontrol,
+       * kullanıcının önce "0–120" görüp 10 yazdıktan sonra "18+ olmalı" ile karşılaşmasını
+       * engeller — ilk uyarı doğrudan gerçek aralığı söyler.
+       */
+      age: z.string().optional(),
       // Uyruk zorunlu (TourVisio şartı); aramadan önden doldurulur.
       nationality: nationalitySchema,
       // Doğum tarihi (yyyy-MM-dd) ve TC kimlik no — uçuş biletlemesi için ZORUNLU, otelde opsiyonel.
@@ -133,24 +138,22 @@ export const makePassengerSchema = (productType: ReservationDraft['productType']
       identityNumber: z.string().optional(),
     })
     .superRefine((p, ctx) => {
-      const age = p.age?.trim() ? Number(p.age) : null
-
+      const rawAge = p.age?.trim() ?? ''
+      const isChild = p.passengerType === 'child'
       // Yaş ↔ tip tutarlılığı — backend'in isTravellerAgeConsistentWithType kuralı.
-      if (p.passengerType === 'child') {
-        if (age === null) {
+      const [minAge, maxAge] = isChild ? [CHILD_MIN_AGE, CHILD_MAX_AGE] : [ADULT_MIN_AGE, MAX_AGE]
+      const age = /^\d{1,3}$/.test(rawAge) ? Number(rawAge) : null
+
+      if (!rawAge) {
+        // Yetişkinde yaş opsiyonel (uçuşta doğum tarihi ayrıca zorunlu), çocukta şart.
+        if (isChild) {
           ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['age'], message: 'Çocuk için yaş gerekli' })
-        } else if (age < CHILD_MIN_AGE || age > CHILD_MAX_AGE) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ['age'],
-            message: `Çocuk yaşı ${CHILD_MIN_AGE}–${CHILD_MAX_AGE} arasında olmalı`,
-          })
         }
-      } else if (age !== null && age < ADULT_MIN_AGE) {
+      } else if (age === null || age < minAge || age > maxAge) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: ['age'],
-          message: `Yetişkin yolcu en az ${ADULT_MIN_AGE} yaşında olmalı`,
+          message: `Geçerli bir yaş girin (${minAge}–${maxAge})`,
         })
       }
 
