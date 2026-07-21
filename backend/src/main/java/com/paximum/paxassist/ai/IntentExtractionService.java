@@ -410,9 +410,13 @@ public class IntentExtractionService {
     public IntentExtractionResult extract(@NonNull String userMessage,
                                           @NonNull List<ChatHistoryEntry> history) {
         if (greetingDetector.isPureGreeting(userMessage)) {
-            // Language is left undetected here: a bare greeting is answered with a fixed,
-            // language-neutral sentence downstream, so there is nothing to localise.
-            return new IntentExtractionResult(IntentType.GREETING, null);
+            // The greeting is answered by a fixed sentence downstream, but its language is resolved
+            // here (from the greeting words, no model call) so that fixed reply is still localized to
+            // the user — "hello" is answered in English, not Turkish. A neutral greeting stays null →
+            // default (Turkish).
+            String language = greetingDetector.greetingLanguage(userMessage).orElse(null);
+            LanguageConfidence confidence = language != null ? LanguageConfidence.HIGH : null;
+            return new IntentExtractionResult(IntentType.GREETING, null, language, confidence);
         }
 
         String combinedPrompt = buildPrompt(userMessage, history);

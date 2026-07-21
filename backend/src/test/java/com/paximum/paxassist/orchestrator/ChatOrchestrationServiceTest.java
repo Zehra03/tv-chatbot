@@ -372,24 +372,56 @@ class ChatOrchestrationServiceTest {
     }
 
     /**
-     * The OTHER path already answers in the user's language (FallbackHandler → ChatService), so the
-     * orchestrator must NOT run a redundant localization pass over it.
+     * The free-form OTHER reply must be localized too: the assistant's own prompt is Turkish-heavy
+     * and cannot be trusted to answer in the user's language on its own, so the localizer is what
+     * guarantees a non-Turkish user gets a non-Turkish answer.
      */
     @Test
-    void otherIntent_isNotReLocalized_evenForNonTurkishLanguage() {
+    void otherIntent_isAlsoLocalized_soFreeFormRepliesFollowTheUserLanguage() {
         ChatSession session = new ChatSession("s1");
         when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
         when(intentExtraction.extract(eq("what's the weather"), anyList()))
                 .thenReturn(new IntentExtractionResult(IntentType.OTHER, null, "en",
                         com.paximum.paxassist.ai.LanguageConfidence.HIGH));
         when(intentRouter.route(IntentType.OTHER)).thenReturn(handler);
-        when(handler.handle(any()))
-                .thenReturn(OrchestrationResult.message("I can only help with hotel or flight search."));
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message(
+                "Yalnızca otel veya uçuş aramasında yardımcı olabilirim."));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize("Yalnızca otel veya uçuş aramasında yardımcı olabilirim.", "en"))
+                .thenReturn("I can only help with hotel or flight search.");
 
-        OrchestrationOutcome outcome = service().handle("s1", "what's the weather", CALLER);
+        OrchestrationResult result = service().handle("s1", "what's the weather", CALLER).result();
 
-        assertThat(outcome.result().reply()).isEqualTo("I can only help with hotel or flight search.");
-        verifyNoInteractions(replyLocalizer);
+        assertThat(result.reply()).isEqualTo("I can only help with hotel or flight search.");
+        // Persisted transcript is in the user's language too.
+        assertThat(session.getMessages().get(1).content())
+                .isEqualTo("I can only help with hotel or flight search.");
+    }
+
+    /**
+     * A greeting whose language the detector resolved (here English "hello") is localized too, so the
+     * fixed Turkish greeting reaches an English user in English.
+     */
+    @Test
+    void englishGreeting_isLocalized() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("hello"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.GREETING, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        when(intentRouter.route(IntentType.GREETING)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message(
+                "Merhaba! Ben seyahat asistanın Paxi. Sana nasıl yardımcı olabilirim? Otel mi yoksa uçuş mu arıyorsun?"));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize(
+                "Merhaba! Ben seyahat asistanın Paxi. Sana nasıl yardımcı olabilirim? Otel mi yoksa uçuş mu arıyorsun?",
+                "en"))
+                .thenReturn("Hi! I'm your travel assistant Paxi. How can I help you? Are you looking for a hotel or a flight?");
+
+        OrchestrationResult result = service().handle("s1", "hello", CALLER).result();
+
+        assertThat(result.reply())
+                .isEqualTo("Hi! I'm your travel assistant Paxi. How can I help you? Are you looking for a hotel or a flight?");
     }
 
     @Test

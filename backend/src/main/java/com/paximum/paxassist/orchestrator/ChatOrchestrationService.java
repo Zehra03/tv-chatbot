@@ -90,13 +90,14 @@ public class ChatOrchestrationService {
                 new OrchestrationContext(session, userMessage, extraction.intent(), extraction.criteria());
         OrchestrationResult result = intentRouter.route(extraction.intent()).handle(context);
 
-        // 3b. Localize the deterministic reply into the language of THIS message. OTHER already
-        //     answers in-language (FallbackHandler → ChatService), and a null/Turkish language
-        //     (greeting, parse failure, Turkish user) is a no-op — so only the template-driven
-        //     search flows for a non-Turkish user pay for a translation. The localized text is what
-        //     we persist below, keeping the transcript in the user's language for later context.
-        if (extraction.intent() != IntentType.OTHER
-                && replyLocalizer.shouldLocalize(extraction.detectedLanguage())) {
+        // 3b. Localize the reply into the language of THIS message. The localizer is the single
+        //     source of the output language for EVERY routed reply — the deterministic search flows
+        //     AND the free-form OTHER reply (the assistant's own prompt is Turkish-heavy and cannot
+        //     be trusted to answer in-language on its own). A null/Turkish language (bare greeting,
+        //     parse failure, Turkish user) is a no-op, so only a non-Turkish user pays for a
+        //     translation. The localized text is what we persist, keeping the transcript in the
+        //     user's language for later context.
+        if (replyLocalizer.shouldLocalize(extraction.detectedLanguage())) {
             result = localizeReply(result, extraction.detectedLanguage());
         }
 
