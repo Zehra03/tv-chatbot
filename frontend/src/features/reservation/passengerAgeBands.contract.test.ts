@@ -23,15 +23,36 @@ const ENUM_PATH = resolve(
   '../../../../backend/src/main/java/com/paximum/paxassist/reservation/domain/PassengerType.java',
 )
 
-/** `ADULT(18, MAX_AGE),` → { ADULT: ['18', 'MAX_AGE'] } */
+/**
+ * `ADULT(18, PassengerType.MAX_AGE),` → { ADULT: ['18', 'MAX_AGE'] }
+ *
+ * Sınır ya bir sayı ya da bir sabitin adıdır; sabit `PassengerType.` ile nitelenmiş yazılır
+ * (enum sabitleri MAX_AGE bildiriminden önce geldiği için Java düz adı "illegal forward
+ * reference" sayıyor), bu yüzden nokta da desene dahil ve önek atılır.
+ */
 function readBackendBands(source: string): Record<string, [string, string]> {
   const bands: Record<string, [string, string]> = {}
   for (const [, name, min, max] of source.matchAll(
-    /^\s{4}(ADULT|CHILD|INFANT)\(\s*([\w]+)\s*,\s*([\w]+)\s*\)/gm,
+    /^\s{4}(ADULT|CHILD|INFANT)\(\s*([\w.]+)\s*,\s*([\w.]+)\s*\)/gm,
   )) {
-    bands[name] = [min, max]
+    bands[name] = [unqualify(min), unqualify(max)]
+  }
+  // Desen tutmazsa hata "undefined okunamadı" diye değil, gerçekten olan şeyle çıksın:
+  // enum'ın bant yazımı değişmiş ve bu test artık hiçbir şeyi doğrulamıyor.
+  for (const type of ['ADULT', 'CHILD', 'INFANT']) {
+    if (!bands[type]) {
+      throw new Error(
+        `PassengerType.java içinde ${type} bandı okunamadı — bant yazımı değişmiş olabilir. ` +
+          `Beklenen biçim: "    ${type}(<min>, <max>),". Testin desenini güncelle.`,
+      )
+    }
   }
   return bands
+}
+
+/** `PassengerType.MAX_AGE` → `MAX_AGE`; sayılar olduğu gibi kalır. */
+function unqualify(value: string): string {
+  return value.replace(/^PassengerType\./, '')
 }
 
 function readBackendMaxAge(source: string): number {
