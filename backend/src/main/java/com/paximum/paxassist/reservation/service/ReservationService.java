@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.paximum.paxassist.common.log.LogModuleClient;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
+import com.paximum.paxassist.reservation.domain.ReservationCaller;
 import com.paximum.paxassist.reservation.domain.ReservationStatus;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.client.TourVisioBookingClient;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.dto.request.AddServicesRequest;
@@ -162,7 +163,8 @@ public class ReservationService {
         // Freeze what TourVisio actually charges, so confirm and the persisted reservation both carry it.
         PreviewReservationCommand repriced = command.withTotalAmount(amount, currency);
         String previewId = UUID.randomUUID().toString();
-        PendingReservation snapshot = new PendingReservation(previewId, command.userId(), Instant.now(), repriced);
+        PendingReservation snapshot = new PendingReservation(
+                previewId, command.userId(), command.guestToken(), Instant.now(), repriced);
         pendingStore.savePreview(snapshot);
 
         log.info("Reservation preview created: previewId={}, productType={}, ttl={}",
@@ -215,15 +217,19 @@ public class ReservationService {
     /**
      * Final confirm: atomically claims the snapshot (concurrency guard), checks ownership, then runs
      * the TourVisio transaction flow (begin → add → setInfo → commit) and persists on success.
+     *
+     * <p>{@code caller} is a logged-in user or an anonymous guest — booking is open to both. Ownership
+     * is compared through {@link ReservationCaller#owns}, never by bare user id: two guests both have a
+     * null user id, so an id-only check would let any visitor confirm another's preview.
      */
-    public ConfirmationResult confirmReservation(String previewId, Long userId) {
+    public ConfirmationResult confirmReservation(String previewId, ReservationCaller caller) {
         // Non-destructive pre-check so an ownership mismatch or plain expiry doesn't consume a valid preview.
         Optional<PendingReservation> peek = pendingStore.peekPreview(previewId);
         if (peek.isEmpty()) {
             return new ConfirmationResult.PreviewExpired();
         }
         // Ownership check belongs here even though full enforcement is finalized in ticket 5.
-        if (!Objects.equals(peek.get().userId(), userId)) {
+        if (!caller.owns(peek.get().userId(), peek.get().guestToken())) {
             log.warn("Ownership mismatch on confirm: previewId={} requested by a non-owner", previewId);
             return new ConfirmationResult.OwnershipMismatch();
         }
@@ -235,11 +241,11 @@ public class ReservationService {
         }
 
         PendingReservation snapshot = claimed.get();
-        ConfirmationResult result = runTransactionFlow(snapshot.command(), userId);
+        ConfirmationResult result = runTransactionFlow(snapshot.command(), caller);
         // A failure that definitely bought nothing must not cost the user their preview: put the
         // snapshot back so the same previewId can be retried (see restoreIfNothingWasPurchased).
         result = restoreIfNothingWasPurchased(snapshot, result);
-        logConfirmOutcome(snapshot.command(), userId, result);
+        logConfirmOutcome(snapshot.command(), caller, result);
         return result;
     }
 
@@ -283,12 +289,12 @@ public class ReservationService {
      * Resumes at commit after the user acknowledges a {@code setReservationInfo} warning. Atomically
      * claims the awaiting-commit state so a duplicate acknowledgement cannot commit twice.
      */
-    public ConfirmationResult confirmReservationAfterWarning(String confirmationToken, Long userId) {
+    public ConfirmationResult confirmReservationAfterWarning(String confirmationToken, ReservationCaller caller) {
         Optional<AwaitingCommit> peek = pendingStore.peekAwaitingCommit(confirmationToken);
         if (peek.isEmpty()) {
             return new ConfirmationResult.PreviewExpired();
         }
-        if (!Objects.equals(peek.get().userId(), userId)) {
+        if (!caller.owns(peek.get().userId(), peek.get().guestToken())) {
             log.warn("Ownership mismatch on second confirm: token rejected");
             return new ConfirmationResult.OwnershipMismatch();
         }
@@ -298,8 +304,8 @@ public class ReservationService {
             return new ConfirmationResult.DuplicateInProgress();
         }
         AwaitingCommit awaiting = claimed.get();
-        ConfirmationResult result = commitAndPersist(awaiting.command(), awaiting.transactionId(), userId);
-        logConfirmOutcome(awaiting.command(), userId, result);
+        ConfirmationResult result = commitAndPersist(awaiting.command(), awaiting.transactionId(), caller);
+        logConfirmOutcome(awaiting.command(), caller, result);
         return result;
     }
 
@@ -333,6 +339,31 @@ public class ReservationService {
                 .filter(reservation -> Objects.equals(reservation.getUserId(), userId))
                 .map(this::initializeAssociations)
                 .map(reservation -> new ReservationDetailResult(reservation, fetchCancellationOptions(reservation)));
+    }
+
+    /**
+     * Public retrieval by PNR + surname — how a guest, who has no account and no reservation list,
+     * gets back to their booking (and how a logged-in user finds one made before they registered).
+     *
+     * <p>Deliberately different from {@link #getReservationDetail}: no TourVisio
+     * {@code getCancellationPenalty} call. That endpoint is authenticated and rate-limited by
+     * principal; this one is open to the internet, and firing a provider request per attempt would
+     * hand anyone a free amplification lever against TourVisio. The lookup answers "here is your
+     * booking", not "here is what cancelling costs".
+     *
+     * <p>Both inputs are trimmed; the surname is matched case-insensitively. A blank PNR or surname
+     * returns empty rather than reaching the DB — an empty surname must never behave like a wildcard.
+     */
+    @Transactional(readOnly = true)
+    public Optional<Reservation> lookupReservation(String pnr, String surname) {
+        String normalizedPnr = pnr == null ? "" : pnr.trim();
+        String normalizedSurname = surname == null ? "" : surname.trim();
+        if (normalizedPnr.isEmpty() || normalizedSurname.isEmpty()) {
+            return Optional.empty();
+        }
+        return reservationRepository
+                .findByReservationNumberAndPassengerSurname(normalizedPnr, normalizedSurname)
+                .map(this::initializeAssociations);
     }
 
     /**
@@ -436,7 +467,7 @@ public class ReservationService {
     // TourVisio transaction flow
     // =========================================================================================
 
-    private ConfirmationResult runTransactionFlow(PreviewReservationCommand command, Long userId) {
+    private ConfirmationResult runTransactionFlow(PreviewReservationCommand command, ReservationCaller caller) {
         // begin
         TourVisioCallResult<TransactionResponse> begin =
                 bookingClient.beginTransactionWithOffer(requestMapper.toBeginRequest(command));
@@ -476,12 +507,13 @@ public class ReservationService {
         if (setHeader != null && setHeader.requiresConfirmation()) {
             String token = UUID.randomUUID().toString();
             List<String> warnings = warningMessages(setHeader);
-            pendingStore.saveAwaitingCommit(new AwaitingCommit(token, userId, transactionId, Instant.now(), command, warnings));
+            pendingStore.saveAwaitingCommit(new AwaitingCommit(
+                    token, caller.userId(), caller.guestToken(), transactionId, Instant.now(), command, warnings));
             log.info("setReservationInfo needs user confirmation ({}). Awaiting explicit second confirm.", warnings);
             return new ConfirmationResult.NeedsUserConfirmation(token, warnings);
         }
 
-        return commitAndPersist(command, transactionId, userId);
+        return commitAndPersist(command, transactionId, caller);
     }
 
     /**
@@ -539,7 +571,8 @@ public class ReservationService {
                 chargedCurrency == null ? command.currency() : chargedCurrency));
     }
 
-    private ConfirmationResult commitAndPersist(PreviewReservationCommand command, String transactionId, Long userId) {
+    private ConfirmationResult commitAndPersist(PreviewReservationCommand command, String transactionId,
+            ReservationCaller caller) {
         TourVisioCallResult<CommitTransactionResponse> commit =
                 bookingClient.commitTransaction(requestMapper.toCommitRequest(command, transactionId));
 
@@ -769,17 +802,26 @@ public class ReservationService {
      * is recorded as SUCCESS (persisted) or FAILED. The payload is a PII-safe summary only —
      * passenger names and contact details are never included.
      */
-    private void logConfirmOutcome(PreviewReservationCommand command, Long userId, ConfirmationResult result) {
+    private void logConfirmOutcome(PreviewReservationCommand command, ReservationCaller caller,
+            ConfirmationResult result) {
         if (result instanceof ConfirmationResult.NeedsUserConfirmation) {
             return;
         }
         if (result instanceof ConfirmationResult.Confirmed confirmed) {
             logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
-                    "SUCCESS", "Reservation " + confirmed.reservationNumber() + " confirmed for user " + userId);
+                    "SUCCESS", "Reservation " + confirmed.reservationNumber() + " confirmed for " + callerLabel(caller));
         } else {
             logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
-                    "FAILED", "Confirm failed for user " + userId + ": " + result.getClass().getSimpleName());
+                    "FAILED", "Confirm failed for " + callerLabel(caller) + ": " + result.getClass().getSimpleName());
         }
+    }
+
+    /**
+     * Who the log line is about, without leaking the guest token — that token is a bearer key, so it
+     * belongs in logs no more than a session cookie does.
+     */
+    private String callerLabel(ReservationCaller caller) {
+        return caller.isGuest() ? "guest" : "user " + caller.userId();
     }
 
     /** Emits a non-blocking LogMod event for a cancel outcome (a not-found/not-owned result is not logged). */

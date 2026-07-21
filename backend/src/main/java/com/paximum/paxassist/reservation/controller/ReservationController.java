@@ -10,10 +10,14 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.paximum.paxassist.auth.security.UserPrincipal;
+import com.paximum.paxassist.reservation.domain.ReservationCaller;
 import com.paximum.paxassist.reservation.service.CancelResult;
 import com.paximum.paxassist.reservation.service.ConfirmationResult;
 import com.paximum.paxassist.reservation.service.PreviewResult;
@@ -32,14 +36,29 @@ import jakarta.validation.Valid;
 /**
  * Reservation HTTP API. Thin plumbing over {@link ReservationService}; no business logic here.
  *
- * <p>The current user is taken from the authenticated JWT principal ({@link UserPrincipal#getId()}),
- * never from the client. {@code /api/v1/reservations/**} requires an authenticated USER/ADMIN
- * (enforced centrally in {@code SecurityConfig}), so a principal is always present. Ownership is
- * enforced in the service for every id-scoped operation (confirm, detail, cancel).
+ * <p>The caller is resolved server-side, never taken from the request body: a logged-in user from the
+ * JWT principal ({@link UserPrincipal#getId()}), or an anonymous guest from the opaque
+ * {@code X-Guest-Id} header — the same identity scheme the chat module already uses.
+ *
+ * <p><b>Who may call what</b> (the path rules live centrally in {@code SecurityConfig}):
+ * <ul>
+ *   <li>{@code POST /preview}, {@code POST /} and {@code GET /lookup} are open to guests — booking no
+ *       longer requires an account. Preview/confirm still need <em>an</em> identity, so the
+ *       preview → confirm handoff stays scoped to the browser that started it.</li>
+ *   <li>{@code GET /}, {@code GET /{id}} and cancel remain account-only: they are keyed by user id
+ *       and a reservation list is exactly what a guest does not have. A guest reaches their booking
+ *       through {@code GET /lookup} (PNR + surname) instead.</li>
+ * </ul>
+ *
+ * <p>Ownership is enforced in the service for every id-scoped operation (confirm, detail, cancel).
  */
 @RestController
 @RequestMapping("/api/v1/reservations")
 public class ReservationController {
+
+    /** Bound by the {@code guest_token varchar(64)} column; longer values are rejected, not truncated. */
+    private static final int MAX_GUEST_ID_LENGTH = 64;
+    private static final String GUEST_ID_HEADER = "X-Guest-Id";
 
     private final ReservationService reservationService;
     private final ReservationWebMapper mapper;
@@ -56,8 +75,9 @@ public class ReservationController {
     @PostMapping("/preview")
     public ResponseEntity<?> preview(
             @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = GUEST_ID_HEADER, required = false) String guestId,
             @Valid @RequestBody PreviewReservationCommand command) {
-        PreviewResult result = reservationService.previewReservation(command.withUserId(principal.getId()));
+        PreviewResult result = reservationService.previewReservation(command.withCaller(resolveCaller(principal, guestId)));
         return switch (result) {
             case PreviewResult.Priced p -> ResponseEntity.ok(mapper.toPreviewResponse(p.preview()));
             // The offer is gone (sold out / expired). The flow stops here with a plain explanation
@@ -80,12 +100,30 @@ public class ReservationController {
     @PostMapping
     public ResponseEntity<?> confirm(
             @AuthenticationPrincipal UserPrincipal principal,
+            @RequestHeader(value = GUEST_ID_HEADER, required = false) String guestId,
             @Valid @RequestBody ConfirmRequest request) {
-        Long userId = principal.getId();
+        ReservationCaller caller = resolveCaller(principal, guestId);
         ConfirmationResult result = request.confirmationToken() != null && !request.confirmationToken().isBlank()
-                ? reservationService.confirmReservationAfterWarning(request.confirmationToken(), userId)
-                : reservationService.confirmReservation(request.previewId(), userId);
+                ? reservationService.confirmReservationAfterWarning(request.confirmationToken(), caller)
+                : reservationService.confirmReservation(request.previewId(), caller);
         return toConfirmResponse(result);
+    }
+
+    /**
+     * GET /api/v1/reservations/lookup?pnr=…&amp;surname=… — public retrieval of a single booking.
+     * Open to guests by design: it is the only way back to a reservation made without an account.
+     *
+     * <p>The surname is the second factor guarding the PNR, so a wrong pair and an unknown PNR must be
+     * indistinguishable — both return 404. Reporting "PNR exists, wrong surname" would turn this into
+     * a PNR oracle, and the response body carries passenger contact details.
+     */
+    @GetMapping("/lookup")
+    public ResponseEntity<?> lookup(@RequestParam String pnr, @RequestParam String surname) {
+        return reservationService.lookupReservation(pnr, surname)
+                .<ResponseEntity<?>>map(r -> ResponseEntity.ok(mapper.toDetail(r, List.of())))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(new OutcomeResponse("RESERVATION_NOT_FOUND",
+                                "Bu rezervasyon numarası ve soyadla eşleşen bir rezervasyon bulunamadı.")));
     }
 
     /** GET /api/v1/reservations — current user's reservations. */
@@ -116,6 +154,27 @@ public class ReservationController {
             @Valid @RequestBody CancelRequest request) {
         CancelResult result = reservationService.cancelReservation(id, principal.getId(), request.reason(), request.serviceIds());
         return toCancelResponse(id, result);
+    }
+
+    /**
+     * A logged-in user wins over any guest header; otherwise the request must carry a usable
+     * {@code X-Guest-Id}. A request with neither identity is unauthorized — the preview it creates
+     * would be owned by nobody, and the confirm that follows could then be issued by anyone.
+     * An over-length guest id is a bad request (it would overflow the column).
+     */
+    private ReservationCaller resolveCaller(UserPrincipal principal, String guestId) {
+        if (principal != null) {
+            return ReservationCaller.authenticated(principal.getId());
+        }
+        String trimmed = guestId == null ? "" : guestId.trim();
+        if (trimmed.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Authentication or a guest session (X-Guest-Id) is required.");
+        }
+        if (trimmed.length() > MAX_GUEST_ID_LENGTH) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid guest session id.");
+        }
+        return ReservationCaller.guest(trimmed);
     }
 
     // --- Result -> HTTP mapping ---------------------------------------------------------------------

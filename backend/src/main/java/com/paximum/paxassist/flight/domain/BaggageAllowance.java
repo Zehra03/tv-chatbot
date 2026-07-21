@@ -1,5 +1,8 @@
 package com.paximum.paxassist.flight.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 /**
  * What a fare includes in checked baggage, and the rule for deciding whether it meets what the
  * traveller asked for.
@@ -15,7 +18,14 @@ package com.paximum.paxassist.flight.domain;
  * <p>An unknown allowance never satisfies a baggage request: a fare we cannot verify must not be
  * presented as "20 kg bagajlı". It is only dropped when the traveller actually asked about baggage —
  * with no request, an unknown allowance is just a card without that detail.
+ *
+ * <p><b>Serialization.</b> This record is cached in Redis as part of a flight result. Two guards keep
+ * that round-trip safe: {@code isUnknown()} is a <em>derived</em> flag, not a component, so it must
+ * not be written out — otherwise Jackson emits an {@code "unknown"} property the record's
+ * two-arg constructor cannot read back, throwing on every cache hit. And {@code ignoreUnknown} lets
+ * any already-poisoned entry (or a future schema change) deserialize as a cache miss instead of a 500.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record BaggageAllowance(Boolean checkedIncluded, Integer checkedKg) {
 
     /** The provider told us nothing about this fare's baggage. */
@@ -23,6 +33,7 @@ public record BaggageAllowance(Boolean checkedIncluded, Integer checkedKg) {
         return new BaggageAllowance(null, null);
     }
 
+    @JsonIgnore
     public boolean isUnknown() {
         return checkedIncluded == null;
     }

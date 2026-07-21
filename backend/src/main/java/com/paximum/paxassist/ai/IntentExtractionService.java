@@ -113,6 +113,9 @@ public class IntentExtractionService {
           destination   : arrival city or airport (string)
           departureDate : departure date YYYY-MM-DD (string)
           returnDate    : return date YYYY-MM-DD — null if one-way (string)
+          tripType      : one_way | round_trip — set round_trip whenever the user asks for a return
+                          leg ("gidiş-dönüş", "dönüşü de olsun", "round trip") EVEN IF no return date
+                          is given yet; one_way for "tek yön", "sadece gidiş" (string)
           cabinClass    : ECONOMY | BUSINESS | FIRST (string)
           flightMaxPrice: upper price limit for a FLIGHT search, "uçuşa 3000 tl max" → 3000 (integer)
           directFlight  : true for direct/non-stop flights (aktarmasız/direkt), false for flights with layovers (aktarmalı) (boolean)

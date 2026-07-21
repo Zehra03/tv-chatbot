@@ -43,6 +43,32 @@ class FlightCriteriaMapperTest {
         assertThat(criteria.getReturnDate()).isEqualTo(LocalDate.of(2026, 8, 10));
     }
 
+    /**
+     * The bug this maps around: "gidiş-dönüş uçuş arıyorum" with no return date yet used to arrive
+     * indistinguishable from a one-way search, so the user got one-way results instead of being
+     * asked for the return date. The stated trip type now survives the missing date, and the flight
+     * module reports the date as missing.
+     */
+    @Test
+    void statedRoundTripSurvivesAMissingReturnDate_soTheChatCanAskForIt() {
+        FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of(
+                "origin", "IST", "destination", "CDG", "departureDate", "2026-08-01",
+                "adults", 1, "currency", "TRY", "tripType", "round_trip")));
+
+        assertThat(criteria.getTripType()).isEqualTo(TripType.ROUND_TRIP);
+        assertThat(criteria.getReturnDate()).isNull();
+        assertThat(criteria.missingRequiredFields()).containsExactly("returnDate");
+    }
+
+    @Test
+    void statedOneWayWinsOverALeftoverReturnDate() {
+        FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of(
+                "origin", "IST", "destination", "CDG", "departureDate", "2026-08-01",
+                "returnDate", "2026-08-10", "adults", 1, "tripType", "one_way")));
+
+        assertThat(criteria.getTripType()).isEqualTo(TripType.ONE_WAY);
+    }
+
     @Test
     void typesEachChildByAge_infantChildAndAdultFare() {
         // 1 → lap infant, 8 → child, 14 → pays the adult fare and joins the adult count.

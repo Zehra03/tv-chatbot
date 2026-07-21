@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.server.ResponseStatusException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -39,6 +40,23 @@ public class GlobalExceptionHandler {
         };
         return ResponseEntity.status(status)
                 .body(new ErrorResponse(e.getCode().name(), e.getMessage()));
+    }
+
+    /**
+     * A controller that rejects a request by throwing {@link ResponseStatusException} has already
+     * decided the status (chat and reservation both do this for a missing/oversized
+     * {@code X-Guest-Id}). Without this handler it falls through to the {@code Exception} catch-all
+     * below and a deliberate 401/400 is reported to the client as a 500 "unexpected error" — the SPA
+     * then shows a server-fault message instead of asking the user to sign in.
+     *
+     * <p>Only the status and the controller's own reason are echoed; there is no cause detail to leak
+     * because these are hand-thrown, not wrapped.
+     */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException e) {
+        HttpStatus status = HttpStatus.valueOf(e.getStatusCode().value());
+        return ResponseEntity.status(status)
+                .body(new ErrorResponse(status.name(), e.getReason() == null ? status.getReasonPhrase() : e.getReason()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

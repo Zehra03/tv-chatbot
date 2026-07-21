@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.paximum.paxassist.reservation.domain.PassengerType;
+import com.paximum.paxassist.reservation.domain.ReservationCaller;
 import com.paximum.paxassist.reservation.domain.TripType;
 
 import jakarta.validation.Valid;
@@ -32,11 +33,14 @@ import jakarta.validation.constraints.Size;
  * see {@code ReservationService}).
  *
  * <p>At least one of {@link #hotel()} / {@link #flight()} must be present; the product type is derived
- * from which are present (never trusted from input). {@code userId} is injected server-side from the
- * authenticated principal via {@link #withUserId(Long)} — it is intentionally NOT validated on input.
+ * from which are present (never trusted from input). {@code userId} / {@code guestToken} are injected
+ * server-side from the authenticated principal or the {@code X-Guest-Id} header via
+ * {@link #withCaller(ReservationCaller)} — they are intentionally NOT validated on input, and whatever
+ * a client sends in those two fields is overwritten before the service ever sees the command.
  */
 public record PreviewReservationCommand(
         Long userId,
+        String guestToken,
         @NotBlank @Size(min = 3, max = 3) String currency,
         @NotNull @PositiveOrZero BigDecimal totalAmount,
         String culture,
@@ -49,12 +53,6 @@ public record PreviewReservationCommand(
         @Valid Customer customer,
         @Valid Hotel hotel,
         @Valid Flight flight) {
-
-    /** Age bands (product decision): infant 0–2, child 3–17, adult 18+. */
-    private static final int ADULT_MIN_AGE = 18;
-
-    /** Inclusive upper bound of the infant band — a lap infant is 0–2. */
-    private static final int INFANT_MAX_AGE = 2;
 
     /** Cross-field rule: a reservation must include at least a hotel or a flight (product type is derived, never trusted). */
     @JsonIgnore
@@ -127,10 +125,13 @@ public record PreviewReservationCommand(
     }
 
     /**
-     * Cross-field rule: a stated age must agree with the declared passenger type — ADULT 18+,
-     * CHILD 3–17, INFANT 0–2. Without it, {@code passengerType=CHILD, age=45} (child pricing for an
-     * adult) or {@code ADULT, age=3} passes every layer and reaches the DB and TourVisio.
-     * Age is optional; travellers without one are not checked here.
+     * Cross-field rule: a stated age must agree with the declared passenger type. Without it,
+     * {@code passengerType=CHILD, age=45} (child pricing for an adult) or {@code ADULT, age=3} passes
+     * every layer and reaches the DB and TourVisio. Age is optional; travellers without one are not
+     * checked here.
+     *
+     * <p>The bands themselves belong to {@link PassengerType} — this rule only applies them, so the
+     * numbers exist in exactly one place.
      */
     @AssertTrue(message = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 18+, çocuk: 3-17, bebek: 0-2)")
     public boolean isTravellerAgeConsistentWithType() {
@@ -139,11 +140,7 @@ public record PreviewReservationCommand(
         }
         return travellers.stream()
                 .filter(t -> t != null && t.age() != null && t.passengerType() != null)
-                .allMatch(t -> switch (t.passengerType()) {
-                    case ADULT -> t.age() >= ADULT_MIN_AGE;
-                    case CHILD -> t.age() > INFANT_MAX_AGE && t.age() < ADULT_MIN_AGE;
-                    case INFANT -> t.age() <= INFANT_MAX_AGE;
-                });
+                .allMatch(t -> t.passengerType().matchesAge(t.age()));
     }
 
     /**
@@ -218,10 +215,20 @@ public record PreviewReservationCommand(
         return flight == null || flight.passengerCount() == null || count == flight.passengerCount();
     }
 
-    /** Returns a copy with the given owner id (the controller injects the authenticated user id here). */
-    public PreviewReservationCommand withUserId(Long userId) {
-        return new PreviewReservationCommand(userId, currency, totalAmount, culture, leadGuestName, reservationNote,
-                agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
+    /**
+     * Returns a copy owned by the given caller — a logged-in user's id or a guest's opaque token,
+     * never both. The controller injects the resolved caller here so the identity on the command is
+     * always the server's, not the client's.
+     */
+    public PreviewReservationCommand withCaller(ReservationCaller caller) {
+        return new PreviewReservationCommand(caller.userId(), caller.guestToken(), currency, totalAmount, culture,
+                leadGuestName, reservationNote, agencyReservationNumber, offerIds, additionalOffers, travellers,
+                customer, hotel, flight);
+    }
+
+    /** The owner recorded on this command, as a caller. */
+    public ReservationCaller caller() {
+        return new ReservationCaller(userId, guestToken);
     }
 
     /**
@@ -230,8 +237,9 @@ public record PreviewReservationCommand(
      * charge — never the figure the client sent.
      */
     public PreviewReservationCommand withTotalAmount(BigDecimal amount, String amountCurrency) {
-        return new PreviewReservationCommand(userId, amountCurrency, amount, culture, leadGuestName, reservationNote,
-                agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
+        return new PreviewReservationCommand(userId, guestToken, amountCurrency, amount, culture, leadGuestName,
+                reservationNote, agencyReservationNumber, offerIds, additionalOffers, travellers, customer,
+                hotel, flight);
     }
 
     /** An additional service/offer to attach via AddServices (optional; primary offers go in {@link #offerIds()}). */
@@ -244,7 +252,7 @@ public record PreviewReservationCommand(
             @NotBlank String firstName,
             @NotBlank String lastName,
             @NotNull PassengerType passengerType,
-            @PositiveOrZero @Max(120) Integer age,
+            @PositiveOrZero @Max(PassengerType.MAX_AGE) Integer age,
             String nationalityCode,
             @Email String email,
             String phone,

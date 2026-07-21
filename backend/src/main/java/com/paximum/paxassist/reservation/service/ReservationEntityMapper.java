@@ -28,6 +28,8 @@ public class ReservationEntityMapper {
         reservation.setReservationNumber(reservationNumber);
         reservation.setExternalReservationNumber(externalReservationNumber);
         reservation.setUserId(command.userId());
+        // Guest bookings carry no user id; the opaque visitor key is the owner instead (V7).
+        reservation.setGuestToken(command.guestToken());
         reservation.setStatus(ReservationStatus.CONFIRMED);
         reservation.setReservationDate(LocalDate.now());
         reservation.setTotalAmount(command.totalAmount());

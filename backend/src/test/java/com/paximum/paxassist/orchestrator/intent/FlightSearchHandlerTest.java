@@ -21,6 +21,7 @@ import com.paximum.paxassist.ai.SlotCriteria;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.flight.domain.FlightProduct;
 import com.paximum.paxassist.flight.domain.FlightSearchCriteria;
+import com.paximum.paxassist.flight.domain.TripType;
 import com.paximum.paxassist.flight.service.FlightSearchOutcome;
 import com.paximum.paxassist.flight.service.FlightSearchService;
 import com.paximum.paxassist.orchestrator.OrchestrationContext;
@@ -33,6 +34,7 @@ import com.paximum.paxassist.orchestrator.slot.SlotGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
 import com.paximum.paxassist.orchestrator.mapper.GeoCountryResolver;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
+import com.paximum.paxassist.orchestrator.slot.TripTypeDetector;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,7 +62,8 @@ class FlightSearchHandlerTest {
         org.mockito.Mockito.lenient().when(locationGuard.checkInvalidLocation(any(), any())).thenReturn(Optional.empty());
         return new FlightSearchHandler(
                 slotFilling, new FlightCriteriaMapper(new GeoCountryResolver()), flightSearchService,
-                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard, locationGuard);
+                new ClarificationComposer(new ClarificationCatalog(), new NoPreferenceDetector()), slotGuard, locationGuard,
+                new TripTypeDetector());
     }
 
     private OrchestrationContext contextWith(SlotCriteria merged) {
@@ -253,5 +256,87 @@ class FlightSearchHandlerTest {
         OrchestrationResult result = handler().handle(context);
 
         assertThat(result.cards()).containsExactly(cheap);
+    }
+
+    /**
+     * The chat's round-trip gap: the user says "gidiş-dönüş" but names no return date yet. The trip
+     * type used to be inferred from the (absent) date alone, so the search ran ONE_WAY and the user
+     * was handed outbound-only results for a round-trip request, with nothing asked in between.
+     */
+    @Test
+    void roundTripRequestWithoutAReturnDate_asksForTheDateInsteadOfSearchingOneWay() {
+        SlotCriteria stated = slots(Map.of(
+                "origin", "İstanbul", "destination", "Antalya", "departureDate", "2026-08-01",
+                "adults", 1, "currency", "TRY"));
+        OrchestrationContext context = contextPassingSlotsThrough(
+                "Gidiş-dönüş uçuş arıyorum", stated);
+        answerSearchFromTheCriteriaItself();
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).isEmpty();
+        assertThat(result.reply()).contains("Dönüş tarihin");
+
+        ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
+        verify(flightSearchService).search(captor.capture());
+        assertThat(captor.getValue().getTripType()).isEqualTo(TripType.ROUND_TRIP);
+    }
+
+    @Test
+    void onceTheReturnDateArrives_theRoundTripSearchRuns() {
+        SlotCriteria answered = slots(Map.of(
+                "origin", "İstanbul", "destination", "Antalya", "departureDate", "2026-08-01",
+                "returnDate", "2026-08-08", "adults", 1, "currency", "TRY", "tripType", "round_trip"));
+        OrchestrationContext context = contextPassingSlotsThrough("8 Ağustos'ta dönüyorum", answered);
+        FlightProduct f1 = flight("F1", "1450");
+        when(flightSearchService.search(any())).thenReturn(FlightSearchOutcome.complete(List.of(f1)));
+
+        OrchestrationResult result = handler().handle(context);
+
+        assertThat(result.cards()).containsExactly(f1);
+
+        ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
+        verify(flightSearchService).search(captor.capture());
+        assertThat(captor.getValue().getTripType()).isEqualTo(TripType.ROUND_TRIP);
+        assertThat(captor.getValue().getReturnDate()).isEqualTo(java.time.LocalDate.of(2026, 8, 8));
+    }
+
+    @Test
+    void sayingTekYonDropsTheReturnDateTheUserNoLongerWants() {
+        SlotCriteria stated = slots(Map.of("origin", "İstanbul", "destination", "Antalya",
+                "departureDate", "2026-08-01", "adults", 1, "currency", "TRY"));
+        OrchestrationContext context = contextPassingSlotsThrough("tek yön olsun", stated);
+        context.session().getAccumulatedCriteria().put("returnDate", "2026-08-08");
+        when(flightSearchService.search(any())).thenReturn(FlightSearchOutcome.complete(List.of()));
+
+        handler().handle(context);
+
+        assertThat(context.session().getAccumulatedCriteria()).doesNotContainKey("returnDate");
+        ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
+        verify(flightSearchService).search(captor.capture());
+        assertThat(captor.getValue().getTripType()).isEqualTo(TripType.ONE_WAY);
+    }
+
+    /**
+     * Slot filling is mocked to hand back exactly what the handler passes in, so what the handler
+     * itself adds to the turn's criteria (the trip type it read from the message) is visible.
+     */
+    private OrchestrationContext contextPassingSlotsThrough(String userMessage, SlotCriteria criteria) {
+        org.mockito.Mockito.lenient().when(slotFilling.peekMerge(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+        org.mockito.Mockito.lenient().when(slotFilling.accumulate(any(), any()))
+                .thenAnswer(invocation -> invocation.getArgument(1));
+        return new OrchestrationContext(new ChatSession("s1"), userMessage, IntentType.FLIGHT, criteria);
+    }
+
+    /** Mirrors the real service: a criteria that is still missing a required field is incomplete. */
+    private void answerSearchFromTheCriteriaItself() {
+        when(flightSearchService.search(any())).thenAnswer(invocation -> {
+            FlightSearchCriteria criteria = invocation.getArgument(0);
+            List<String> missing = criteria.missingRequiredFields();
+            return missing.isEmpty()
+                    ? FlightSearchOutcome.complete(List.of())
+                    : FlightSearchOutcome.incomplete(missing);
+        });
     }
 }

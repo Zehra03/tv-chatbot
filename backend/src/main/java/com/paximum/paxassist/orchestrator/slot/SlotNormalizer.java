@@ -17,6 +17,10 @@ import com.paximum.paxassist.ai.SlotCriteria;
 @Component
 public class SlotNormalizer {
 
+    /** Wire values of the trip type, matching the frontend's {@code TripType} union. */
+    public static final String TRIP_TYPE_ROUND = "round_trip";
+    public static final String TRIP_TYPE_ONE_WAY = "one_way";
+
     public SlotCriteria normalize(SlotCriteria criteria) {
         if (criteria == null) {
             return null;
@@ -79,6 +83,14 @@ public class SlotNormalizer {
             returnDateStr = null;
         }
 
+        // A known return date IS a round trip, whether or not the user said the words. The reverse
+        // does not hold: "gidiş-dönüş" with no date yet stays ROUND_TRIP so the handler asks for the
+        // return date instead of quietly searching one-way.
+        String tripType = normalizeTripType(criteria.tripType());
+        if (returnDateStr != null) {
+            tripType = TRIP_TYPE_ROUND;
+        }
+
         // 3. Numeric Limits
         Integer adults = criteria.adults() != null && criteria.adults() > 0 ? criteria.adults() : null;
         Integer children = criteria.children() != null && criteria.children() >= 0 ? criteria.children() : null;
@@ -122,6 +134,7 @@ public class SlotNormalizer {
                 // the search, where every fare would trivially "meet" it.
                 criteria.minCheckedBaggageKg() != null && criteria.minCheckedBaggageKg() > 0
                         ? criteria.minCheckedBaggageKg() : null,
+                tripType,
                 adults,
                 children,
                 childAges,
@@ -131,6 +144,28 @@ public class SlotNormalizer {
                 criteria.limit(),
                 criteria.selectionReference()
         );
+    }
+
+    /**
+     * Accepts what either producer may write — the detector's own values, or an LLM answering with
+     * {@code ROUND_TRIP} / "roundtrip" / "gidiş-dönüş" — and folds them onto the two wire values.
+     * Anything unrecognized becomes null: an unknown trip type must not make the search ask for a
+     * return date it will never accept.
+     */
+    private String normalizeTripType(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String value = raw.trim().toLowerCase(java.util.Locale.ROOT).replace('-', '_').replace(' ', '_');
+        if (value.equals("round_trip") || value.equals("roundtrip") || value.equals("return")
+                || value.startsWith("gidiş_dönüş") || value.startsWith("gidis_donus")) {
+            return TRIP_TYPE_ROUND;
+        }
+        if (value.equals("one_way") || value.equals("oneway") || value.startsWith("tek_yön")
+                || value.startsWith("tek_yon")) {
+            return TRIP_TYPE_ONE_WAY;
+        }
+        return null;
     }
 
     private LocalDate parseOrNull(String dateStr) {
