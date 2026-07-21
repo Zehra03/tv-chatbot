@@ -49,4 +49,27 @@ class GreetingDetectorTest {
     void doesNotRecognisePunctuationOnly() {
         assertThat(detector.isPureGreeting("!!!")).isFalse();
     }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"hello", "hi", "HI", "Hello!", "hello paxi"})
+    void englishGreetingIsDetectedAsEnglish(String message) {
+        assertThat(detector.greetingLanguage(message)).contains("en");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"merhaba", "selam", "günaydın", "iyi günler", "selam paxi", "hi merhaba"})
+    void turkishGreetingIsDetectedAsTurkish(String message) {
+        assertThat(detector.greetingLanguage(message)).contains("tr");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"hey", "paxi"})
+    void neutralGreetingHasNoLanguage(String message) {
+        assertThat(detector.greetingLanguage(message)).isEmpty();
+    }
+
+    @Test
+    void nonGreetingHasNoLanguage() {
+        assertThat(detector.greetingLanguage("Antalya'da otel arıyorum")).isEmpty();
+    }
 }

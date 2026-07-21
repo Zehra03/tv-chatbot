@@ -11,6 +11,7 @@ import com.paximum.paxassist.ai.IntentType;
 import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
+import com.paximum.paxassist.chat.service.ReplyLocalizer;
 import com.paximum.paxassist.guard.GuardBlockedException;
 import com.paximum.paxassist.guard.GuardAuditLogger;
 import com.paximum.paxassist.guard.GuardOrchestrator;
@@ -24,6 +25,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -43,12 +45,15 @@ class ChatOrchestrationServiceTest {
     private IntentRouter intentRouter;
     @Mock
     private IntentHandler handler;
+    @Mock
+    private ReplyLocalizer replyLocalizer;
 
     // The turn's caller. Session ownership scopes by this; the guard still keys by its raw userId (7L).
     private static final ChatCaller CALLER = ChatCaller.authenticated(7L);
 
     private ChatOrchestrationService service() {
-        return new ChatOrchestrationService(guard, guardAuditLogger, intentExtraction, sessionStore, intentRouter);
+        return new ChatOrchestrationService(guard, guardAuditLogger, intentExtraction, sessionStore,
+                intentRouter, replyLocalizer);
     }
 
     /**
@@ -226,6 +231,197 @@ class ChatOrchestrationServiceTest {
 
         verify(guard, never()).registerOutOfScope(any(), anyBoolean());
         verify(sessionStore).save(session);
+    }
+
+    /**
+     * A non-Turkish detected language localizes the deterministic template reply (and persists the
+     * localized text), while the structured cards pass through untouched.
+     */
+    @Test
+    void nonTurkishLanguage_localizesTheDeterministicReply() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("a hotel in Antalya"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
+        when(handler.handle(any()))
+                .thenReturn(OrchestrationResult.cards("Aramana uygun 2 otel buldum:",
+                        java.util.List.of(new Object(), new Object())));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize("Aramana uygun 2 otel buldum:", "en"))
+                .thenReturn("I found 2 hotels matching your search:");
+
+        OrchestrationOutcome outcome = service().handle("s1", "a hotel in Antalya", CALLER);
+
+        assertThat(outcome.result().reply()).isEqualTo("I found 2 hotels matching your search:");
+        assertThat(outcome.result().cards()).hasSize(2);
+        // The persisted assistant turn keeps the localized text for later context.
+        assertThat(session.getMessages().get(1).content()).isEqualTo("I found 2 hotels matching your search:");
+    }
+
+    /**
+     * A clarify result carries the SAME text in {@code reply} and {@code pendingQuestion}; both must
+     * come out localized, and the mirrored pending question must reuse the reply's translation rather
+     * than pay for a second model round-trip.
+     */
+    @Test
+    void clarifyResult_localizesReplyAndReusesItForTheMirroredPendingQuestion() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("a flight"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.FLIGHT, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        when(intentRouter.route(IntentType.FLIGHT)).thenReturn(handler);
+        when(handler.handle(any()))
+                .thenReturn(OrchestrationResult.clarify("Nereye gitmek istersin?", "flight"));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize("Nereye gitmek istersin?", "en"))
+                .thenReturn("Where do you want to go?");
+
+        OrchestrationResult result = service().handle("s1", "a flight", CALLER).result();
+
+        assertThat(result.reply()).isEqualTo("Where do you want to go?");
+        assertThat(result.pendingQuestion()).isEqualTo("Where do you want to go?");
+        assertThat(result.domain()).isEqualTo("flight");
+        // Reused, not re-translated: exactly one call for that string.
+        verify(replyLocalizer, times(1)).localize("Nereye gitmek istersin?", "en");
+    }
+
+    /**
+     * A disambiguation card must be fully localized: the question, and each option's button label AND
+     * the value re-submitted on click — otherwise clicking a button would send Turkish back and flip
+     * the conversation's language on the next turn.
+     */
+    @Test
+    void choicesResult_localizesQuestionAndEachOptionLabelAndValue() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("Antalya"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.AMBIGUOUS, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        when(intentRouter.route(IntentType.AMBIGUOUS)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.choices(
+                "Otel araması mı yoksa uçuş araması mı yapmak istersin?",
+                java.util.List.of(
+                        new ChoiceOption("Otel ara", "Antalya için otel arıyorum"),
+                        new ChoiceOption("Uçuş ara", "Antalya için uçuş arıyorum"))));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize("Otel araması mı yoksa uçuş araması mı yapmak istersin?", "en"))
+                .thenReturn("Do you want to search for a hotel or a flight?");
+        when(replyLocalizer.localize("Otel ara", "en")).thenReturn("Search hotels");
+        when(replyLocalizer.localize("Antalya için otel arıyorum", "en"))
+                .thenReturn("I'm looking for a hotel in Antalya");
+        when(replyLocalizer.localize("Uçuş ara", "en")).thenReturn("Search flights");
+        when(replyLocalizer.localize("Antalya için uçuş arıyorum", "en"))
+                .thenReturn("I'm looking for a flight to Antalya");
+
+        OrchestrationResult result = service().handle("s1", "Antalya", CALLER).result();
+
+        assertThat(result.reply()).isEqualTo("Do you want to search for a hotel or a flight?");
+        assertThat(result.options()).extracting(ChoiceOption::label)
+                .containsExactly("Search hotels", "Search flights");
+        assertThat(result.options()).extracting(ChoiceOption::value)
+                .containsExactly("I'm looking for a hotel in Antalya", "I'm looking for a flight to Antalya");
+    }
+
+    /**
+     * Language is decided per message, not fixed for the session: Turkish → English → Turkish must
+     * localize only the middle (English) turn. The final short "2" turn stands in for a low-confidence
+     * message where the extractor has already carried the previous language forward (here English), so
+     * the reply is localized to that carried-over language rather than flipping.
+     */
+    @Test
+    void languageIsResolvedPerTurn_notStuckForTheSession() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentRouter.route(IntentType.HOTEL)).thenReturn(handler);
+        when(handler.handle(any()))
+                .thenReturn(OrchestrationResult.message("Kaç gece konaklayacaksın?"));
+        when(replyLocalizer.shouldLocalize("tr")).thenReturn(false);
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize("Kaç gece konaklayacaksın?", "en")).thenReturn("How many nights?");
+
+        // Turn 1 — Turkish: no localization.
+        when(intentExtraction.extract(eq("Antalya'da otel"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null, "tr",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        assertThat(service().handle("s1", "Antalya'da otel", CALLER).result().reply())
+                .isEqualTo("Kaç gece konaklayacaksın?");
+
+        // Turn 2 — English: localized.
+        when(intentExtraction.extract(eq("a hotel in Antalya"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        assertThat(service().handle("s1", "a hotel in Antalya", CALLER).result().reply())
+                .isEqualTo("How many nights?");
+
+        // Turn 3 — back to Turkish: no localization again.
+        when(intentExtraction.extract(eq("tekrar Türkçe"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null, "tr",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        assertThat(service().handle("s1", "tekrar Türkçe", CALLER).result().reply())
+                .isEqualTo("Kaç gece konaklayacaksın?");
+
+        // Turn 4 — short "2", low confidence: extractor carried English forward → still English.
+        when(intentExtraction.extract(eq("2"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.HOTEL, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.LOW));
+        assertThat(service().handle("s1", "2", CALLER).result().reply())
+                .isEqualTo("How many nights?");
+    }
+
+    /**
+     * The free-form OTHER reply must be localized too: the assistant's own prompt is Turkish-heavy
+     * and cannot be trusted to answer in the user's language on its own, so the localizer is what
+     * guarantees a non-Turkish user gets a non-Turkish answer.
+     */
+    @Test
+    void otherIntent_isAlsoLocalized_soFreeFormRepliesFollowTheUserLanguage() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("what's the weather"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.OTHER, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        when(intentRouter.route(IntentType.OTHER)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message(
+                "Yalnızca otel veya uçuş aramasında yardımcı olabilirim."));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize("Yalnızca otel veya uçuş aramasında yardımcı olabilirim.", "en"))
+                .thenReturn("I can only help with hotel or flight search.");
+
+        OrchestrationResult result = service().handle("s1", "what's the weather", CALLER).result();
+
+        assertThat(result.reply()).isEqualTo("I can only help with hotel or flight search.");
+        // Persisted transcript is in the user's language too.
+        assertThat(session.getMessages().get(1).content())
+                .isEqualTo("I can only help with hotel or flight search.");
+    }
+
+    /**
+     * A greeting whose language the detector resolved (here English "hello") is localized too, so the
+     * fixed Turkish greeting reaches an English user in English.
+     */
+    @Test
+    void englishGreeting_isLocalized() {
+        ChatSession session = new ChatSession("s1");
+        when(sessionStore.getOrCreate(any(), any())).thenReturn(session);
+        when(intentExtraction.extract(eq("hello"), anyList()))
+                .thenReturn(new IntentExtractionResult(IntentType.GREETING, null, "en",
+                        com.paximum.paxassist.ai.LanguageConfidence.HIGH));
+        when(intentRouter.route(IntentType.GREETING)).thenReturn(handler);
+        when(handler.handle(any())).thenReturn(OrchestrationResult.message(
+                "Merhaba! Ben seyahat asistanın Paxi. Sana nasıl yardımcı olabilirim? Otel mi yoksa uçuş mu arıyorsun?"));
+        when(replyLocalizer.shouldLocalize("en")).thenReturn(true);
+        when(replyLocalizer.localize(
+                "Merhaba! Ben seyahat asistanın Paxi. Sana nasıl yardımcı olabilirim? Otel mi yoksa uçuş mu arıyorsun?",
+                "en"))
+                .thenReturn("Hi! I'm your travel assistant Paxi. How can I help you? Are you looking for a hotel or a flight?");
+
+        OrchestrationResult result = service().handle("s1", "hello", CALLER).result();
+
+        assertThat(result.reply())
+                .isEqualTo("Hi! I'm your travel assistant Paxi. How can I help you? Are you looking for a hotel or a flight?");
     }
 
     @Test
