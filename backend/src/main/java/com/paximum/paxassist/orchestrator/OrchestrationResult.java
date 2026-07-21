@@ -80,4 +80,16 @@ public record OrchestrationResult(
         return new OrchestrationResult(reply, cards, options, redirectToReservation, selectedProduct, id,
                 pendingQuestion, domain);
     }
+
+    /**
+     * Returns a copy with the natural-language text swapped for its localized form: the reply, the
+     * mirrored {@code pendingQuestion}, and the disambiguation {@code options}. Everything structured
+     * — {@code cards}, the redirect flag, the selected product, {@code domain} — is carried through
+     * untouched, so product data is never translated (only the wording the user reads is).
+     */
+    public OrchestrationResult withLocalizedText(String localizedReply, String localizedPendingQuestion,
+                                                 List<ChoiceOption> localizedOptions) {
+        return new OrchestrationResult(localizedReply, cards, localizedOptions, redirectToReservation,
+                selectedProduct, sessionId, localizedPendingQuestion, domain);
+    }
 }

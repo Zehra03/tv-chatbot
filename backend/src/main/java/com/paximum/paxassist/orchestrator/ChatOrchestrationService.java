@@ -11,6 +11,7 @@ import com.paximum.paxassist.ai.IntentType;
 import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
+import com.paximum.paxassist.chat.service.ReplyLocalizer;
 import com.paximum.paxassist.guard.GuardBlockedException;
 import com.paximum.paxassist.guard.GuardAuditLogger;
 import com.paximum.paxassist.guard.GuardOrchestrator;
@@ -32,17 +33,20 @@ public class ChatOrchestrationService {
     private final IntentExtractionService intentExtraction;
     private final ChatSessionStore sessionStore;
     private final IntentRouter intentRouter;
+    private final ReplyLocalizer replyLocalizer;
 
     public ChatOrchestrationService(GuardOrchestrator guard,
                                     GuardAuditLogger guardAuditLogger,
                                     IntentExtractionService intentExtraction,
                                     ChatSessionStore sessionStore,
-                                    IntentRouter intentRouter) {
+                                    IntentRouter intentRouter,
+                                    ReplyLocalizer replyLocalizer) {
         this.guard = guard;
         this.guardAuditLogger = guardAuditLogger;
         this.intentExtraction = intentExtraction;
         this.sessionStore = sessionStore;
         this.intentRouter = intentRouter;
+        this.replyLocalizer = replyLocalizer;
     }
 
     public OrchestrationOutcome handle(String sessionId, String userMessage, ChatCaller caller) {
@@ -86,6 +90,16 @@ public class ChatOrchestrationService {
                 new OrchestrationContext(session, userMessage, extraction.intent(), extraction.criteria());
         OrchestrationResult result = intentRouter.route(extraction.intent()).handle(context);
 
+        // 3b. Localize the deterministic reply into the language of THIS message. OTHER already
+        //     answers in-language (FallbackHandler → ChatService), and a null/Turkish language
+        //     (greeting, parse failure, Turkish user) is a no-op — so only the template-driven
+        //     search flows for a non-Turkish user pay for a translation. The localized text is what
+        //     we persist below, keeping the transcript in the user's language for later context.
+        if (extraction.intent() != IntentType.OTHER
+                && replyLocalizer.shouldLocalize(extraction.detectedLanguage())) {
+            result = localizeReply(result, extraction.detectedLanguage());
+        }
+
         // 4. Persist the turn (append user + assistant messages) and return.
         session.addMessage("user", userMessage);
         session.addMessage("assistant", result.reply());
@@ -103,6 +117,28 @@ public class ChatOrchestrationService {
         OrchestrationResult blocked = OrchestrationResult.message(e.getMessage())
                 .withSessionId(session.getId());
         return new OrchestrationOutcome(blocked, session);
+    }
+
+    /**
+     * Translates only the natural-language parts of a result — reply, the mirrored pending question,
+     * and any disambiguation option label/value — leaving the structured cards and flags untouched.
+     * The pending question mirrors the reply on a clarify result, so it reuses the same translation
+     * instead of paying for a second call.
+     */
+    private OrchestrationResult localizeReply(OrchestrationResult result, String language) {
+        String localizedReply = replyLocalizer.localize(result.reply(), language);
+        String localizedPending = result.pendingQuestion() == null ? null
+                : result.pendingQuestion().equals(result.reply())
+                        ? localizedReply
+                        : replyLocalizer.localize(result.pendingQuestion(), language);
+        List<ChoiceOption> localizedOptions = result.options().isEmpty()
+                ? result.options()
+                : result.options().stream()
+                        .map(option -> new ChoiceOption(
+                                replyLocalizer.localize(option.label(), language),
+                                replyLocalizer.localize(option.value(), language)))
+                        .toList();
+        return result.withLocalizedText(localizedReply, localizedPending, localizedOptions);
     }
 
     private List<ChatHistoryEntry> toHistory(ChatSession session) {

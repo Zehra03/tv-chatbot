@@ -59,6 +59,18 @@ public class IntentExtractionService {
                  See <security> for injection / instruction-override handling (also OTHER).
         </intents>
 
+        <language>
+        Always set BOTH fields, recomputed for the CURRENT user message (never fixed per session):
+          detectedLanguage    : ISO 639-1 code of the current message. Supported: tr, en, de, ru, ar;
+                                map any other language to the closest of these.
+          languageConfidence  : HIGH normally; LOW when the message is too short/neutral to tell the
+                                language from (only a number, emoji, or a bare name/city). On LOW, reuse
+                                the language of the previous user message in the history — do not guess.
+        These fields never affect criteria: dates, numbers, codes and locations stay language-neutral
+        and standard-formatted no matter what language the message is in. The <examples> below omit
+        these two fields for brevity, but you MUST include them in every real response.
+        </language>
+
         <schema>
         Fill ONLY the fields explicitly stated by the user; every other field is null.
 
@@ -189,6 +201,19 @@ public class IntentExtractionService {
         <examples>
         For the examples below, assume TODAY = 2026-07-13 (Monday).
 
+        # ── Language fields (full shape; every real response looks like this) ──
+        Mesaj: "Antalya'da 5 gece 2 yetişkin otel"
+        Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","nights":5,"adults":2},"detectedLanguage":"tr","languageConfidence":"HIGH"}
+
+        Mesaj: "a hotel in Antalya for 2 adults"
+        Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":2},"detectedLanguage":"en","languageConfidence":"HIGH"}
+
+        Sohbet Geçmişi: user: a hotel in Antalya for 2 adults
+        assistant: How many nights?
+        Mesaj: "5"
+        Çıktı: {"intent":"HOTEL","criteria":{"nights":5},"detectedLanguage":"en","languageConfidence":"LOW"}
+
+        # ── The examples below omit the two language fields for brevity — still emit them. ──
         Mesaj: "Antalya'da 2 yetişkin otel bak"
         Çıktı: {"intent":"HOTEL","criteria":{"location":"Antalya","adults":2}}
 
@@ -385,6 +410,8 @@ public class IntentExtractionService {
     public IntentExtractionResult extract(@NonNull String userMessage,
                                           @NonNull List<ChatHistoryEntry> history) {
         if (greetingDetector.isPureGreeting(userMessage)) {
+            // Language is left undetected here: a bare greeting is answered with a fixed,
+            // language-neutral sentence downstream, so there is nothing to localise.
             return new IntentExtractionResult(IntentType.GREETING, null);
         }
 
