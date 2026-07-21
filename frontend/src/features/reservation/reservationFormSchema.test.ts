@@ -195,10 +195,16 @@ describe('yaş ↔ yolcu tipi tutarlılığı (backend kuralının kopyası)', (
   const withPassenger = (extra: Partial<ReservationFormValues['passengers'][number]>) =>
     parse({ passengers: [{ ...validValues.passengers[0], ...extra }] })
 
-  it('yetişkin 18+ olmalı', () => {
+  /**
+   * Mesaj İLK denemede gerçek aralığı söylemeli: eskiden alan önce '(0–120)' diyor, 10 yazınca
+   * '18+ olmalı'ya dönüyordu — kullanıcı iki tur harcıyordu.
+   */
+  it('yetişkin 18+ olmalı ve hata doğrudan 18–120 aralığını gösterir', () => {
     expect(withPassenger({ age: '25' }).success).toBe(true)
     expect(withPassenger({ age: '' }).success).toBe(true) // yaş opsiyonel
-    expect(firstError(withPassenger({ age: '5' }))).toContain('en az 18')
+    expect(firstError(withPassenger({ age: '10' }))).toBe('Geçerli bir yaş girin (18–120)')
+    expect(firstError(withPassenger({ age: '200' }))).toBe('Geçerli bir yaş girin (18–120)')
+    expect(firstError(withPassenger({ age: 'abc' }))).toBe('Geçerli bir yaş girin (18–120)')
   })
 
   it('çocuk 3–17 arası ve yaşı zorunlu', () => {

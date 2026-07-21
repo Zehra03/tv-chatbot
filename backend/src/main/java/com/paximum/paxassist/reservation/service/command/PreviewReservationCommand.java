@@ -50,12 +50,6 @@ public record PreviewReservationCommand(
         @Valid Hotel hotel,
         @Valid Flight flight) {
 
-    /** Age bands (product decision): infant 0–2, child 3–17, adult 18+. */
-    private static final int ADULT_MIN_AGE = 18;
-
-    /** Inclusive upper bound of the infant band — a lap infant is 0–2. */
-    private static final int INFANT_MAX_AGE = 2;
-
     /** Cross-field rule: a reservation must include at least a hotel or a flight (product type is derived, never trusted). */
     @JsonIgnore
     @AssertTrue(message = "A reservation must include at least a hotel or a flight")
@@ -127,10 +121,13 @@ public record PreviewReservationCommand(
     }
 
     /**
-     * Cross-field rule: a stated age must agree with the declared passenger type — ADULT 18+,
-     * CHILD 3–17, INFANT 0–2. Without it, {@code passengerType=CHILD, age=45} (child pricing for an
-     * adult) or {@code ADULT, age=3} passes every layer and reaches the DB and TourVisio.
-     * Age is optional; travellers without one are not checked here.
+     * Cross-field rule: a stated age must agree with the declared passenger type. Without it,
+     * {@code passengerType=CHILD, age=45} (child pricing for an adult) or {@code ADULT, age=3} passes
+     * every layer and reaches the DB and TourVisio. Age is optional; travellers without one are not
+     * checked here.
+     *
+     * <p>The bands themselves belong to {@link PassengerType} — this rule only applies them, so the
+     * numbers exist in exactly one place.
      */
     @AssertTrue(message = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 18+, çocuk: 3-17, bebek: 0-2)")
     public boolean isTravellerAgeConsistentWithType() {
@@ -139,11 +136,7 @@ public record PreviewReservationCommand(
         }
         return travellers.stream()
                 .filter(t -> t != null && t.age() != null && t.passengerType() != null)
-                .allMatch(t -> switch (t.passengerType()) {
-                    case ADULT -> t.age() >= ADULT_MIN_AGE;
-                    case CHILD -> t.age() > INFANT_MAX_AGE && t.age() < ADULT_MIN_AGE;
-                    case INFANT -> t.age() <= INFANT_MAX_AGE;
-                });
+                .allMatch(t -> t.passengerType().matchesAge(t.age()));
     }
 
     /**
@@ -244,7 +237,7 @@ public record PreviewReservationCommand(
             @NotBlank String firstName,
             @NotBlank String lastName,
             @NotNull PassengerType passengerType,
-            @PositiveOrZero @Max(120) Integer age,
+            @PositiveOrZero @Max(PassengerType.MAX_AGE) Integer age,
             String nationalityCode,
             @Email String email,
             String phone,

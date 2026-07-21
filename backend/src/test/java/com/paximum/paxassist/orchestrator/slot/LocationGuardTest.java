@@ -44,7 +44,7 @@ class LocationGuardTest {
     void checkInvalidLocation_hotel_validLocation_returnsEmpty() {
         SlotCriteria criteria = SlotCriteria.empty();
         criteria = new SlotCriteria("Antalya", null, null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(hotelSearchService.suggestLocations("Antalya"))
                 .thenReturn(List.of(new HotelLocationDto("123", "Antalya", "city")));
@@ -59,7 +59,7 @@ class LocationGuardTest {
         SlotCriteria criteria = SlotCriteria.empty();
         // Since SlotCriteria is a record, creating one with only location
         criteria = new SlotCriteria("burdan", null, null, null, null, null, null, null, null, null, null, null, null,
-                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(hotelSearchService.suggestLocations("burdan"))
                 .thenReturn(List.of());
@@ -73,7 +73,7 @@ class LocationGuardTest {
     @Test
     void checkInvalidLocation_flight_invalidOrigin_returnsMessage() {
         SlotCriteria criteria = new SlotCriteria(null, null, null, null, null, null, null, null, null, null, "burdan",
-                "Antalya", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
+                "Antalya", null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
 
         when(flightLocationService.suggest("burdan", true))
                 .thenReturn(List.of());

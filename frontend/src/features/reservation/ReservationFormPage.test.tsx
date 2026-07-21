@@ -128,7 +128,7 @@ describe('ReservationFormPage', () => {
 
     await user.type(screen.getByLabelText('Yaş (opsiyonel)'), '200')
     await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
-    expect(await screen.findByText('Geçerli bir yaş girin (0–120)')).toBeTruthy()
+    expect(await screen.findByText('Geçerli bir yaş girin (18–120)')).toBeTruthy()
   })
 
   it('ad alanı harf dışı karakter kabul etmez', async () => {

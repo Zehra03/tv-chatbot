@@ -35,7 +35,9 @@ public class ClarificationCatalog {
             "origin", "Nereden kalkmak istersin?",
             "destination", "Nereye gitmek istersin?",
             "departDate", "Hangi tarihte gitmek istersin? (örn. 2026-08-01)",
-            "returnDate", "Dönüş tarihin nedir?",
+            // Asked when the user said "gidiş-dönüş" without a return date — name the trip type back
+            // so the question does not read as a random second date request.
+            "returnDate", "Gidiş-dönüş için planlıyorum. Dönüş tarihin hangi gün olsun? (örn. 2026-08-08)",
             "tripType", "Tek yön mü yoksa gidiş-dönüş mü olsun?",
             "passengers", "Kaç yolcu seyahat edecek?",
             // Not a field the flight module reports: FlightSearchHandler asks for it, because the

@@ -13,7 +13,8 @@ import java.util.List;
  * Hotel fields : location, checkIn, checkOut, nights, adults, children, childAges,
  *                nationality, currency, rooms, stars, boardType, features, hotelMaxPrice, sortBy
  * Flight fields: origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice,
- *                directFlight, airline, departTimeRange, checkedBaggage, minCheckedBaggageKg
+ *                directFlight, airline, departTimeRange, checkedBaggage, minCheckedBaggageKg,
+ *                tripType
  * Shared        : adults, children, childAges, nationality, currency
  * SELECT intent : selectionReference
  *
@@ -47,6 +48,14 @@ public record SlotCriteria(
         String departTimeRange,   // departure time-of-day bucket: morning | afternoon | evening | night
         Boolean checkedBaggage,   // true: fare must include checked baggage, false: cabin-only fare, null: any
         Integer minCheckedBaggageKg, // minimum checked allowance in kg, "15 kilo bagajlı" → 15
+        /*
+         * one_way | round_trip — the trip the user ASKED for, which is not the same thing as whether
+         * a return date is already known. Without it "gidiş-dönüş uçuş arıyorum" with no date yet
+         * looked identical to a one-way search, so the search ran one-way instead of asking for the
+         * return date (FlightSearchCriteria#missingRequiredFields reports "returnDate" only when the
+         * trip type says ROUND_TRIP). Values match the frontend's TripType union.
+         */
+        String tripType,
 
         // ── Shared (hotel + flight) ───────────────────────────────────────────
         Integer adults,
@@ -71,11 +80,26 @@ public record SlotCriteria(
         return new SlotCriteria(
                 // hotel (10)
                 null, null, null, null, null, null, null, null, null, null,
-                // flight (11): origin, destination, departureDate, returnDate, cabinClass,
+                // flight (12): origin, destination, departureDate, returnDate, cabinClass,
                 //              flightMaxPrice, directFlight, airline, departTimeRange,
-                //              checkedBaggage, minCheckedBaggageKg
-                null, null, null, null, null, null, null, null, null, null, null,
+                //              checkedBaggage, minCheckedBaggageKg, tripType
+                null, null, null, null, null, null, null, null, null, null, null, null,
                 // shared (5) + filter/sort (2) + select (1)
                 null, null, null, null, null, null, null, null);
+    }
+
+    /**
+     * Copy carrying the given trip type. The chat handler uses it to write back what a deterministic
+     * reading of the user's own words found ("gidiş-dönüş"), so the value accumulates like any other
+     * slot instead of being recomputed from scratch every turn.
+     */
+    public SlotCriteria withTripType(String tripType) {
+        return new SlotCriteria(
+                location, checkIn, checkOut, nights, rooms, stars, maxStars, boardType, features,
+                hotelMaxPrice,
+                origin, destination, departureDate, returnDate, cabinClass, flightMaxPrice,
+                directFlight, airline, departTimeRange, checkedBaggage, minCheckedBaggageKg, tripType,
+                adults, children, childAges, nationality, currency,
+                sortBy, limit, selectionReference);
     }
 }

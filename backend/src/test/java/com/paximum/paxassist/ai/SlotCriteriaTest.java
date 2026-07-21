@@ -16,12 +16,13 @@ class SlotCriteriaTest {
         SlotCriteria criteria = new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 "İstanbul", "İzmir", null, null, null, null, Boolean.TRUE,
-                "THY", "morning", null, null,
+                "THY", "morning", null, null, "round_trip",
                 null, null, null, null, null, null, null, null);
 
         assertThat(criteria.directFlight()).isTrue();
         assertThat(criteria.airline()).isEqualTo("THY");
         assertThat(criteria.departTimeRange()).isEqualTo("morning");
+        assertThat(criteria.tripType()).isEqualTo("round_trip");
     }
 
     @Test
