@@ -31,7 +31,7 @@ class ReservationTourVisioRequestMapperTest {
     }
 
     private SetReservationInfoRequest.Traveller mapFirst(PreviewReservationCommand.Traveller traveller) {
-        PreviewReservationCommand command = new PreviewReservationCommand(null, "EUR", BigDecimal.TEN, null,
+        PreviewReservationCommand command = new PreviewReservationCommand(null, null, "EUR", BigDecimal.TEN, null,
                 "Lead", null, null, null, null, List.of(traveller), null, null, null);
         return mapper.toSetReservationInfoRequest(command, "txn-1").travellers().get(0);
     }

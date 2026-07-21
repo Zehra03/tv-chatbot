@@ -84,7 +84,7 @@ class PreviewReservationCommandTest {
     private PreviewReservationCommand command(List<PreviewReservationCommand.Traveller> travellers,
                                               PreviewReservationCommand.Hotel hotel,
                                               PreviewReservationCommand.Flight flight) {
-        return new PreviewReservationCommand(1L, "EUR", new BigDecimal("100"), null, "Ada Yılmaz",
+        return new PreviewReservationCommand(1L, null, "EUR", new BigDecimal("100"), null, "Ada Yılmaz",
                 null, null, null, null, travellers, null, hotel, flight);
     }
 

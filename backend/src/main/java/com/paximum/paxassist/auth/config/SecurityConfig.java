@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -86,16 +87,29 @@ public class SecurityConfig {
                         // account. A logged-in user still arrives here with a populated principal
                         // (the JWT filter runs on every request); a guest arrives anonymously and is
                         // identified downstream by an opaque X-Guest-Id, never a Spring principal.
-                        // Booking stays gated below so only registered users can create/retrieve a
-                        // reservation ("controlled booking" invariant).
                         .requestMatchers(
                                 "/api/v1/chat/**",
                                 "/api/v1/hotels/**",
                                 "/api/v1/flights/**")
                         .permitAll()
-                        // Business module endpoints requiring an account: any authenticated user
-                        // (USER or ADMIN). Path-based so the Reservation controller needs no
-                        // security annotations - RBAC lives centrally in Auth.
+                        // Guest booking: creating a reservation no longer requires an account, so
+                        // preview + confirm are open here. This does NOT weaken the "controlled
+                        // booking" invariant — those endpoints are still the AI-free form path, and
+                        // the controller demands an identity (principal or X-Guest-Id) so the
+                        // preview -> confirm handoff stays scoped to one browser.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/reservations",
+                                "/api/v1/reservations/preview")
+                        .permitAll()
+                        // A guest has no reservation list, so PNR + surname is their only way back to
+                        // a booking. The surname is the second factor; brute force is bounded by the
+                        // rate-limit filter below (keyed by client IP for anonymous callers).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reservations/lookup")
+                        .permitAll()
+                        // Everything else under /reservations stays account-only: the list, the
+                        // id-scoped detail and cancel are keyed by user id. Path-based so the
+                        // Reservation controller needs no security annotations - RBAC lives
+                        // centrally in Auth.
                         .requestMatchers("/api/v1/reservations/**")
                         .hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())

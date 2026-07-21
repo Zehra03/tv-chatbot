@@ -35,6 +35,7 @@ import com.paximum.paxassist.reservation.pending.PendingReservation;
 import com.paximum.paxassist.reservation.pending.PendingReservationStore;
 import com.paximum.paxassist.reservation.recovery.OrphanedBookingRepository;
 import com.paximum.paxassist.reservation.repository.ReservationRepository;
+import com.paximum.paxassist.reservation.domain.ReservationCaller;
 import com.paximum.paxassist.reservation.service.command.PreviewReservationCommand;
 
 @ExtendWith(MockitoExtension.class)
@@ -212,11 +213,11 @@ class ReservationServiceTest {
         );
 
         PreviewReservationCommand command = new PreviewReservationCommand(
-                userId, "EUR", new BigDecimal("1500.00"), "en-US", "Lead Guest",
+                userId, null, "EUR", new BigDecimal("1500.00"), "en-US", "Lead Guest",
                 "Notes", "Agency-1", List.of("OFFER-1"), List.of(),
                 List.of(mockTraveller), null, mockHotel, null);
 
-        PendingReservation pending = new PendingReservation(previewId, userId, Instant.now(), command);
+        PendingReservation pending = new PendingReservation(previewId, userId, null, Instant.now(), command);
         
         when(pendingStore.peekPreview(previewId)).thenReturn(Optional.of(pending));
         when(pendingStore.claimPreview(previewId)).thenReturn(Optional.of(pending));
@@ -248,7 +249,8 @@ class ReservationServiceTest {
         when(reservationRepository.save(reservation)).thenReturn(reservation);
 
         // When
-        ConfirmationResult result = reservationService.confirmReservation(previewId, userId);
+        ConfirmationResult result =
+                reservationService.confirmReservation(previewId, ReservationCaller.authenticated(userId));
 
         // Then
         assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
@@ -269,7 +271,7 @@ class ReservationServiceTest {
                 "1", "John", "Doe", com.paximum.paxassist.reservation.domain.PassengerType.ADULT,
                 30, "TR", "test@test.com", "555", true, 1, 1, java.time.LocalDate.of(1990, 1, 1),
                 "123", null, null, null);
-        return new PreviewReservationCommand(123L, "EUR", declaredAmount, "en-US", "John Doe",
+        return new PreviewReservationCommand(123L, null, "EUR", declaredAmount, "en-US", "John Doe",
                 null, null, List.of("OFFER-1"), List.of(), List.of(traveller), null, hotel, null);
     }
 
@@ -305,7 +307,7 @@ class ReservationServiceTest {
     /** Claims a preview for user 123 and stubs beginTransaction to return the given response. */
     private PendingReservation givenClaimedPreviewWithBegin(PreviewReservationCommand command,
                                                             TourVisioCallResult<TransactionResponse> begin) {
-        PendingReservation pending = new PendingReservation("preview-123", 123L, Instant.now(), command);
+        PendingReservation pending = new PendingReservation("preview-123", 123L, null, Instant.now(), command);
         when(pendingStore.peekPreview("preview-123")).thenReturn(Optional.of(pending));
         when(pendingStore.claimPreview("preview-123")).thenReturn(Optional.of(pending));
         when(requestMapper.toBeginRequest(command))
@@ -322,7 +324,7 @@ class ReservationServiceTest {
         givenClaimedPreviewWithBegin(command,
                 new TourVisioCallResult.Success<>(beginResponsePricedAt("1500.00")));
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
 
         assertThat(result).isInstanceOf(ConfirmationResult.PriceMismatch.class);
         ConfirmationResult.PriceMismatch mismatch = (ConfirmationResult.PriceMismatch) result;
@@ -343,7 +345,7 @@ class ReservationServiceTest {
         givenClaimedPreviewWithBegin(command,
                 new TourVisioCallResult.Success<>(beginResponsePricedAt("1750.00")));
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
 
         assertThat(result).isInstanceOf(ConfirmationResult.PriceMismatch.class);
         verify(bookingClient, org.mockito.Mockito.never()).commitTransaction(any());
@@ -372,7 +374,7 @@ class ReservationServiceTest {
         when(entityMapper.toReservation(eq(command), anyString(), eq("TV-RES-1"))).thenReturn(reservation);
         when(reservationRepository.save(reservation)).thenReturn(reservation);
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
 
         assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
         verify(bookingClient).commitTransaction(any());
@@ -407,7 +409,7 @@ class ReservationServiceTest {
         when(entityMapper.toReservation(captor.capture(), anyString(), eq("TV-RES-1"))).thenReturn(reservation);
         when(reservationRepository.save(reservation)).thenReturn(reservation);
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
         assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
         return captor.getValue();
     }
@@ -482,7 +484,7 @@ class ReservationServiceTest {
                 new TourVisioCallResult.TechnicalFailure<TransactionResponse>("read timed out", null));
         when(pendingStore.restorePreview(pending)).thenReturn(true);
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
 
         assertThat(result).isInstanceOf(ConfirmationResult.TourVisioUnavailable.class);
         verify(pendingStore).restorePreview(pending);
@@ -496,7 +498,7 @@ class ReservationServiceTest {
                 new TourVisioCallResult.TechnicalFailure<TransactionResponse>("read timed out", null));
         when(pendingStore.restorePreview(pending)).thenReturn(false);
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
 
         // "Your preview expired, start again" — not "already being confirmed".
         assertThat(result).isInstanceOf(ConfirmationResult.PreviewExpired.class);
@@ -518,7 +520,7 @@ class ReservationServiceTest {
         when(bookingClient.commitTransaction(any()))
                 .thenReturn(new TourVisioCallResult.UnknownOutcome<CommitTransactionResponse>("TV-99", "timed out after commit", null));
 
-        ConfirmationResult result = reservationService.confirmReservation("preview-123", 123L);
+        ConfirmationResult result = reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L));
 
         assertThat(result).isInstanceOf(ConfirmationResult.CommitOutcomeUnknown.class);
         verify(pendingStore, org.mockito.Mockito.never()).restorePreview(any());
@@ -528,15 +530,58 @@ class ReservationServiceTest {
     void confirmReservation_unownedPreview_failsImmediately() {
         // Given
         String previewId = "preview-123";
-        PendingReservation pending = new PendingReservation(previewId, 999L, Instant.now(), null); // Belongs to user 999
+        PendingReservation pending = new PendingReservation(previewId, 999L, null, Instant.now(), null); // Belongs to user 999
         when(pendingStore.peekPreview(previewId)).thenReturn(Optional.of(pending));
 
         // When
-        ConfirmationResult result = reservationService.confirmReservation(previewId, 123L);
+        ConfirmationResult result = reservationService.confirmReservation(previewId, ReservationCaller.authenticated(123L));
 
         // Then
         assertThat(result).isInstanceOf(ConfirmationResult.OwnershipMismatch.class);
         verifyNoInteractions(bookingClient);
+        verifyNoInteractions(reservationRepository);
+    }
+
+    @Test
+    void confirmReservation_anotherGuestsPreview_isNotOwnedJustBecauseBothLackAUserId() {
+        // The reason guest ownership is a token and not a null user id: with an id-only check both
+        // guests are "null", null equals null, and any visitor holding a leaked previewId could
+        // confirm — i.e. actually purchase — someone else's booking.
+        String previewId = "preview-123";
+        PendingReservation pending =
+                new PendingReservation(previewId, null, "guest-owner", Instant.now(), null);
+        when(pendingStore.peekPreview(previewId)).thenReturn(Optional.of(pending));
+
+        ConfirmationResult result =
+                reservationService.confirmReservation(previewId, ReservationCaller.guest("guest-intruder"));
+
+        assertThat(result).isInstanceOf(ConfirmationResult.OwnershipMismatch.class);
+        verifyNoInteractions(bookingClient);
+        verifyNoInteractions(reservationRepository);
+    }
+
+    @Test
+    void confirmReservation_ownGuestPreview_passesTheOwnershipCheck() {
+        // The other half of the rule: the browser that created the preview must still be able to buy.
+        String previewId = "preview-123";
+        PendingReservation pending =
+                new PendingReservation(previewId, null, "guest-owner", Instant.now(), null);
+        when(pendingStore.peekPreview(previewId)).thenReturn(Optional.of(pending));
+        when(pendingStore.claimPreview(previewId)).thenReturn(Optional.empty());
+
+        ConfirmationResult result =
+                reservationService.confirmReservation(previewId, ReservationCaller.guest("guest-owner"));
+
+        // It got past ownership and on to the atomic claim (which this test leaves unclaimable) —
+        // the point being that it is NOT an OwnershipMismatch.
+        assertThat(result).isInstanceOf(ConfirmationResult.DuplicateInProgress.class);
+    }
+
+    @Test
+    void lookupReservation_withABlankSurname_neverReachesTheDatabase() {
+        // An empty surname must not behave like a wildcard on a publicly reachable lookup.
+        assertThat(reservationService.lookupReservation("PAX-20260721-ABC123", "  ")).isEmpty();
+        assertThat(reservationService.lookupReservation("  ", "Yılmaz")).isEmpty();
         verifyNoInteractions(reservationRepository);
     }
 }

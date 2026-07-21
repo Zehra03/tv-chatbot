@@ -56,6 +56,14 @@ public class Reservation {
     @Column(name = "user_id")
     private Long userId;
 
+    /**
+     * Opaque per-visitor key (the {@code X-Guest-Id} header) owning a guest booking; null for
+     * user-owned ones. Mutually exclusive with {@link #userId} — enforced by
+     * {@code chk_reservations_single_owner} (V7).
+     */
+    @Column(name = "guest_token", length = 64)
+    private String guestToken;
+
     @Column(name = "product_type", nullable = false, length = 16)
     private ProductType productType;
 
@@ -105,6 +113,14 @@ public class Reservation {
     @OneToOne(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true,
             fetch = FetchType.LAZY, optional = true)
     private FlightReservationDetails flightDetails;
+
+    /**
+     * True when this booking was made without an account. Derived from the absence of a user id
+     * rather than stored as a second flag, so the two can never disagree.
+     */
+    public boolean isGuest() {
+        return userId == null;
+    }
 
     /**
      * Product type derived from which detail snapshots are attached, rather than

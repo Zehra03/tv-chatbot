@@ -33,6 +33,7 @@ import com.paximum.paxassist.config.GlobalExceptionHandler;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
 import com.paximum.paxassist.reservation.domain.ReservationStatus;
+import com.paximum.paxassist.reservation.domain.ReservationCaller;
 import com.paximum.paxassist.reservation.service.CancelResult;
 import com.paximum.paxassist.reservation.service.ConfirmationResult;
 import com.paximum.paxassist.reservation.service.PreviewResult;
@@ -140,7 +141,7 @@ class ReservationControllerTest {
                 }
                 """;
         
-        when(reservationService.confirmReservation("preview-123", 123L)).thenReturn(new ConfirmationResult.OwnershipMismatch());
+        when(reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L))).thenReturn(new ConfirmationResult.OwnershipMismatch());
 
         // When & Then
         mockMvc.perform(post("/api/v1/reservations")
@@ -149,7 +150,7 @@ class ReservationControllerTest {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.outcome").value("OWNERSHIP_MISMATCH"));
 
-        verify(reservationService).confirmReservation("preview-123", 123L);
+        verify(reservationService).confirmReservation("preview-123", ReservationCaller.authenticated(123L));
     }
 
     // =============================================================================================
@@ -160,7 +161,7 @@ class ReservationControllerTest {
     // =============================================================================================
 
     private void confirmWithPreviewId(ConfirmationResult result) {
-        when(reservationService.confirmReservation("preview-123", 123L)).thenReturn(result);
+        when(reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L))).thenReturn(result);
     }
 
     private org.springframework.test.web.servlet.ResultActions postConfirm(String body) throws Exception {
@@ -217,7 +218,7 @@ class ReservationControllerTest {
 
     @Test
     void confirm_withConfirmationToken_resumesAtCommitInsteadOfStartingOver() throws Exception {
-        when(reservationService.confirmReservationAfterWarning("token-abc", 123L))
+        when(reservationService.confirmReservationAfterWarning("token-abc", ReservationCaller.authenticated(123L)))
                 .thenReturn(new ConfirmationResult.Confirmed(7L, "PAX-1", "TV-99"));
         when(reservationService.getReservation(7L)).thenReturn(java.util.Optional.empty());
 
@@ -226,7 +227,7 @@ class ReservationControllerTest {
                 """)
                 .andExpect(status().isCreated());
 
-        verify(reservationService).confirmReservationAfterWarning("token-abc", 123L);
+        verify(reservationService).confirmReservationAfterWarning("token-abc", ReservationCaller.authenticated(123L));
         // The preview path must not run as well — that would begin a second TourVisio transaction.
         verify(reservationService, org.mockito.Mockito.never()).confirmReservation(any(), any());
     }
@@ -338,7 +339,7 @@ class ReservationControllerTest {
 
         for (Case c : cases) {
             org.mockito.Mockito.reset(reservationService);
-            when(reservationService.confirmReservation("preview-123", 123L)).thenReturn(c.result());
+            when(reservationService.confirmReservation("preview-123", ReservationCaller.authenticated(123L))).thenReturn(c.result());
 
             String body = postConfirm(PREVIEW_BODY)
                     .andExpect(status().is(c.status()))
