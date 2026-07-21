@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { format } from 'date-fns'
-import { ArrowRightLeft, Plane } from 'lucide-react'
+import { ArrowRightLeft, Plane, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DropdownSelect } from '@/components/ui/dropdown-select'
 import { DatePicker } from '@/components/ui/date-picker'
@@ -11,12 +11,12 @@ import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { SearchHero } from '@/components/SearchHero'
-import { Skeleton } from '@/components/ui/skeleton'
+import { FlightCardSkeleton } from '@/features/flights/FlightCardSkeleton'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
-import { flightFiltersChanged } from '@/features/ui/uiSlice'
+import { flightFiltersChanged, flightFiltersReset } from '@/features/ui/uiSlice'
 import { flightFilterChips } from '@/features/ui/filterChips'
 import { useFlightSearch } from '@/features/flights/useFlightSearch'
 import { FlightFilters } from '@/features/flights/FlightFilters'
@@ -175,6 +175,9 @@ export function FlightsPage() {
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {/* Skyscanner'daki gibi yön seçimi ve direkt uçuş tercihi alanların üstünde. */}
           <div className="flex flex-wrap items-center gap-4">
+            {/* Hero örneği: örtü her temada lacivert, o yüzden cam yüzeyi de
+                temadan bağımsız beyaz alfa (bkz. SearchHero / heroFieldClass).
+                Metin rengi verilmiyor — SearchHero'dan beyaz miras alınır. */}
             <DropdownSelect
               id="flight-triptype"
               aria-label="Yön"
@@ -184,14 +187,17 @@ export function FlightsPage() {
                 { value: 'round_trip', label: 'Gidiş-dönüş' },
               ]}
               onChange={(v) => setTripType(v as TripType)}
+              className="border-white/15 bg-white/10 hover:bg-white/20"
             />
             {/* Sonuç filtre çubuğuyla aynı uiSlice alanına yazar — ikisi senkron kalır. */}
+            {/* Hero'nun lacivert örtüsü üstünde — renkler temadan bağımsız beyaz
+                (bkz. components/SearchHero). */}
             <label className="flex items-center gap-2 text-sm font-medium text-white">
               <input
                 type="checkbox"
                 checked={filters.nonstopOnly}
                 onChange={(e) => dispatch(flightFiltersChanged({ nonstopOnly: e.target.checked }))}
-                className="h-4 w-4 rounded border-white/30 accent-brand-teal"
+                className="h-4 w-4 rounded border-white/30 accent-brand-steel [color-scheme:dark]"
               />
               Direkt uçuşlar
             </label>
@@ -220,7 +226,7 @@ export function FlightsPage() {
               type="button"
               onClick={swapPlaces}
               aria-label="Kalkış ve varış yerlerini değiştir"
-              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white backdrop-blur-sm transition-colors hover:bg-white/20 sm:flex"
+              className="hidden h-12 w-10 shrink-0 items-center justify-center rounded-lg border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20 sm:flex"
             >
               <ArrowRightLeft className="h-4 w-4" aria-hidden="true" />
             </button>
@@ -287,8 +293,10 @@ export function FlightsPage() {
               fieldClassName={cn('w-32', heroFieldClass)}
               align="right"
             />
-            {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
-            <Button type="submit" className="h-12">
+            {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
+                text-white: Button'ın default varyantı text-foreground'dur; hero'nun
+                lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}
+            <Button type="submit" variant="cta" className="h-12">
               Ara
             </Button>
           </div>
@@ -297,7 +305,7 @@ export function FlightsPage() {
           {formError && (
             <p
               role="alert"
-              className="rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm font-medium text-red-100"
+              className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive-emphasis"
             >
               {formError}
             </p>
@@ -313,12 +321,12 @@ export function FlightsPage() {
 
       {query.isFetching && (
         <div className="space-y-3">
-          <LoadingState label="Aranıyor…" className="text-brand-ice/70" />
-          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          <LoadingState label="Aranıyor…" className="text-muted-foreground" />
+          {/* Karta birebir iskelet kartlar (CLS 0) — duyuruyu üstteki role="status" yapar. */}
           <div aria-hidden="true" className="grid gap-3">
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
-            <Skeleton className="h-36" />
+            <FlightCardSkeleton />
+            <FlightCardSkeleton />
+            <FlightCardSkeleton />
           </div>
         </div>
       )}
@@ -331,8 +339,30 @@ export function FlightsPage() {
         <>
           <FlightFilters airlines={airlines} />
           <ActiveFilterChips chips={chips} />
-          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
-          <FlightList products={visible} criteria={criteria ?? undefined} />
+          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
+          {/* Filtreler tüm sonuçları eleyince pasif "bulunamadı" yerine tıklanabilir
+              kurtarma (§6): backend uçuş döndü ama filtreler 0'a indirdi → tek tıkla temizle. */}
+          {query.data.length > 0 && visible.length === 0 ? (
+            <EmptyState
+              tone="dark"
+              title="Filtrelerinizle eşleşen uçuş yok"
+              icon={<SlidersHorizontal className="h-5 w-5" />}
+              action={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => dispatch(flightFiltersReset())}
+                >
+                  Filtreleri temizle
+                </Button>
+              }
+            >
+              Toplam {query.data.length} uçuş bulundu ama seçili filtreler hepsini eledi.
+            </EmptyState>
+          ) : (
+            <FlightList products={visible} criteria={criteria ?? undefined} />
+          )}
         </>
       )}
     </div>

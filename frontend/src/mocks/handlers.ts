@@ -61,6 +61,18 @@ function shouldWarn(cmd: PreviewReservationCommand): boolean {
   return (cmd.offerIds ?? []).includes('OFFER-DUP')
 }
 
+/**
+ * Fiyat değişimi (K21) dalını tetikleyen sinyal: offerId 'OFFER-REPRICE'. Gerçek backend
+ * önizlemeyi kurarken TourVisio'nun CANLI fiyatını yeniden okur ve aramadakinden farklıysa
+ * priceChanged + previousAmount döndürür. Mock eskiden istemcinin kendi tutarını yankılıyordu,
+ * yani bu dal hiç sürülemiyordu — alanların frontend tipinde eksik olduğu da bu yüzden
+ * hiçbir testte ortaya çıkmamıştı.
+ */
+const REPRICE_MULTIPLIER = 1.3
+function shouldReprice(cmd: PreviewReservationCommand): boolean {
+  return (cmd.offerIds ?? []).includes('OFFER-REPRICE')
+}
+
 /** Komuttan tam rezervasyon detayı üretir (onaylı) — çift-jetonlu backend commit'inin karşılığı. */
 function reservationFromCommand(cmd: PreviewReservationCommand, id: number): ReservationDetail {
   return {
@@ -270,16 +282,25 @@ export const handlers: RequestHandler[] = [
     const cmd = (await request.json()) as PreviewReservationCommand
     const previewId = `preview-${nextPreviewSeq++}`
     previewStore.set(previewId, cmd)
+    // Canlı fiyat: normalde istemcinin gördüğü tutarla aynı; 'OFFER-REPRICE' ile yeniden fiyatlanır.
+    const repriced = shouldReprice(cmd)
+    const liveAmount = repriced
+      ? Math.round(cmd.totalAmount * REPRICE_MULTIPLIER * 100) / 100
+      : cmd.totalAmount
     const body: PreviewResponse = {
       previewId,
       expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
       productType: deriveProductType(cmd),
-      totalAmount: cmd.totalAmount,
+      totalAmount: liveAmount,
       currency: cmd.currency,
       leadGuestName: cmd.leadGuestName,
       passengerNames: (cmd.travellers ?? []).map((t) => `${t.firstName} ${t.lastName}`),
       hasHotel: !!cmd.hotel,
       hasFlight: !!cmd.flight,
+      priceChanged: repriced,
+      previousAmount: repriced ? cmd.totalAmount : null,
+      // Önizleme yalnız TourVisio'nun fiyatlamayı kabul ettiği teklif için oluşur.
+      available: true,
     }
     return HttpResponse.json(body)
   }),

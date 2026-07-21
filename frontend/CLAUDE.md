@@ -25,15 +25,29 @@ Tokens live as HSL CSS variables in `src/index.css` and are wired into Tailwind 
 `tailwind.config.js`. **Use semantic Tailwind classes, never raw hex** — e.g. `bg-primary`,
 `text-muted-foreground`, `border`. This keeps light/dark + theming consistent.
 
-- **Brand:** PaxAssist — travel chatbot. The mark = a paper plane (travel); "pax" nods to
-  both *passenger* and *PAXIMUM*. Tone: trustworthy, modern, clean.
-- **Primary:** `--primary` = `221.2 83.2% 53.3%` (blue-600, `#2563eb`). Use `bg-primary` /
+**Visual language: flat, light-first (Booking/Stripe/Linear).** No glassmorphism, no heavy
+gradients, no WebGL. Surfaces are solid `bg-card` + `border` + soft shadow (`shadow-soft`).
+Default theme is **light** (`app/theme.tsx` `DEFAULT_THEME = 'light'`, mirrored in the
+`index.html` FOUC script); dark is a supported secondary theme. Follow **60-30-10**: ~60%
+neutral (white/`bg-background`), ~30% brand blue, ≤10% orange — orange is CTA-only.
+
+- **Brand:** PaxAssist — travel chatbot. Fixed identity palette (does not theme-switch),
+  defined in `tailwind.config.js` + mirrored in `lib/brand.ts`: `brand-navy #00243F`,
+  `brand-blue #004E89`, `brand-steel #1A659E`, `brand-orange #FF6B35`, `brand-peach #F7C59F`,
+  `brand-cream #EFEFD0`. No teal/iris/ice.
+- **Primary:** `--primary` = `206 100% 27%` (`#004E89`, brand blue). Use `bg-primary` /
   `text-primary` / `fill-primary`.
 - **Neutrals & semantic:** `background`, `foreground`, `muted`, `accent`, `card`,
-  `secondary`, `destructive` — all as `*-foreground` pairs.
+  `secondary`, `destructive` (+ `destructive-emphasis` for readable error **text**),
+  `success` (`#22C55E`), `warning` (`#F59E0B`) — all as `*-foreground` pairs.
+- **Buttons** (`ui/button.tsx`, flat): `cta` = solid orange + navy text (the primary action —
+  Search/Book/Continue/Pay/Confirm; navy-on-orange is 5.5:1, white-on-orange fails AA so we do
+  NOT use white); `default` = neutral white+border; `secondary` = white + blue border + blue
+  text; `ghost` = blue text; `outline`/`destructive`/`link` as named.
 - **Typography:** Inter (loaded in `index.css`). Hierarchy via **size + weight**, not color.
 - **Spacing:** 8px rhythm — Tailwind scale (`gap-2`=8px, `gap-4`=16px, `p-6`=24px).
-- **Radius:** `--radius` (`rounded-lg/md/sm` derive from it).
+- **Radius:** `--radius` = `0.75rem`. Buttons/inputs `rounded-lg` (12px), cards `rounded-2xl`
+  (16px), dialogs `rounded-[1.25rem]` (20px), badges `rounded-full`.
 - **Components:** shadcn/ui primitives in `src/components/ui/`; 21st.dev Magic for richer
   modern/animated pieces. Shared app primitives in `src/components/`.
 

@@ -1,19 +1,20 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { Hotel } from 'lucide-react'
+import { Hotel, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ActiveFilterChips } from '@/components/ActiveFilterChips'
 import { EmptyState } from '@/components/EmptyState'
 import { ErrorState } from '@/components/ErrorState'
 import { LoadingState } from '@/components/LoadingState'
 import { SearchHero } from '@/components/SearchHero'
-import { Skeleton } from '@/components/ui/skeleton'
+import { HotelCardSkeleton } from '@/features/hotels/HotelCardSkeleton'
 import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
+import { CHILD_MAX_AGE, CHILD_MIN_AGE } from '@/features/reservation/reservationFormSchema'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
-import { hotelFiltersChanged } from '@/features/ui/uiSlice'
+import { hotelFiltersChanged, hotelFiltersReset } from '@/features/ui/uiSlice'
 import { hotelFilterChips } from '@/features/ui/filterChips'
 import { useHotelSearch } from '@/features/hotels/useHotelSearch'
 import { HotelFilters } from '@/features/hotels/HotelFilters'
@@ -186,7 +187,16 @@ export function HotelsPage() {
             summary={guestSummary}
             rows={[
               { key: 'adults', label: 'Yetişkin', hint: '18 yaş ve üzeri', value: adults, min: 1, max: MAX_PARTY_SIZE },
-              { key: 'children', label: 'Çocuk', hint: '0–17 yaş', value: childCount, min: 0, max: 6 },
+              {
+                key: 'children',
+                label: 'Çocuk',
+                // İpucu de şemayla aynı kaynaktan: '0–17' yazmak seçilemeyen (ve rezerve
+                // edilemeyen) bir yaşı davet ediyordu.
+                hint: `${CHILD_MIN_AGE}–${CHILD_MAX_AGE} yaş`,
+                value: childCount,
+                min: 0,
+                max: 6,
+              },
               { key: 'rooms', label: 'Oda', hint: 'Her odada en az bir yetişkin', value: rooms, min: 1, max: maxRooms },
             ]}
             onRowChange={(key, value) => {
@@ -197,8 +207,8 @@ export function HotelsPage() {
             fieldClassName={cn('w-56', heroFieldClass)}
           >
             {childCount > 0 && (
-              <div className="mt-4 border-t border-white/10 pt-3">
-                <p className="text-xs font-medium text-brand-ice/70">
+              <div className="mt-4 border-t border-border pt-3">
+                <p className="text-xs font-medium text-muted-foreground">
                   Çocuk yaşları (fiyatlama için)
                 </p>
                 {/* auto-fit: panel daraldığında (küçük ekranda min() ile kısalır)
@@ -208,7 +218,7 @@ export function HotelsPage() {
                   {childAges.map((age, i) => (
                     <label
                       key={i}
-                      className="grid min-w-0 grid-rows-[auto_auto] gap-1 text-start text-xs text-brand-ice/70"
+                      className="grid min-w-0 grid-rows-[auto_auto] gap-1 text-start text-xs text-muted-foreground"
                     >
                       {/* truncate: etiket sarmalanırsa o sütunun select'i komşusuna
                           göre aşağı kayıyordu — tek satıra sabitleyip hizayı korur. */}
@@ -220,16 +230,27 @@ export function HotelsPage() {
                             ages.map((a, j) => (j === i ? Number(e.target.value) : a)),
                           )
                         }
-                        // bg-brand-navy opak olmalı: yarı saydam bir zeminde native
-                        // seçenek listesi panelin değil OS yüzeyinin üstünde
-                        // birleştiriliyor ve beyaz zemin + beyaz yazı çıkıyor.
-                        className="h-9 w-full min-w-0 rounded-md border border-white/15 bg-brand-navy px-2 text-sm text-white [color-scheme:dark] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal"
+                        // Zemin OPAK olmalı (yarı saydamda native seçenek listesi
+                        // panelin değil OS yüzeyinin üstünde birleşiyor ve beyaz
+                        // zemin + beyaz yazı çıkıyordu) — `bg-background` opak ve
+                        // temayı izliyor. color-scheme artık :root/.dark'tan miras:
+                        // sabit [color-scheme:dark] açık temada native listeyi
+                        // zorla koyu render ediyordu.
+                        className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
-                        {Array.from({ length: 18 }, (_, y) => (
-                          <option key={y} value={y} className="bg-brand-navy text-white">
-                            {y}
-                          </option>
-                        ))}
+                        {/* Aralık şemayla TEK kaynaktan gelir (CHILD_MIN_AGE–CHILD_MAX_AGE).
+                            Eskiden 0'dan başlıyordu: 0–2 seçen kullanıcı aramayı yapabiliyor
+                            ama rezervasyon formunu ASLA gönderemiyordu (şema 3–17 istiyor,
+                            yolcu satırı teklifin pax'ına sabit olduğu için silinemiyor).
+                            Otelde 0–2 zaten geçersiz — INFANT yalnız uçuş ücret tipi. */}
+                        {Array.from({ length: CHILD_MAX_AGE - CHILD_MIN_AGE + 1 }, (_, i) => {
+                          const y = CHILD_MIN_AGE + i
+                          return (
+                            <option key={y} value={y} className="bg-background text-foreground">
+                              {y}
+                            </option>
+                          )
+                        })}
                       </select>
                     </label>
                   ))}
@@ -237,8 +258,10 @@ export function HotelsPage() {
               </div>
             )}
           </PeoplePicker>
-          {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı. */}
-          <Button type="submit" className="h-12">
+          {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
+              text-white: Button'ın default varyantı text-foreground'dur; hero'nun
+              lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}
+          <Button type="submit" variant="cta" className="h-12">
             Ara
           </Button>
 
@@ -247,7 +270,7 @@ export function HotelsPage() {
           {formError && (
             <p
               role="alert"
-              className="w-full rounded-lg border border-red-400/40 bg-red-500/15 px-3 py-2 text-sm font-medium text-red-100"
+              className="w-full rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive-emphasis"
             >
               {formError}
             </p>
@@ -263,12 +286,12 @@ export function HotelsPage() {
 
       {query.isFetching && (
         <div className="space-y-3">
-          <LoadingState label="Aranıyor…" className="text-brand-ice/70" />
-          {/* Dekoratif iskelet kartlar — duyuruyu üstteki role="status" yapar. */}
+          <LoadingState label="Aranıyor…" className="text-muted-foreground" />
+          {/* Karta birebir iskelet kartlar (CLS 0) — duyuruyu üstteki role="status" yapar. */}
           <div aria-hidden="true" className="grid gap-3">
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
-            <Skeleton className="h-32" />
+            <HotelCardSkeleton />
+            <HotelCardSkeleton />
+            <HotelCardSkeleton />
           </div>
         </div>
       )}
@@ -281,8 +304,30 @@ export function HotelsPage() {
         <>
           <HotelFilters boardTypes={boardTypes} />
           <ActiveFilterChips chips={chips} />
-          <p className="text-sm text-brand-ice/70">{visible.length} sonuç</p>
-          <HotelList products={visible} criteria={criteria ?? undefined} />
+          <p className="text-sm text-muted-foreground">{visible.length} sonuç</p>
+          {/* Filtreler tüm sonuçları eleyince pasif "bulunamadı" yerine tıklanabilir
+              kurtarma (§6): backend otel döndü ama filtreler 0'a indirdi → tek tıkla temizle. */}
+          {query.data.length > 0 && visible.length === 0 ? (
+            <EmptyState
+              tone="dark"
+              title="Filtrelerinizle eşleşen otel yok"
+              icon={<SlidersHorizontal className="h-5 w-5" />}
+              action={
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => dispatch(hotelFiltersReset())}
+                >
+                  Filtreleri temizle
+                </Button>
+              }
+            >
+              Toplam {query.data.length} otel bulundu ama seçili filtreler hepsini eledi.
+            </EmptyState>
+          ) : (
+            <HotelList products={visible} criteria={criteria ?? undefined} />
+          )}
         </>
       )}
     </div>

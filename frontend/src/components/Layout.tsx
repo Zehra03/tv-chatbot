@@ -1,24 +1,31 @@
 import { useState } from 'react'
-import { NavLink, useLocation, useMatches, useNavigate } from 'react-router-dom'
+import { NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Menu, UserRound, X } from 'lucide-react'
 import { AnimatedOutlet } from '@/components/AnimatedOutlet'
 import { GooeyNav } from '@/components/GooeyNav'
 import { Logo } from '@/components/Logo'
-import { NightSkyBackground } from '@/components/NightSkyBackground'
+import { SkyBackground } from '@/components/NightSkyBackground'
+import { ThemeToggle } from '@/components/ThemeToggle'
 import { Button } from '@/components/ui/button'
-import { useAppDispatch, useAppSelector } from '@/app/hooks'
-import { zoneFromMatches, type Zone } from '@/app/zones'
-import { logout } from '@/features/auth/authSlice'
+import { useAppSelector } from '@/app/hooks'
+import { useTheme } from '@/app/theme'
+import { useLogout } from '@/features/auth/useLogout'
 import { cn } from '@/lib/utils'
 
 /** Korumalı sayfaların ortak çatısı: üst bar (logo + navigasyon + kullanıcı/çıkış)
  * ve içerik alanı. İçerik <AnimatedOutlet /> ile buraya render edilir.
  * Responsive: md+ satır içi navigasyon; mobilde hamburger ile açılan panel.
  *
- * Bölge mekanizması: rotanın `handle.zone` işaretine göre yüzey koyu (ai) ya da
- * açık (controlled) boyanır; 700ms renk geçişi "bu adımda AI devre dışı"
- * anlatısının görsel karşılığıdır. */
+ * Yüzey rengi KULLANICI TEMASINDAN gelir (app/theme.tsx), rotadan değil. Önceden
+ * rotanın `handle.zone` işareti boyardı ("AI bölgesi koyu, kontrollü bölge açık");
+ * tüm rotalar 'ai' işaretlenip anlatı AiOffBanner'a taşınınca o mekanizma tek
+ * renge çöktü ve kaldırıldı.
+ *
+ * Kabuk artık tema dalı taşımıyor — renkler token'dan geliyor ve ikisini de doğru
+ * veriyor. Logo da istisna değil: eskiden lacivert harfleri koyu yüzeyde okunur
+ * kılmak için arkasına beyaz halo konurdu; artık Logo'nun kendi koyu varyantı
+ * (beyaz harfli kaynak) var, halo kaldırıldı. */
 const NAV = [
   { to: '/chat', label: 'Sohbet' },
   { to: '/hotels', label: 'Oteller' },
@@ -26,32 +33,23 @@ const NAV = [
   { to: '/reservations', label: 'Rezervasyonlar' },
 ]
 
-/** Mobil panel nav: her iki bölgede de pill (dikey listede alt çizgi okunmaz). */
-const mobileNavLinkClass =
-  (zone: Zone) =>
-  ({ isActive }: { isActive: boolean }) =>
-    zone === 'ai'
-      ? cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive ? 'bg-white/10 text-white' : 'text-brand-ice/60 hover:text-white',
-        )
-      : cn(
-          'rounded-md px-3 py-2 text-sm font-medium transition-colors',
-          isActive
-            ? 'bg-accent text-accent-foreground'
-            : 'text-muted-foreground hover:text-foreground',
-        )
+/** Mobil panel nav: her iki temada da pill (dikey listede alt çizgi okunmaz).
+ *  Renkler token'dan geldiği için tema dalı gerekmiyor. */
+const mobileNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+  cn(
+    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+    isActive
+      ? 'bg-primary/10 text-primary'
+      : 'text-muted-foreground hover:text-foreground',
+  )
 
 export function Layout() {
   const user = useAppSelector((s) => s.auth.user)
-  const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const matches = useMatches()
   const [menuOpen, setMenuOpen] = useState(false)
 
-  const zone = zoneFromMatches(matches)
-  const dark = zone === 'ai'
+  const { resolvedTheme } = useTheme()
 
   // Chat, viewport'a oturan bir "uygulama" görünümü: geniş dikey oluk (py-8)
   // yüksekliği çalar ve panel/thread'i fold'un altına itebilir. Bu rotada oluğu
@@ -67,10 +65,7 @@ export function Layout() {
       : location.pathname.startsWith(item.to),
   )
 
-  const handleLogout = () => {
-    dispatch(logout())
-    navigate('/login', { replace: true })
-  }
+  const handleLogout = useLogout()
 
   return (
     <div
@@ -80,46 +75,45 @@ export function Layout() {
         // "boş kaydırılabilir alan" olarak sızamaz. h-[100dvh] mobilde dinamik
         // araç çubuğuna da uyar; header + main flex sütununu paylaşır.
         'flex h-screen flex-col overflow-hidden transition-colors duration-700 supports-[height:100dvh]:h-[100dvh]',
-        // 'dark' sınıfı semantik token'ları (bg-card, muted-foreground, border…)
-        // koyu palete çevirir — token'la yazılmış sayfalar otomatik okunur kalır.
-        dark ? 'dark bg-brand-navy text-white' : 'bg-background text-foreground',
+        // 'dark' sınıfı ARTIK BURADA DEĞİL — <html>'e taşındı (app/theme.tsx), çünkü
+        // <body>'ye portal olan katmanlar (ui/modal, chat/ResultsPanel, sonner) bu
+        // div'in altında değil ve sınıf burada kalsaydı temayı göremezlerdi.
+        //
+        // Kabuk artık elle boyanmıyor: koyu --background = brand-navy, --foreground
+        // = beyaz (index.css'teki Gece Uçuşu paleti), yani token'lar iki temayı da
+        // doğru veriyor.
+        'bg-background text-foreground',
       )}
     >
-      {/* Gece uçuşu arka planı — yalnızca AI bölgesinde, yumuşak giriş/çıkışla. */}
-      <AnimatePresence>
-        {dark && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7 }}
-          >
-            <NightSkyBackground />
-          </motion.div>
-        )}
+      {/* Gökyüzü — her iki temada da var (gece/gündüz), tema değişiminde çapraz
+          geçişle. Açık temada bu zemin ŞART: cam yüzeyler beyaz/0.65, saf beyaz
+          üstünde görünmezlerdi. */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={resolvedTheme}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.7 }}
+        >
+          <SkyBackground />
+        </motion.div>
       </AnimatePresence>
 
       <header
         className={cn(
           // Kabuğun sabit üst satırı — flex sütununda küçülmez (shrink-0); sticky
           // yerine gerçek akış elemanı, çünkü main artık tek kaydırma kabı.
-          'relative z-40 shrink-0 border-b backdrop-blur-md transition-colors duration-700',
-          dark ? 'border-white/10 bg-brand-navy/70' : 'border-border bg-background/80',
+          // Düz (flat): dolu zemin + alt kenarlık, cam/blur yok. Renkler token'dan.
+          'relative z-40 shrink-0 border-b border-border bg-background transition-colors duration-700',
         )}
       >
         {/* Bar tam genişlik (container sınırı yok) — h-24; ChatPage 10rem hesabı buna bağlı. */}
         <div className="relative flex h-24 w-full items-center justify-between gap-4 px-4 sm:px-8">
           <NavLink to="/" aria-label="Ana sayfa" onClick={() => setMenuOpen(false)}>
-            {/* Koyu yüzeyde login'deki halo hilesi: lacivert harfler okunur kalır. */}
-            <span className="relative inline-block">
-              {dark && (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-0 -m-1 rounded-full bg-white/35 blur-md"
-                />
-              )}
-              <Logo height={88} className="relative" />
-            </span>
+            {/* Halo YOK: Logo 'auto' varyantla koyu zeminde beyaz harfli kaynağa
+                geçiyor, okunurluk artık görselin kendisinden geliyor. */}
+            <Logo height={34} />
           </NavLink>
           {/* Masaüstü navigasyonu — barın gerçek ortasında (mutlak konum, logo ve
               sağ eylemlerden bağımsız); mobilde gizli, hamburger paneline taşınır. */}
@@ -131,6 +125,8 @@ export function Layout() {
             />
           </div>
           <div className="flex items-center gap-3">
+            {/* Tema seçici — masaüstünde satır içi; mobilde hamburger panelinde. */}
+            <ThemeToggle className="hidden md:flex" />
             {/* Kullanıcı adı → profil sayfası. */}
             {user && (
               <NavLink
@@ -138,13 +134,7 @@ export function Layout() {
                 className={({ isActive }) =>
                   cn(
                     'hidden max-w-[16rem] items-center gap-1.5 truncate rounded-md px-2 py-1 text-sm transition-colors md:flex',
-                    dark
-                      ? isActive
-                        ? 'text-white'
-                        : 'text-brand-ice/70 hover:text-white'
-                      : isActive
-                        ? 'text-foreground'
-                        : 'text-muted-foreground hover:text-foreground',
+                    isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground',
                   )
                 }
               >
@@ -156,7 +146,7 @@ export function Layout() {
             <Button
               variant="ghost"
               size="icon"
-              className={cn('md:hidden', dark && 'text-brand-ice hover:bg-white/10 hover:text-white')}
+              className="text-muted-foreground hover:bg-muted hover:text-foreground md:hidden"
               aria-label={menuOpen ? 'Menüyü kapat' : 'Menüyü aç'}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((o) => !o)}
@@ -169,40 +159,30 @@ export function Layout() {
         {/* Mobil panel — overlay olarak açılır (header shrink-0 yüksekliği
             sabit kalır, kabuk düzeni bozulmaz); linke tıklayınca kapanır. */}
         {menuOpen && (
-          <div
-            className={cn(
-              'absolute inset-x-0 top-full z-50 border-b border-t shadow-md backdrop-blur-md md:hidden',
-              dark ? 'border-white/10 bg-brand-navy/95' : 'bg-background',
-            )}
-          >
+          <div className="absolute inset-x-0 top-full z-50 border-b border-t border-border bg-background shadow-soft md:hidden">
             <nav className="flex flex-col gap-1 px-4 py-3 sm:px-8">
               {NAV.map((item) => (
                 <NavLink
                   key={item.to}
                   to={item.to}
-                  className={mobileNavLinkClass(zone)}
+                  className={mobileNavLinkClass}
                   onClick={() => setMenuOpen(false)}
                 >
                   {item.label}
                 </NavLink>
               ))}
-              <div
-                className={cn(
-                  'mt-2 flex items-center justify-between gap-2 border-t pt-3',
-                  dark && 'border-white/10',
-                )}
-              >
+              {/* Tema seçici — mobil panelde kendi satırında. */}
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border px-3 pt-3">
+                <span className="text-sm text-muted-foreground">Tema</span>
+                <ThemeToggle />
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-2 border-t border-border pt-3">
                 {/* Kullanıcı adı → profil sayfası (panel kapanır). */}
                 {user && (
                   <NavLink
                     to="/profile"
                     onClick={() => setMenuOpen(false)}
-                    className={cn(
-                      'flex min-w-0 items-center gap-1.5 truncate px-3 text-sm transition-colors',
-                      dark
-                        ? 'text-brand-ice/70 hover:text-white'
-                        : 'text-muted-foreground hover:text-foreground',
-                    )}
+                    className="flex min-w-0 items-center gap-1.5 truncate px-3 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
                     <UserRound className="h-4 w-4 shrink-0" aria-hidden />
                     <span className="truncate">{user.name ?? user.email}</span>

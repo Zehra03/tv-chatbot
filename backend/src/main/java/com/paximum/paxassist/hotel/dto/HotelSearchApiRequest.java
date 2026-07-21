@@ -17,8 +17,13 @@ import jakarta.validation.constraints.NotNull;
  * The request body {@code POST /api/v1/hotels/search} receives from the frontend
  * ({@code HotelSearchCriteria} in {@code frontend/src/types/search.ts}). Only the fields the
  * search needs are mapped to the internal {@link HotelSearchRequest}; frontend-only filters
- * (stars, boardType, priceRange, region, sort, hotelName, rooms, children) are applied client-side
+ * (stars, boardType, priceRange, region, sort, hotelName, children) are applied client-side
  * and ignored here.
+ *
+ * <p>{@code rooms} is NOT one of those client-side filters, despite what this note used to claim:
+ * the frontend applied it nowhere, and dropping it here meant every multi-room search was priced
+ * as a single room holding the whole party — the guest saw a one-room rate and then booked it with
+ * {@code rooms: N} on the reservation. It is a pricing input and is mapped through.
  *
  * <p>Constraints are enforced here rather than left to the frontend: this endpoint is reachable
  * directly, and an unchecked body reaches TourVisio as a nonsensical search (zero adults, a
@@ -32,6 +37,7 @@ public record HotelSearchApiRequest(
 
         @NotNull(message = "Giriş tarihi zorunludur.")
         @FutureOrPresent(message = "Geçmiş tarih seçilemez.")
+        @com.paximum.paxassist.validator.MaxSearchDate
         LocalDate checkIn,
 
         @NotNull(message = "Çıkış tarihi zorunludur.")
@@ -41,6 +47,10 @@ public record HotelSearchApiRequest(
         @Min(value = 1, message = "En az 1 yetişkin olmalıdır.")
         Integer adults,
 
+        Integer children,
+        /** Requested rooms; null means one (older clients / chat criteria that never asked). */
+        @Min(value = 1, message = "En az 1 oda olmalıdır.")
+        Integer rooms,
         List<Integer> childAges,
         String nationality,
         String currency) {
@@ -53,12 +63,23 @@ public record HotelSearchApiRequest(
         return checkIn == null || checkOut == null || checkOut.isAfter(checkIn);
     }
 
+    /**
+     * Cross-field rule: every room needs at least one adult, so there can never be more rooms than
+     * adults. The frontend already clamps this (HotelsPage sends {@code Math.min(rooms, adults)})
+     * and validatePreviewCommand repeats it, but this endpoint is reachable directly.
+     */
+    @JsonIgnore
+    @AssertTrue(message = "Oda sayısı yetişkin sayısından fazla olamaz.")
+    public boolean isRoomsWithinAdults() {
+        return rooms == null || adults == null || rooms <= adults;
+    }
+
     /** Maps to the internal request: nights are derived from check-in/check-out, adults→adult. */
     public HotelSearchRequest toInternal() {
         Integer night = (checkIn != null && checkOut != null)
                 ? (int) ChronoUnit.DAYS.between(checkIn, checkOut)
                 : null;
         String checkInIso = (checkIn != null) ? checkIn.toString() : null;
-        return new HotelSearchRequest(destination, checkInIso, night, adults, childAges, nationality, currency, null);
+        return new HotelSearchRequest(destination, checkInIso, night, adults, rooms, childAges, nationality, currency, null);
     }
 }

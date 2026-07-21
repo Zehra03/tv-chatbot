@@ -160,8 +160,10 @@ public class HotelSearchServiceImpl implements HotelSearchService {
                 continue; // never suggest a past/today date
             }
             String checkIn = candidate.toString();
+            // Carry the room count: a suggestion is only useful if the date is available for the
+            // party the guest actually asked for, not for a single room holding all of them.
             HotelSearchRequest probe = new HotelSearchRequest(
-                    base.destination(), checkIn, base.night(), base.adult(),
+                    base.destination(), checkIn, base.night(), base.adult(), base.rooms(),
                     base.childAges(), base.nationality(), base.currency(), base.culture());
             try {
                 if (hasResults(tourVisioHotelApiClient.priceSearch(probe, locationId))) {
@@ -205,6 +207,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         // dropdown stays usable.
         String needle = fold(query.trim());
         return byId.values().stream()
+                .filter(loc -> fold(loc.name()).contains(needle) || needle.contains(fold(loc.name())))
                 .sorted(Comparator.comparingInt(loc -> fold(loc.name()).startsWith(needle) ? 0 : 1))
                 .limit(MAX_SUGGESTIONS)
                 .toList();

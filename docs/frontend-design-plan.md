@@ -1,8 +1,16 @@
 # PaxAssist — Tasarım Yenileme Planı ("Gece Uçuşu")
 
-> Hedef: Login/register'da kurulan görsel kimliği (lacivert + glassmorphism +
-> teal/iris gradyan) uygulamanın tamamına taşımak. Jüri demosunda giriş ekranı ile
-> iç ekranlar tek bir ürün gibi hissettirmeli.
+> ⚠️ **BU PLAN ARTIK GEÇERSİZ (tarihsel kayıt).** Ürün, düz (flat), **açık-tema
+> öncelikli** bir tasarıma (Booking/Stripe/Linear dili) geçti: glassmorphism, ağır
+> gradyanlar, WebGL ve teal/iris/ice paleti KALDIRILDI. Güncel tasarım sistemi için
+> `frontend/CLAUDE.md`'ye bakın. Aşağıdaki "Gece Uçuşu" planı yalnızca geçmiş referanstır.
+>
+> Güncel palet: `brand-navy #00243F · blue #004E89 · steel #1A659E · orange #FF6B35 ·
+> peach #F7C59F · cream #EFEFD0`. Varsayılan tema **açık**; koyu tema desteklenen
+> ikincil seçenek. Yüzeyler dolu (`bg-card` + kenarlık + `shadow-soft`), CTA turuncu.
+
+> (Tarihsel hedef) Login/register'da kurulan görsel kimliği (lacivert + glassmorphism +
+> teal/iris gradyan) uygulamanın tamamına taşımak.
 
 ## 1. Konsept: "AI alanı koyu, kontrollü alan açık"
 

@@ -42,7 +42,7 @@ class AmbiguityHandlerTest {
         // The chosen option carries the original message so the next turn keeps the city.
         assertThat(result.options())
                 .extracting(ChoiceOption::value)
-                .containsExactly("Antalya için otel arıyorum", "Antalya için uçuş arıyorum");
+                .containsExactly("Otel aramak istiyorum (Seçim: Antalya)", "Uçuş aramak istiyorum (Seçim: Antalya)");
     }
 
     @Test
@@ -51,6 +51,6 @@ class AmbiguityHandlerTest {
 
         assertThat(result.options())
                 .extracting(ChoiceOption::value)
-                .containsExactly("Bodrum için otel arıyorum", "Bodrum için uçuş arıyorum");
+                .containsExactly("Otel aramak istiyorum (Seçim: Bodrum)", "Uçuş aramak istiyorum (Seçim: Bodrum)");
     }
 }

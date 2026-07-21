@@ -65,8 +65,14 @@ export function DropdownSelect({
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
+        // METİN RENGİ BİLEREK YOK — miras alınır (ui/label ile aynı desen). Bu
+        // bileşen iki farklı yüzeyde yaşıyor: normal sayfalarda Layout'un
+        // `text-foreground`'unu, hero'da SearchHero'nun `text-white`'ını alır.
+        // Sabit `text-foreground` yazılsaydı hero'nun lacivert örtüsünde açık
+        // temada siyaha dönerdi. Zemin/kenar token'lı kalır (sayfa yüzeyi için
+        // doğru); hero örneği bunları className ile ezer — heroFieldClass deseni.
         className={cn(
-          'flex h-9 items-center justify-between gap-2 rounded-xl border border-white/15 bg-white/5 px-3 text-sm text-white shadow-[0_0_20px_rgba(0,0,0,0.2)] backdrop-blur-sm transition-colors hover:border-brand-teal/60 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-teal',
+          'flex h-9 items-center justify-between gap-2 rounded-xl border border-border bg-card px-3 text-sm shadow-soft transition-colors hover:border-primary/60 hover:bg-muted focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring',
           className,
         )}
       >
@@ -75,7 +81,9 @@ export function DropdownSelect({
           aria-hidden
           animate={{ rotate: open ? 180 : 0 }}
           transition={{ duration: 0.4, ease: 'easeInOut', type: 'spring' }}
-          className="shrink-0 text-brand-ice/70"
+          // Renk değil opaklık: miras alınan metin rengini takip eder, yani her
+          // yüzeyde (koyu hero / açık sayfa) doğru tonda kalır.
+          className="shrink-0 opacity-60"
         >
           <ChevronDown className="h-4 w-4" />
         </motion.span>
@@ -90,7 +98,7 @@ export function DropdownSelect({
             animate={{ opacity: 1, y: 0, scale: 1, filter: 'blur(0px)' }}
             exit={{ opacity: 0, y: -5, scale: 0.95, filter: 'blur(10px)' }}
             transition={{ duration: 0.4, type: 'spring', bounce: 0.15 }}
-            className="absolute left-0 top-full z-50 mt-2 flex w-max min-w-full max-w-[18rem] flex-col gap-0.5 rounded-xl border border-white/15 bg-brand-navy/95 p-1 shadow-[0_0_20px_rgba(0,0,0,0.35)] backdrop-blur-md"
+            className="pax-popover absolute left-0 top-full z-50 mt-2 flex w-max min-w-full max-w-[18rem] flex-col gap-0.5 rounded-xl p-1"
           >
             {options.map((option, index) => {
               const selected = option.value === value
@@ -111,12 +119,12 @@ export function DropdownSelect({
                   className={cn(
                     'flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-2 text-left text-sm transition-colors',
                     selected
-                      ? 'bg-white/10 text-white'
-                      : 'text-brand-ice/80 hover:bg-white/10 hover:text-white',
+                      ? 'bg-muted text-foreground'
+                      : 'text-muted-foreground hover:bg-accent hover:text-foreground',
                   )}
                 >
                   <span className="truncate">{option.label}</span>
-                  {selected && <Check className="h-4 w-4 shrink-0 text-brand-teal" aria-hidden />}
+                  {selected && <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden />}
                 </motion.button>
               )
             })}

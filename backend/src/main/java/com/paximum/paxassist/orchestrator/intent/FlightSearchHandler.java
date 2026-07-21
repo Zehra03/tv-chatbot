@@ -16,6 +16,7 @@ import com.paximum.paxassist.orchestrator.OrchestrationContext;
 import com.paximum.paxassist.orchestrator.OrchestrationResult;
 import com.paximum.paxassist.orchestrator.clarify.ClarificationComposer;
 import com.paximum.paxassist.orchestrator.slot.SlotGuard;
+import com.paximum.paxassist.orchestrator.slot.LocationGuard;
 import com.paximum.paxassist.orchestrator.mapper.FlightCriteriaMapper;
 import com.paximum.paxassist.orchestrator.slot.SlotFillingService;
 
@@ -34,16 +35,20 @@ public class FlightSearchHandler implements IntentHandler {
     private final ClarificationComposer clarifications;
     private final SlotGuard slotGuard;
 
+    private final LocationGuard locationGuard;
+
     public FlightSearchHandler(SlotFillingService slotFilling,
             FlightCriteriaMapper mapper,
             FlightSearchService flightSearchService,
             ClarificationComposer clarifications,
-            SlotGuard slotGuard) {
+            SlotGuard slotGuard,
+            LocationGuard locationGuard) {
         this.slotFilling = slotFilling;
         this.mapper = mapper;
         this.flightSearchService = flightSearchService;
         this.clarifications = clarifications;
         this.slotGuard = slotGuard;
+        this.locationGuard = locationGuard;
     }
 
     @Override
@@ -66,6 +71,13 @@ public class FlightSearchHandler implements IntentHandler {
         Optional<String> invalidSlot = slotGuard.checkInvalidSlots(unnormalizedMerged);
         if (invalidSlot.isPresent()) {
             return OrchestrationResult.clarify(invalidSlot.get(), "flight");
+        }
+
+        Optional<String> invalidLocation = locationGuard.checkInvalidLocation(unnormalizedMerged, "FLIGHT");
+        if (invalidLocation.isPresent()) {
+            context.session().getAccumulatedCriteria().remove("origin");
+            context.session().getAccumulatedCriteria().remove("destination");
+            return OrchestrationResult.clarify(invalidLocation.get(), "flight");
         }
 
         SlotCriteria merged = slotFilling.accumulate(context.session(), context.criteria());

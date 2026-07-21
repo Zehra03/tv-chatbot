@@ -53,10 +53,14 @@ describe('ReservationDetailPage (MSW ile)', () => {
     expect(screen.getByText('İptal edildi')).toBeTruthy()
     // "Otel" iki yerde: ürün-tipi alanı + otel bloğu başlığı.
     expect(screen.getAllByText('Otel').length).toBeGreaterThanOrEqual(1)
-    expect(screen.getByText(/800/)).toBeTruthy()
+    // 800 hem toplam tutarda hem otel fiyatında görünür (fixture'da eşit) — en az biri.
+    expect(screen.getAllByText(/800/).length).toBeGreaterThanOrEqual(1)
 
-    // Otel snapshot bloğu.
-    expect(screen.getByText('Test Seaside Hotel Bodrum · 4★')).toBeTruthy()
+    // Otel snapshot bloğu — zengin detay: ad, yıldız sınıfı, gece sayısı, pansiyon.
+    expect(screen.getByText('Test Seaside Hotel Bodrum')).toBeTruthy()
+    expect(screen.getByLabelText('4 yıldız')).toBeTruthy()
+    expect(screen.getByText('5 gece')).toBeTruthy()
+    expect(screen.getByText('Yarım pansiyon')).toBeTruthy()
 
     // Misafir dökümü: yetişkin + çocuk, iletişim yalnızca ana misafirde.
     expect(screen.getByText('Sample Guest')).toBeTruthy()

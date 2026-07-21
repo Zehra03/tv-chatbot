@@ -44,9 +44,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException e) {
         var errors = new java.util.HashMap<String, String>();
-        e.getBindingResult().getFieldErrors().forEach(fe ->
-            errors.put(fe.getField(), fe.getDefaultMessage())
-        );
+        boolean outOfRange = false;
+        
+        for (var fe : e.getBindingResult().getFieldErrors()) {
+            errors.put(fe.getField(), fe.getDefaultMessage());
+            if ("OUT_OF_CALENDAR_RANGE".equals(fe.getDefaultMessage())) {
+                outOfRange = true;
+            }
+        }
+
+        if (outOfRange) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("OUT_OF_CALENDAR_RANGE", "Arama tarihi takvim sınırlarını aşıyor.", errors));
+        }
 
         return ResponseEntity.badRequest()
                 .body(new ErrorResponse("VALIDATION_ERROR", "Geçersiz istek formu.", errors));

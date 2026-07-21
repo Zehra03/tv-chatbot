@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildContactPhone,
+  CHILD_MAX_AGE,
+  CHILD_MIN_AGE,
   formatE164,
   initialPhoneCountry,
   isValidTcKimlikNo,
@@ -9,7 +11,10 @@ import {
   type ReservationFormValues,
 } from '@/features/reservation/reservationFormSchema'
 import { findCountry, parseNationalNumber } from '@/lib/countries'
-import type { ReservationDraft } from '@/features/reservation/reservationDraftSlice'
+import type {
+  FlightReservationDraft,
+  ReservationDraft,
+} from '@/features/reservation/reservationDraftSlice'
 
 /**
  * Telefon/uyruk eşleştirmesinin ve alan kurallarının birim testleri. Bu yardımcılar önceden
@@ -39,6 +44,35 @@ const hotelDraft: ReservationDraft = {
     price: 1200,
     currency: 'EUR',
   },
+}
+
+/** Gidiş-dönüş uçuş taslağı — iki bacak, iki TourVisio jetonu. */
+const roundTripDraft: FlightReservationDraft = {
+  productType: 'flight',
+  offerId: 'out-token',
+  returnOfferId: 'ret-token',
+  title: 'THY IST → AYT',
+  summary: 'özet',
+  price: 4200,
+  currency: 'TRY',
+  flight: {
+    origin: 'IST',
+    destination: 'AYT',
+    airline: 'THY',
+    tripType: 'round_trip',
+    departTime: '2026-08-01T08:00:00+03:00',
+    returnDepartTime: '2026-08-08T18:00:00+03:00',
+    passengerCount: 1,
+    price: 4200,
+    currency: 'TRY',
+  },
+}
+
+/** Tek yön: dönüş jetonu yok. */
+const oneWayDraft: FlightReservationDraft = {
+  ...roundTripDraft,
+  returnOfferId: undefined,
+  flight: { ...roundTripDraft.flight, tripType: 'one_way', returnDepartTime: null },
 }
 
 const validValues: ReservationFormValues = {
@@ -223,6 +257,38 @@ describe('uçuş alanları (doğum tarihi + kimlik no)', () => {
   })
 })
 
+/**
+ * Aramadaki çocuk yaş seçicisi ile şemanın kabul ettiği aralık AYNI kaynaktan gelmeli.
+ * Ayrıştıklarında (arama 0–17 sunarken şema 3–17 istiyordu) kullanıcı, rezervasyon formunu
+ * asla gönderemeyeceği bir yaş seçebiliyordu — yolcu satırı teklifin pax'ına sabit olduğu
+ * için silinemiyor, yani akış tamamen çıkışsız kalıyordu.
+ */
+describe('çocuk yaş aralığı — arama ve şema tek kaynak', () => {
+  it('sınırlar backend PassengerType ile aynı (CHILD 3–17)', () => {
+    expect(CHILD_MIN_AGE).toBe(3)
+    expect(CHILD_MAX_AGE).toBe(17)
+  })
+
+  it('aralıktaki her yaşı şema kabul eder — seçilebilen yaş rezerve EDİLEBİLİR olmalı', () => {
+    for (let age = CHILD_MIN_AGE; age <= CHILD_MAX_AGE; age++) {
+      const result = parse({
+        passengers: [{ ...validValues.passengers[0], passengerType: 'child', age: String(age) }],
+      })
+      expect(result.success, `${age} yaş reddedildi`).toBe(true)
+    }
+  })
+
+  it('aralık dışındaki bebek yaşlarını reddeder (otelde INFANT yok)', () => {
+    for (const age of ['0', '1', '2']) {
+      expect(
+        parse({
+          passengers: [{ ...validValues.passengers[0], passengerType: 'child', age }],
+        }).success,
+      ).toBe(false)
+    }
+  })
+})
+
 describe('isValidTcKimlikNo', () => {
   it('algoritmayı doğrular', () => {
     expect(isValidTcKimlikNo('10000000146')).toBe(true)
@@ -230,6 +296,20 @@ describe('isValidTcKimlikNo', () => {
     expect(isValidTcKimlikNo('00000000146')).toBe(false) // 0 ile başlayamaz
     expect(isValidTcKimlikNo('1234567890')).toBe(false) // 10 hane
     expect(isValidTcKimlikNo('abcdefghijk')).toBe(false)
+  })
+
+  // Yukarıdaki mutlu yol vakalarında odds*7 > evens olduğundan `%`'in işaret davranışı hiç
+  // görünmüyordu. Bu vakalarda odds*7 < evens: düz `(odds*7 - evens) % 10` NEGATİF döner ve
+  // 0–9 arasındaki kontrol hanesiyle asla eşleşmez → geçerli kimlikler reddedilirdi.
+  it('odds*7 < evens olan GEÇERLİ kimlikleri reddetmez (negatif modulo regresyonu)', () => {
+    expect(isValidTcKimlikNo('19090909018')).toBe(true) // odds*7=7, evens=36 → -29
+    expect(isValidTcKimlikNo('13050914036')).toBe(true) // odds*7=14, evens=21 → -7
+    expect(isValidTcKimlikNo('18070505028')).toBe(true) // odds*7=7,  evens=25 → -18
+  })
+
+  it('negatif modulo dalında da bozuk kontrol hanesini yakalar', () => {
+    expect(isValidTcKimlikNo('19090909019')).toBe(false) // son hane bozuk
+    expect(isValidTcKimlikNo('19090909028')).toBe(false) // 10. hane bozuk
   })
 })
 
@@ -242,5 +322,25 @@ describe('toPreviewCommand', () => {
     expect(lead.phone).toBe('+905551112233')
     expect(lead.nationalityCode).toBe('TR')
     expect(lead.address?.email).toBe('zehra@example.com')
+  })
+
+  /**
+   * PARA-KRİTİK: TourVisio gidiş-dönüşü iki ayrı jetonla satar. Yalnız gidiş jetonunu
+   * göndermek, kullanıcı gidiş-dönüş ücretini ödemişken TEK YÖN bilet alır. Bu dal tamamen
+   * kapsamsızdı: ternary sadeleştirilse ya da buildFlightDraft `returnOfferId`'i taşımayı
+   * bıraksa tüm suite yeşil kalıyordu.
+   */
+  it('gidiş-dönüşte İKİ teklif jetonu gönderir', () => {
+    const cmd = toPreviewCommand(roundTripDraft, validValues)
+    expect(cmd.offerIds).toEqual(['out-token', 'ret-token'])
+  })
+
+  it('tek yönde yalnız gidiş jetonunu gönderir', () => {
+    expect(toPreviewCommand(oneWayDraft, validValues).offerIds).toEqual(['out-token'])
+  })
+
+  it('returnOfferId null ise dönüş jetonu eklenmez (tek yön gibi davranır)', () => {
+    const draft = { ...roundTripDraft, returnOfferId: null }
+    expect(toPreviewCommand(draft, validValues).offerIds).toEqual(['out-token'])
   })
 })

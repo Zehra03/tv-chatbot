@@ -94,26 +94,31 @@ export function ChatPage() {
     // rayı sol kenara tam dayanır; oluğu aşağıdaki sütunlar tek tek verir.
     <div className="relative flex min-h-0 w-full flex-1">
       <SessionSidebar />
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-4 px-4 py-4 sm:px-8">
-        {!isEmpty && (
-          <>
-            <MessageList
-              pending={sendMessage.isPending}
-              searching={searching}
-              error={sendMessage.error}
-              onRetry={sendMessage.retry}
-              onSelectOption={sendMessage.send}
-              onShowResults={handleShowResults}
-            />
-            <CriteriaChips />
-          </>
-        )}
-        <AnimatedAIChat
-          hero={isEmpty}
-          onSend={handleSend}
-          disabled={sendMessage.isPending}
-          placeholder={pendingQuestion}
-        />
+      {/* Dış kolon oluğu verir; iç sarmalayıcı konuşmayı okunur bir sütuna
+          (max-w-4xl) ortalar — ChatGPT deseni. Sonuç paneli açıkken kalan
+          genişlik içinde yine ortalanır; uzun satır yormaz. */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col px-4 py-4 sm:px-8">
+        <div className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-4">
+          {!isEmpty && (
+            <>
+              <MessageList
+                pending={sendMessage.isPending}
+                searching={searching}
+                error={sendMessage.error}
+                onRetry={sendMessage.retry}
+                onSelectOption={sendMessage.send}
+                onShowResults={handleShowResults}
+              />
+              <CriteriaChips />
+            </>
+          )}
+          <AnimatedAIChat
+            hero={isEmpty}
+            onSend={handleSend}
+            disabled={sendMessage.isPending}
+            placeholder={pendingQuestion}
+          />
+        </div>
       </div>
 
       {/* Masaüstü sonuç ekranı — sohbetin sağında sabit; sonuç varken belirir. */}

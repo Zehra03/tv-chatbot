@@ -168,7 +168,7 @@ export function LocationAutocomplete<T extends LocationSuggestion>({
           )}
 
           {isError && !isFetching && (
-            <li className="px-3 py-2 text-sm text-destructive">Öneriler yüklenemedi</li>
+            <li className="px-3 py-2 text-sm text-destructive-emphasis">Öneriler yüklenemedi</li>
           )}
 
           {!isFetching && !isError && !suggestions.length && (
@@ -203,7 +203,7 @@ export function LocationAutocomplete<T extends LocationSuggestion>({
                     active ? 'bg-slate-100' : 'hover:bg-slate-50',
                   )}
                 >
-                  <Icon className="h-4 w-4 shrink-0 text-brand-blue" aria-hidden="true" />
+                  <Icon className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
                   <span className="truncate">{displayName}</span>
                   {location.code && (
                     <span className="ml-auto shrink-0 text-xs font-medium text-slate-400">

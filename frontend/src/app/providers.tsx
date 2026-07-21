@@ -1,14 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { Provider, useStore } from 'react-redux'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query'
 import { RouterProvider } from 'react-router-dom'
 import { MotionConfig } from 'framer-motion'
 import { Toaster } from 'sonner'
 import { authApi, TOKENS_REFRESHED_EVENT, UNAUTHORIZED_EVENT } from '@/api'
-import { useAppDispatch } from '@/app/hooks'
-import { LiquidGlassFilter } from '@/components/ui/button'
+import { useAppDispatch, useAppSelector } from '@/app/hooks'
+import { ThemeProvider, useTheme } from '@/app/theme'
 import { store, type RootState } from '@/app/store'
 import { router } from '@/app/router'
+import { selectIdentity } from '@/features/auth/selectors'
 import { logout, tokensRefreshed, userRefreshed } from '@/features/auth/authSlice'
 
 /**
@@ -29,12 +30,27 @@ const queryClient = new QueryClient({
 /**
  * Oturum bekçisi: (1) jetonlu bir istek 401 dönerse (client.ts olayı) oturumu
  * kapatır — ProtectedRoute kullanıcıyı /login'e düşürür; (2) açılışta saklı
- * jeton varsa GET /auth/me ile doğrular ve kullanıcı bilgisini tazeler.
+ * jeton varsa GET /auth/me ile doğrular ve kullanıcı bilgisini tazeler;
+ * (3) kimlik değişince React Query cache'ini atar.
  * Ağ hatasında oturuma dokunulmaz; gerçek 401 zaten olayı tetikler.
  */
 function SessionManager() {
   const dispatch = useAppDispatch()
   const reduxStore = useStore<RootState>()
+  const queryClient = useQueryClient()
+  const identity = useAppSelector(selectIdentity)
+  const previousIdentity = useRef(identity)
+
+  // Kimlik sınırı: çıkış/giriş/misafire düşme anında SUNUCU state'ini at. Redux kendini
+  // temizliyordu ama React Query cache'i sağ kalıyordu (gcTime 5 dk) — aynı tarayıcıda o
+  // pencerede giren ikinci kullanıcı, birincinin rezervasyonlarını görüyordu. Query key'leri
+  // de kimlik taşır (useReservations/useChatSessions); bu, o savunmanın atlanan bir yolu
+  // kalırsa devreye giren ikinci katman. İlk mount'ta kimlik değişmediği için çalışmaz.
+  useEffect(() => {
+    if (identity === previousIdentity.current) return
+    previousIdentity.current = identity
+    queryClient.clear()
+  }, [identity, queryClient])
 
   useEffect(() => {
     const onUnauthorized = () => dispatch(logout())
@@ -71,18 +87,28 @@ function SessionManager() {
   return null
 }
 
+/**
+ * Toaster <body>'ye portal olur, yani <html>'deki `.dark` sınıfını CSS ile değil
+ * yalnızca kendi `theme` prop'uyla görür — bu yüzden ThemeProvider'ın içinde,
+ * ayrı bir bileşen olarak okunur.
+ */
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme()
+  // Marka toast'ları — inline role="alert" mesajlarının yerine değil, yanına.
+  return <Toaster richColors position="top-center" theme={resolvedTheme} />
+}
+
 export function Providers() {
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <MotionConfig reducedMotion="user">
-          <SessionManager />
-          {/* Liquid glass butonların kırılım filtresi — tüm sayfalar için tek tanım. */}
-          <LiquidGlassFilter />
-          <RouterProvider router={router} />
-          {/* Marka toast'ları — inline role="alert" mesajlarının yerine değil, yanına. */}
-          <Toaster richColors position="top-center" />
-        </MotionConfig>
+        <ThemeProvider>
+          <MotionConfig reducedMotion="user">
+            <SessionManager />
+            <RouterProvider router={router} />
+            <ThemedToaster />
+          </MotionConfig>
+        </ThemeProvider>
       </QueryClientProvider>
     </Provider>
   )

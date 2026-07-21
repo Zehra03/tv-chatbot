@@ -33,6 +33,15 @@ export interface HotelProduct {
    * görsel yoksa null/undefined gelir; kart placeholder gösterir. Asla uydurulmaz.
    */
   image?: string | null
+  /**
+   * Otelin öne çıkan gerçek özellik adları — TourVisio pricesearch
+   * `hotel.facilities[].name ∪ hotel.themes[].name` (backend `HotelProduct.java` `features`),
+   * ör. "Deniz Kenarında", "Outdoor Pool", "Private Beach", "Spa". Sağlayıcı tesis/tema
+   * verisi döndürmediyse boş dizi (backend garanti eder) ya da eski/chat kaynaklarında
+   * undefined gelir → kart özellik satırını hiç göstermez. Asla uydurulmaz; kartta yalnız
+   * ilk birkaçı chip olarak listelenir.
+   */
+  features?: string[]
 }
 
 export interface FlightProduct {
@@ -58,7 +67,15 @@ export interface FlightProduct {
   destinationCity?: string | null
   departTime: IsoDateTime
   arriveTime: IsoDateTime | null
-  tripType: TripType
+  /**
+   * OPSİYONEL — tel üzerindeki gerçeğe uyar: `/flights/search` bunu doldurur
+   * (FlightProductApiDto), ama chat sonuç kartları ürünü domain nesnesinden serileştirdiğinden
+   * alanı TAŞIMAZ. Zorunlu tiplenmişken tsc "hep var" diyordu ve `product.tripType ===
+   * 'round_trip'` yazan her yeni okuyucu chat kartlarında sessizce false alıyordu — gidiş-dönüş
+   * tek yön gibi render oluyordu (bkz. FlightCard'ın `!!returnDepartTime` çözümü ve
+   * buildFlightDraft'ın yedek zinciri). Okurken daima yedeğe düşün.
+   */
+  tripType?: TripType
   /** round_trip iken dolu; one_way'de null. */
   returnDepartTime?: IsoDateTime | null
   returnArriveTime?: IsoDateTime | null
