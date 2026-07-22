@@ -5,6 +5,7 @@ import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -24,6 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.paximum.paxassist.auth.security.AuthAccessDeniedHandler;
 import com.paximum.paxassist.auth.security.AuthEntryPoint;
 import com.paximum.paxassist.auth.security.JwtAuthenticationFilter;
+import com.paximum.paxassist.common.log.RequestCorrelationFilter;
 import com.paximum.paxassist.ratelimiter.RateLimitFilter;
 
 import jakarta.servlet.DispatcherType;
@@ -56,8 +58,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter,
+            RequestCorrelationFilter correlationFilter) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -86,23 +88,40 @@ public class SecurityConfig {
                         // account. A logged-in user still arrives here with a populated principal
                         // (the JWT filter runs on every request); a guest arrives anonymously and is
                         // identified downstream by an opaque X-Guest-Id, never a Spring principal.
-                        // Booking stays gated below so only registered users can create/retrieve a
-                        // reservation ("controlled booking" invariant).
                         .requestMatchers(
                                 "/api/v1/chat/**",
                                 "/api/v1/hotels/**",
                                 "/api/v1/flights/**")
                         .permitAll()
-                        // Business module endpoints requiring an account: any authenticated user
-                        // (USER or ADMIN). Path-based so the Reservation controller needs no
-                        // security annotations - RBAC lives centrally in Auth.
+                        // Guest booking: creating a reservation no longer requires an account, so
+                        // preview + confirm are open here. This does NOT weaken the "controlled
+                        // booking" invariant — those endpoints are still the AI-free form path, and
+                        // the controller demands an identity (principal or X-Guest-Id) so the
+                        // preview -> confirm handoff stays scoped to one browser.
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/reservations",
+                                "/api/v1/reservations/preview")
+                        .permitAll()
+                        // A guest has no reservation list, so PNR + surname is their only way back to
+                        // a booking. The surname is the second factor; brute force is bounded by the
+                        // rate-limit filter below (keyed by client IP for anonymous callers).
+                        .requestMatchers(HttpMethod.GET, "/api/v1/reservations/lookup")
+                        .permitAll()
+                        // Everything else under /reservations stays account-only: the list, the
+                        // id-scoped detail and cancel are keyed by user id. Path-based so the
+                        // Reservation controller needs no security annotations - RBAC lives
+                        // centrally in Auth.
                         .requestMatchers("/api/v1/reservations/**")
                         .hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Correlation right after authentication: it needs the principal the JWT filter just
+                // populated, and it must run BEFORE the rate limiter so a 429 is logged with the
+                // identity that got throttled — that is precisely the request worth investigating.
+                .addFilterAfter(correlationFilter, JwtAuthenticationFilter.class)
                 // Rate limit after authentication so buckets are keyed by the authenticated
                 // principal (SecurityContextRateLimitKeyResolver), falling back to client IP.
-                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(rateLimitFilter, RequestCorrelationFilter.class);
 
         return http.build();
     }

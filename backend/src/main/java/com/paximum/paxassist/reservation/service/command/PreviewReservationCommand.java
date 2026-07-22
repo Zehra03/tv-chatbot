@@ -7,6 +7,7 @@ import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.paximum.paxassist.reservation.domain.PassengerType;
+import com.paximum.paxassist.reservation.domain.ReservationCaller;
 import com.paximum.paxassist.reservation.domain.TripType;
 
 import jakarta.validation.Valid;
@@ -32,11 +33,14 @@ import jakarta.validation.constraints.Size;
  * see {@code ReservationService}).
  *
  * <p>At least one of {@link #hotel()} / {@link #flight()} must be present; the product type is derived
- * from which are present (never trusted from input). {@code userId} is injected server-side from the
- * authenticated principal via {@link #withUserId(Long)} — it is intentionally NOT validated on input.
+ * from which are present (never trusted from input). {@code userId} / {@code guestToken} are injected
+ * server-side from the authenticated principal or the {@code X-Guest-Id} header via
+ * {@link #withCaller(ReservationCaller)} — they are intentionally NOT validated on input, and whatever
+ * a client sends in those two fields is overwritten before the service ever sees the command.
  */
 public record PreviewReservationCommand(
         Long userId,
+        String guestToken,
         @NotBlank @Size(min = 3, max = 3) String currency,
         @NotNull @PositiveOrZero BigDecimal totalAmount,
         String culture,
@@ -211,10 +215,20 @@ public record PreviewReservationCommand(
         return flight == null || flight.passengerCount() == null || count == flight.passengerCount();
     }
 
-    /** Returns a copy with the given owner id (the controller injects the authenticated user id here). */
-    public PreviewReservationCommand withUserId(Long userId) {
-        return new PreviewReservationCommand(userId, currency, totalAmount, culture, leadGuestName, reservationNote,
-                agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
+    /**
+     * Returns a copy owned by the given caller — a logged-in user's id or a guest's opaque token,
+     * never both. The controller injects the resolved caller here so the identity on the command is
+     * always the server's, not the client's.
+     */
+    public PreviewReservationCommand withCaller(ReservationCaller caller) {
+        return new PreviewReservationCommand(caller.userId(), caller.guestToken(), currency, totalAmount, culture,
+                leadGuestName, reservationNote, agencyReservationNumber, offerIds, additionalOffers, travellers,
+                customer, hotel, flight);
+    }
+
+    /** The owner recorded on this command, as a caller. */
+    public ReservationCaller caller() {
+        return new ReservationCaller(userId, guestToken);
     }
 
     /**
@@ -223,8 +237,9 @@ public record PreviewReservationCommand(
      * charge — never the figure the client sent.
      */
     public PreviewReservationCommand withTotalAmount(BigDecimal amount, String amountCurrency) {
-        return new PreviewReservationCommand(userId, amountCurrency, amount, culture, leadGuestName, reservationNote,
-                agencyReservationNumber, offerIds, additionalOffers, travellers, customer, hotel, flight);
+        return new PreviewReservationCommand(userId, guestToken, amountCurrency, amount, culture, leadGuestName,
+                reservationNote, agencyReservationNumber, offerIds, additionalOffers, travellers, customer,
+                hotel, flight);
     }
 
     /** An additional service/offer to attach via AddServices (optional; primary offers go in {@link #offerIds()}). */

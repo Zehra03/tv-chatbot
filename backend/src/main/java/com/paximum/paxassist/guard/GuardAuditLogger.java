@@ -17,10 +17,11 @@ public class GuardAuditLogger {
         this.auditLogModule = auditLogModule;
     }
 
-    public void logBlockedRequestAsync(String originalInput, String reason) {
+    public void logBlockedRequest(String originalInput, String reason) {
         String maskedInput = SensitiveDataMasker.mask(originalInput, reason);
-        auditLogModule.logSecurityEventAsync(
-                "Blocked request: reason=%s, input=%s".formatted(sanitize(reason), sanitize(maskedInput)));
+        auditLogModule.logSecurityEvent("guardBlock", "BLOCKED",
+                sanitize(maskedInput),
+                "Blocked request: reason=" + sanitize(reason));
     }
 
     // Strips CR/LF from user-derived values before they reach the log sink, so a malicious

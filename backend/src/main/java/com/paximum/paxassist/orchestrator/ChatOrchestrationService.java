@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.ai.ChatHistoryEntry;
 import com.paximum.paxassist.ai.IntentExtractionResult;
 import com.paximum.paxassist.ai.IntentExtractionService;
@@ -11,6 +12,7 @@ import com.paximum.paxassist.ai.IntentType;
 import com.paximum.paxassist.chat.domain.ChatCaller;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
+import com.paximum.paxassist.chat.service.ReplyLocalizer;
 import com.paximum.paxassist.guard.GuardBlockedException;
 import com.paximum.paxassist.guard.GuardAuditLogger;
 import com.paximum.paxassist.guard.GuardOrchestrator;
@@ -27,22 +29,31 @@ import com.paximum.paxassist.orchestrator.intent.IntentRouter;
 @Service
 public class ChatOrchestrationService {
 
+    private static final String MODULE = "OrchestratorModule";
+    private static final String ACTION = "chatTurn";
+
     private final GuardOrchestrator guard;
     private final GuardAuditLogger guardAuditLogger;
     private final IntentExtractionService intentExtraction;
     private final ChatSessionStore sessionStore;
     private final IntentRouter intentRouter;
+    private final ReplyLocalizer replyLocalizer;
+    private final ActivityLog activityLog;
 
     public ChatOrchestrationService(GuardOrchestrator guard,
                                     GuardAuditLogger guardAuditLogger,
                                     IntentExtractionService intentExtraction,
                                     ChatSessionStore sessionStore,
-                                    IntentRouter intentRouter) {
+                                    IntentRouter intentRouter,
+                                    ReplyLocalizer replyLocalizer,
+                                    ActivityLog activityLog) {
         this.guard = guard;
         this.guardAuditLogger = guardAuditLogger;
         this.intentExtraction = intentExtraction;
         this.sessionStore = sessionStore;
         this.intentRouter = intentRouter;
+        this.replyLocalizer = replyLocalizer;
+        this.activityLog = activityLog;
     }
 
     public OrchestrationOutcome handle(String sessionId, String userMessage, ChatCaller caller) {
@@ -102,10 +113,29 @@ public class ChatOrchestrationService {
                 new OrchestrationContext(session, userMessage, intent, extraction.criteria());
         OrchestrationResult result = intentRouter.route(intent).handle(context);
 
+        // 3b. Localize the reply into the language of THIS message. The localizer is the single
+        //     source of the output language for EVERY routed reply — the deterministic search flows
+        //     AND the free-form OTHER reply (the assistant's own prompt is Turkish-heavy and cannot
+        //     be trusted to answer in-language on its own). A null/Turkish language (bare greeting,
+        //     parse failure, Turkish user) is a no-op, so only a non-Turkish user pays for a
+        //     translation. The localized text is what we persist, keeping the transcript in the
+        //     user's language for later context.
+        if (replyLocalizer.shouldLocalize(extraction.detectedLanguage())) {
+            result = localizeReply(result, extraction.detectedLanguage());
+        }
+
         // 4. Persist the turn (append user + assistant messages) and return.
         session.addMessage("user", userMessage);
         session.addMessage("assistant", result.reply());
         sessionStore.save(session);
+
+        // The turn itself, as an activity event. The classified INTENT is recorded, never the
+        // user's message: that text is free-form and routinely carries names, dates and phone
+        // numbers a traveller typed into the chat, and the transcript already lives in the chat
+        // DB where it is access-controlled. The log needs to know what kind of turn happened,
+        // not what the person said.
+        activityLog.logActivity(MODULE, ACTION, "intent=" + intent, "SUCCESS",
+                "Chat turn handled");
         return new OrchestrationOutcome(result.withSessionId(session.getId()), session);
     }
 
@@ -115,10 +145,36 @@ public class ChatOrchestrationService {
      */
     private OrchestrationOutcome blockedOutcome(ChatSession session, String userMessage,
                                                 GuardBlockedException e) {
-        guardAuditLogger.logBlockedRequestAsync(userMessage, e.getDetailedReason());
+        guardAuditLogger.logBlockedRequest(userMessage, e.getDetailedReason());
+        // Neither the message nor the guard's detailed reason belongs here — the reason can quote
+        // the offending input. GuardAuditLogger owns the masked security record; this line only
+        // marks that a turn ended in a block, so blocked turns are countable alongside normal ones.
+        activityLog.logActivity(MODULE, ACTION, "intent=blocked", "BLOCKED", "Chat turn blocked by guard");
         OrchestrationResult blocked = OrchestrationResult.message(e.getMessage())
                 .withSessionId(session.getId());
         return new OrchestrationOutcome(blocked, session);
+    }
+
+    /**
+     * Translates only the natural-language parts of a result — reply, the mirrored pending question,
+     * and any disambiguation option label/value — leaving the structured cards and flags untouched.
+     * The pending question mirrors the reply on a clarify result, so it reuses the same translation
+     * instead of paying for a second call.
+     */
+    private OrchestrationResult localizeReply(OrchestrationResult result, String language) {
+        String localizedReply = replyLocalizer.localize(result.reply(), language);
+        String localizedPending = result.pendingQuestion() == null ? null
+                : result.pendingQuestion().equals(result.reply())
+                        ? localizedReply
+                        : replyLocalizer.localize(result.pendingQuestion(), language);
+        List<ChoiceOption> localizedOptions = result.options().isEmpty()
+                ? result.options()
+                : result.options().stream()
+                        .map(option -> new ChoiceOption(
+                                replyLocalizer.localize(option.label(), language),
+                                replyLocalizer.localize(option.value(), language)))
+                        .toList();
+        return result.withLocalizedText(localizedReply, localizedPending, localizedOptions);
     }
 
     private List<ChatHistoryEntry> toHistory(ChatSession session) {

@@ -38,7 +38,7 @@ public class AuthAccessDeniedHandler implements AccessDeniedHandler {
         String principal = SecurityContextHolder.getContext().getAuthentication() != null
                 ? SecurityContextHolder.getContext().getAuthentication().getName()
                 : "anonymous";
-        auditLogger.logAccessDeniedAsync(request.getRequestURI(), principal);
+        auditLogger.logAccessDenied(request.getRequestURI(), principal);
 
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);

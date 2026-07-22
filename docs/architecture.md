@@ -8,7 +8,9 @@ graph TD
     %%  - Rate limiter "kimliği doğrulanmış principal'a göre anahtarlar" notu eklendi.
     %%  - Orchestrator'a Evaluator-Optimizer (AI serbest-metin çıktısında guardrail döngüsü) eklendi.
     %%  - Runtime MCP Server (arama araçlarını yayınlar) eklendi — dev-time MCP'lerden farklıdır.
-    %%  - Log Modülü + LogDB kanonik kabul edildi; "planlanan vs. bugünkü" notu düşüldü.
+    %%  - LogDB kaldırıldı (V8): loglar veritabanında tutulmuyor. Log hedefi "yapılandırılmış
+    %%    stdout": prod'da JSON (ECS) satırlar, platform toplar. Her istek requestId +
+    %%    userId/guestId ile korele ediliyor; güvenlik olayları da aynı alanları taşıyor.
     %%  - Reservation "planlanan" olarak işaretlendi.
     %% =====================================================================
     %% --- STİL VE RENK TANIMLAMALARI ---
@@ -49,7 +51,7 @@ graph TD
         %% Önbellek + MCP + Log
         RedisCache[Redis Cache <br> TourVisio canlı sonuçları]:::cache
         McpServer[MCP Server -runtime- <br> Arama araçlarını yayınlar · SEARCH-ONLY, booking YOK]:::mcp
-        LogMod[Log Modülü <br> Asenkron kuyruk · PLANLANAN <br> -bugün: harici log servisi + SLF4J audit-]:::log
+        LogMod[Loglama <br> ActivityLog -module/action/status- + korelasyon -requestId/userId/guestId- <br> prod'da JSON -ECS- stdout]:::log
     end
 
     %% --- VERİTABANI KATMANI ---
@@ -57,7 +59,6 @@ graph TD
         UsersDB[(users <br> Paylaşılan kimlik + rol)]:::db
         ChatDB[(Chat & Session DB <br> chat_sessions / chat_messages)]:::db
         ResDB[(Reservation DB <br> Nihai rezervasyon kayıtları)]:::db
-        LogDB[(logging.app_logs <br> Sistem ve hata logları)]:::db
     end
 
     %% --- DIŞ DÜNYA ---
@@ -104,4 +105,5 @@ graph TD
     HotelMod -.->|Log olayı| LogMod
     FlightMod -.->|Log olayı| LogMod
     ReservationMod -.->|Log olayı| LogMod
-    LogMod -->|Background worker ile toplu yazma| LogDB
+    %% Loglar bir veritabanına yazılmıyor (V8 ile logging şeması düşürüldü) ve ayrı bir log
+    %% servisine gönderilmiyor: olaylar sürecin stdout'una akar, platform oradan toplar.
