@@ -66,6 +66,11 @@ public class OrphanedBooking {
     @Column(name = "reconciled", nullable = false)
     private boolean reconciled = false;
 
+    /** Operator note recorded when marking this reconciled (V9) — e.g. which Reservation id was
+     * manually created to match the TourVisio booking. Null until then. */
+    @Column(name = "resolution_note", columnDefinition = "text")
+    private String resolutionNote;
+
     @Generated(event = EventType.INSERT)
     @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
