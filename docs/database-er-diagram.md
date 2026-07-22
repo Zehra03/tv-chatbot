@@ -130,7 +130,8 @@ physical `paxassist` database:
 
 All tables live in the `public` schema. There is no Log DB: logs are **not kept in the database**
 (V8 dropped the `logging` schema and its `app_logs` table, which no code had ever written to). Log
-events go to SLF4J/stdout; a durable destination, if one is chosen, will be outside Postgres.
+events go to SLF4J and out on stdout — as JSON (ECS) under the `prod` profile, so the collector can
+query them by field — and never back into Postgres.
 
 Live TourVisio search results are cached in **Redis**, not in any of these tables.
 

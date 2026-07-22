@@ -15,6 +15,20 @@ spring:
       "[hibernate.format_sql]": false
 
 logging:
+  # Structured (JSON) log lines to stdout — one JSON object per event, in Elastic Common Schema.
+  #
+  # This is where logs live: the platform collects the container's stdout. Nothing is written to the
+  # database (the logging.app_logs table was dropped in V8) and nothing is POSTed to a separate log
+  # service. JSON makes the stream queryable by field instead of grep-able by substring — including
+  # the activity fields ActivityLog puts in the MDC (activity.module / .action / .status), which the
+  # ECS formatter emits as top-level attributes.
+  #
+  # prod ONLY, deliberately: in dev the default human-readable console layout is far easier to read,
+  # and no collector is watching. Boot 3.4+ ships this natively, so there is no logback-spring.xml
+  # and no extra encoder dependency to keep in step.
+  structured:
+    format:
+      console: ecs
   level:
     root: INFO
     com.paximum.paxassist: INFO

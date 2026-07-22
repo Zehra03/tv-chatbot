@@ -1,6 +1,6 @@
 package com.paximum.paxassist.hotel;
 
-import com.paximum.paxassist.common.log.LogModuleClient;
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.hotel.dto.AutocompleteResponse;
 import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -49,12 +49,12 @@ class HotelSearchCacheKeyIntegrationTest {
         }
 
         @Bean
-        LogModuleClient logModuleClient() {
-            return mock(LogModuleClient.class);
+        ActivityLog activityLog() {
+            return mock(ActivityLog.class);
         }
 
         @Bean
-        HotelSearchService hotelSearchService(TourVisioHotelApiClient client, LogModuleClient logs) {
+        HotelSearchService hotelSearchService(TourVisioHotelApiClient client, ActivityLog logs) {
             return new HotelSearchServiceImpl(client, logs);
         }
     }

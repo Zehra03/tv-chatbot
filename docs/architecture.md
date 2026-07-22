@@ -8,9 +8,8 @@ graph TD
     %%  - Rate limiter "kimliği doğrulanmış principal'a göre anahtarlar" notu eklendi.
     %%  - Orchestrator'a Evaluator-Optimizer (AI serbest-metin çıktısında guardrail döngüsü) eklendi.
     %%  - Runtime MCP Server (arama araçlarını yayınlar) eklendi — dev-time MCP'lerden farklıdır.
-    %%  - LogDB kaldırıldı (V8): loglar veritabanında tutulmuyor. Log Modülü bugün SLF4J
-    %%    audit + stdout demek; nihai log hedefi (yapılandırılmış stdout / harici toplayıcı)
-    %%    henüz kararlaştırılmadı.
+    %%  - LogDB kaldırıldı (V8): loglar veritabanında tutulmuyor. Log hedefi olarak
+    %%    "yapılandırılmış stdout" seçildi: prod'da JSON (ECS) satırlar, platform toplar.
     %%  - Reservation "planlanan" olarak işaretlendi.
     %% =====================================================================
     %% --- STİL VE RENK TANIMLAMALARI ---
@@ -51,7 +50,7 @@ graph TD
         %% Önbellek + MCP + Log
         RedisCache[Redis Cache <br> TourVisio canlı sonuçları]:::cache
         McpServer[MCP Server -runtime- <br> Arama araçlarını yayınlar · SEARCH-ONLY, booking YOK]:::mcp
-        LogMod[Log Modülü <br> -bugün: SLF4J audit + stdout- <br> Nihai hedef KARARLAŞTIRILMADI]:::log
+        LogMod[Loglama <br> SLF4J · ActivityLog -module/action/status alanları- <br> prod'da JSON -ECS- stdout]:::log
     end
 
     %% --- VERİTABANI KATMANI ---
@@ -105,5 +104,5 @@ graph TD
     HotelMod -.->|Log olayı| LogMod
     FlightMod -.->|Log olayı| LogMod
     ReservationMod -.->|Log olayı| LogMod
-    %% LogMod artık bir veritabanına yazmıyor: loglar DB'de tutulmuyor (V8 ile logging şeması
-    %% düşürüldü). Olaylar stdout'a akar; kalıcı bir hedef seçilirse buraya eklenecek.
+    %% Loglar bir veritabanına yazılmıyor (V8 ile logging şeması düşürüldü) ve ayrı bir log
+    %% servisine gönderilmiyor: olaylar sürecin stdout'una akar, platform oradan toplar.
