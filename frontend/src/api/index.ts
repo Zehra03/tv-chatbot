@@ -35,9 +35,17 @@ export type {
   CancelResult,
 } from './reservationApi'
 
+export { adminApi } from './adminApi'
+export type {
+  DashboardStats,
+  AdminUser,
+  AdminReservationQuery,
+} from './adminApi'
+
 export { authApi } from './authApi'
 export type {
   AuthUser,
+  UserRole,
   LoginRequest,
   RegisterRequest,
   UpdateEmailRequest,

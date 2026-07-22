@@ -6,6 +6,7 @@ import {
   type RouteObject,
 } from 'react-router-dom'
 import { useAppSelector } from '@/app/hooks'
+import { selectIsAdmin } from '@/features/auth/selectors'
 import { Layout } from '@/components/Layout'
 import LoginPage from '@/features/auth/LoginPage'
 import LandingPage from '@/pages/LandingPage'
@@ -19,6 +20,11 @@ import { ReservationsPage } from '@/features/reservation/ReservationsPage'
 import { ReservationDetailPage } from '@/features/reservation/ReservationDetailPage'
 import { ReservationPrintPage } from '@/features/reservation/ReservationPrintPage'
 import { ProfilePage } from '@/features/profile/ProfilePage'
+import { AdminLayout } from '@/features/admin/AdminLayout'
+import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
+import { AdminFlightsPage } from '@/features/admin/AdminFlightsPage'
+import { AdminReservationsPage } from '@/features/admin/AdminReservationsPage'
+import { AdminUsersPage } from '@/features/admin/AdminUsersPage'
 
 /**
  * Korumalı rota sarmalı — hiç oturum yoksa /login'e yönlendirir
@@ -60,6 +66,30 @@ function RequireAccount() {
       to="/login"
       replace
       state={{ reason: 'account-required', from: `${location.pathname}${location.search}` }}
+    />
+  )
+}
+
+/**
+ * Admin rotası sarmalı — panel yalnızca ROLE_ADMIN taşıyan hesaba açıktır.
+ *
+ * RequireAccount'tan ayrı durur çünkü sorusu farklı: o "gerçek hesap var mı?" diye sorar,
+ * bu "bu hesap yönetici mi?" diye. Yetkisizi /login'e yollar (kart kriteri bunu istiyor);
+ * `reason` ile LoginPage neden geldiğini ayırt edebilir, `from` ile giriş sonrası dönüş yolu korunur.
+ *
+ * Bu bir GÖRÜNÜRLÜK kapısıdır, güvenlik sınırı DEĞİL: /api/v1/admin/** backend'de
+ * hasRole('ADMIN') ile kapalı. Buradaki kontrol sadece yetkisiz kullanıcıya her isteği 403
+ * dönen boş bir panel göstermemek için var.
+ */
+function RequireAdmin() {
+  const isAdmin = useAppSelector(selectIsAdmin)
+  const location = useLocation()
+  if (isAdmin) return <Outlet />
+  return (
+    <Navigate
+      to="/login"
+      replace
+      state={{ reason: 'admin-required', from: `${location.pathname}${location.search}` }}
     />
   )
 }
@@ -125,6 +155,29 @@ export const routes: RouteObject[] = [
                         path: '/profile',
                         element: <ProfilePage />,
                       },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            // Admin paneli — ana Layout'un DIŞINDA, kardeş dalda: panelin kabuğu solda
+            // sidebar'lı (AdminLayout), ana kabuk ise üst barlı. İç içe girselerdi iki
+            // navigasyon üst üste binerdi. Hata sınırı kendi dalında: paneldeki bir sayfa
+            // patlarsa sidebar korunur, kullanıcı başka modüle geçebilir.
+            element: <RequireAdmin />,
+            children: [
+              {
+                element: <AdminLayout />,
+                children: [
+                  {
+                    errorElement: <RouteErrorPage />,
+                    children: [
+                      { path: '/admin', element: <AdminDashboardPage /> },
+                      { path: '/admin/flights', element: <AdminFlightsPage /> },
+                      { path: '/admin/reservations', element: <AdminReservationsPage /> },
+                      { path: '/admin/users', element: <AdminUsersPage /> },
                     ],
                   },
                 ],
