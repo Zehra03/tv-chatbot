@@ -7,9 +7,11 @@ import com.paximum.paxassist.reservation.service.command.PreviewReservationComma
 
 /**
  * Frozen preview snapshot held in Redis between {@code previewReservation} and
- * {@code confirmReservation}. It captures the exact validated input the user saw in the summary, so
- * confirmation is driven purely from this snapshot — there is no re-reading of live prices/availability
- * (see the accepted-risk note in {@code ReservationService}).
+ * {@code confirmReservation}. It captures the exact validated input the user saw in the summary — with
+ * TourVisio's own price already substituted in by {@code previewReservation} (K21) — and confirmation
+ * is driven purely from this snapshot. The snapshot is not re-read against live TourVisio state a second
+ * time here; that re-verification happens explicitly at the top of the confirm flow
+ * ({@code ReservationService#verifyPrice}), immediately before commit.
  *
  * @param previewId  generated UUID; the Redis key and the handle returned to the caller
  * @param userId     the requesting user's id, or null for a guest; used for the ownership check at

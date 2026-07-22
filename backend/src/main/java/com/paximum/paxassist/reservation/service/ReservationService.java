@@ -61,9 +61,12 @@ import com.paximum.paxassist.reservation.service.command.PreviewReservationComma
  *       {@code setReservationInfo} warning (e.g. DuplicateReservationFound).</li>
  * </ul>
  *
- * <p><b>Accepted risk (flagged):</b> the frozen price/availability is trusted as-is — there is no
- * re-verification against the Hotel/Flight modules before confirming, because no such live-recheck
- * method exists there yet. Revisit when one does.
+ * <p><b>K21 closed:</b> price/availability ARE re-verified against TourVisio at two points — once in
+ * {@link #previewReservation} (freezes the provider's own price, not the client's) and again at the
+ * top of {@link #runTransactionFlow} via {@link #verifyPrice}, immediately before commit. After a
+ * successful commit, {@link #reconcileWithBookedPrice} reads the price back from the booking itself so
+ * what gets persisted is what was actually charged. See commits {@code 491fc68}, {@code e55a5bb} and
+ * {@code fd310c9}.
  */
 @Service
 public class ReservationService {
@@ -372,15 +375,22 @@ public class ReservationService {
      */
     @Transactional
     public CancelResult cancelReservation(Long id, Long userId, String reason, List<String> serviceIds) {
-        CancelResult result = doCancelReservation(id, userId, reason, serviceIds);
+        CancelResult result = doCancelReservation(id, userId, reason, serviceIds, false);
         logCancelOutcome(id, userId, result);
         return result;
     }
 
-    private CancelResult doCancelReservation(Long id, Long userId, String reason, List<String> serviceIds) {
+    @Transactional
+    public CancelResult adminCancelReservation(Long id, String reason, List<String> serviceIds) {
+        CancelResult result = doCancelReservation(id, null, reason, serviceIds, true);
+        logCancelOutcome(id, null, result);
+        return result;
+    }
+
+    private CancelResult doCancelReservation(Long id, Long userId, String reason, List<String> serviceIds, boolean bypassOwnership) {
         Optional<Reservation> found = reservationRepository.findById(id);
         // A non-owner (or missing) reservation is reported as NotFound so existence is not revealed.
-        if (found.isEmpty() || !Objects.equals(found.get().getUserId(), userId)) {
+        if (found.isEmpty() || (!bypassOwnership && !Objects.equals(found.get().getUserId(), userId))) {
             return new CancelResult.NotFound();
         }
         Reservation reservation = found.get();

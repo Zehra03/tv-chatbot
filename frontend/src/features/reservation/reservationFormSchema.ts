@@ -295,13 +295,31 @@ export const emptyPassenger: PassengerValues = {
 
 /**
  * Yolcu satırlarını teklifin pax'ıyla önden doldurur: otelde `adults` yetişkin + `children` çocuk
- * (çocuk yaşları aramadan), uçuşta `passengerCount` yetişkin. Uyruk aramanın uyruğuyla dolar.
- * TourVisio yolcu sayısı-teklif eşleşmesini şart koştuğundan satır sayısı burada sabitlenir.
+ * (çocuk yaşları aramadan), uçuşta da aynı şekilde `passengerCount - childAges.length` yetişkin +
+ * `childAges` çocuk (HATA 5 fix — eskiden uçuşta tüm yolcular koşulsuz yetişkin sayılırdı, arama
+ * formunda çocuk/bebek ayrımı hiç yoktu). Uyruk aramanın uyruğuyla dolar (yalnız otelde; uçuş
+ * snapshot'ında uyruk alanı yok). TourVisio yolcu sayısı-teklif eşleşmesini şart koştuğundan satır
+ * sayısı burada sabitlenir.
+ *
+ * <p>NOT: bu form yolcu tipini yalnız 'adult'/'child' olarak ayırır — TourVisio'nun uçuşa özgü
+ * INFANT (bebek) tipi burada henüz temsil edilmiyor (ayrı, daha büyük bir kapsam). 0-2 yaş bir
+ * çocuk burada 'child' olarak açılır; bu satırın yaşı (aşağıdaki şemadaki 3-17 aralığı) formda
+ * elle düzeltilmeli — arama artık en azından yaşı DOĞRU taşıyor, eskiden tamamen kayboluyordu.
  */
 export function initialPassengers(draft: ReservationDraft): PassengerValues[] {
   if (draft.productType === 'flight') {
-    const count = Math.max(1, draft.flight.passengerCount)
-    return Array.from({ length: count }, () => ({ ...emptyPassenger, passengerType: 'adult' }))
+    const childAges = draft.childAges ?? []
+    const adults = Math.max(1, draft.flight.passengerCount - childAges.length)
+    const adultRows: PassengerValues[] = Array.from({ length: adults }, () => ({
+      ...emptyPassenger,
+      passengerType: 'adult',
+    }))
+    const childRows: PassengerValues[] = childAges.map((age) => ({
+      ...emptyPassenger,
+      passengerType: 'child',
+      age: String(age),
+    }))
+    return [...adultRows, ...childRows]
   }
   const nat = (draft.hotel.nationality ?? '').toUpperCase()
   const prefill = isCountryCode(nat) ? nat : ''

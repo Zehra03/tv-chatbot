@@ -44,7 +44,7 @@ function missingRequiredCount(pc: PartialCriteria): number {
   if (!c.origin) n++
   if (!c.destination) n++
   if (!c.departDate) n++
-  if (!c.passengers) n++
+  if (!c.adults) n++
   // Dönüş tarihi yalnız gidiş-dönüşte zorunlu; tek yönde (veya tripType belirsizken) sayılmaz.
   if (c.tripType === 'round_trip' && !c.returnDate) n++
   return n

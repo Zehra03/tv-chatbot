@@ -28,9 +28,10 @@ import jakarta.validation.constraints.Size;
  * everything needed to (a) show a summary, (b) later drive the TourVisio transaction flow, and
  * (c) persist ticket 1's entities — so the whole confirm flow can run purely from the frozen snapshot.
  *
- * <p>{@code totalAmount}/{@code currency} are the price the user is committing to; there is no
- * re-verification against live Hotel/Flight availability (no such method exists yet — accepted risk,
- * see {@code ReservationService}).
+ * <p>{@code totalAmount}/{@code currency} are the price the user is committing to. They are re-verified
+ * against live TourVisio availability at preview time (the frozen snapshot carries the provider's own
+ * price, not the client's) and again immediately before commit — see {@code ReservationService}'s
+ * {@code previewReservation} and {@code verifyPrice} (K21).
  *
  * <p>At least one of {@link #hotel()} / {@link #flight()} must be present; the product type is derived
  * from which are present (never trusted from input). {@code userId} / {@code guestToken} are injected

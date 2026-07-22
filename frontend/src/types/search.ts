@@ -82,14 +82,30 @@ export interface HotelSearchCriteria {
   sort?: 'price-asc' | 'price-desc' | 'stars-desc'
 }
 
-/** Uçuş arama kriteri. origin/destination + passengers(count) DB alanlarıyla hizalı. */
+/**
+ * Uçuşta bir çocuğun en büyük yaşı — bu sınırın üstü yetişkin ücretiyle uçar.
+ * Otelden farklı olarak 0'dan başlar: 0–1 INFANT (kucak bebeği, backend
+ * `PassengerCount.ofChildAges`), 2–{@link FLIGHT_CHILD_MAX_AGE} CHILD.
+ */
+export const FLIGHT_CHILD_MAX_AGE = 17
+
+/**
+ * Uçuş arama kriteri. origin/destination DB alanlarıyla hizalı; yolcu sayısı
+ * (backend `passenger_count`) `adults + childAges.length`'ten türetilir.
+ */
 export interface FlightSearchCriteria {
   origin: string // DB: origin varchar(100)
   destination: string // DB: destination varchar(100)
   /** Kullanıcının seçtiği gün; kalıcı biçimde depart_time (instant) olarak saklanır. */
   departDate: IsoDate
-  /** Yolcu SAYISI. DB: passenger_count smallint (>=1). */
-  passengers: number
+  /** Yetişkin yolcu SAYISI (>=1). */
+  adults: number
+  /**
+   * Refakatteki her çocuğun yaşı; backend `PassengerCount.ofChildAges` bunu ücret tipine
+   * (infant/child/adult ücreti) çevirir — otelin `childAges`'i ile aynı fikir, TourVisio'nun
+   * uçuş ücret bantlarına göre. Boş dizi = refakatte çocuk yok.
+   */
+  childAges: number[]
   currency: CurrencyCode
   tripType: TripType
   /** `tripType === 'round_trip'` iken. DB: return_depart_time. */
