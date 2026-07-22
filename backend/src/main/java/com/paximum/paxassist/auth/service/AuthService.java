@@ -140,6 +140,7 @@ public class AuthService {
     }
 
     private static AuthUserDto toUserDto(User user) {
-        return new AuthUserDto(String.valueOf(user.getId()), user.getEmail(), user.getDisplayName());
+        return new AuthUserDto(String.valueOf(user.getId()), user.getEmail(), user.getDisplayName(),
+                user.getRole().name());
     }
 }

@@ -54,7 +54,7 @@ class AuthControllerTest {
     void register_returns201WithUserAndToken() throws Exception {
         RegisterRequestDto request = new RegisterRequestDto("new@example.com", "password123", "New User");
         AuthResponseDto response = new AuthResponseDto(
-                new AuthUserDto("1", "new@example.com", "New User"), "jwt-token", "refresh-token");
+                new AuthUserDto("1", "new@example.com", "New User", "USER"), "jwt-token", "refresh-token");
         when(authService.register(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -92,7 +92,7 @@ class AuthControllerTest {
     void login_returns200WithUserAndToken() throws Exception {
         LoginRequestDto request = new LoginRequestDto("user@example.com", "password123");
         AuthResponseDto response = new AuthResponseDto(
-                new AuthUserDto("2", "user@example.com", null), "jwt-token", "refresh-token");
+                new AuthUserDto("2", "user@example.com", null, "USER"), "jwt-token", "refresh-token");
         when(authService.login(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/login")
@@ -121,7 +121,7 @@ class AuthControllerTest {
     void refresh_returns200WithRotatedTokens() throws Exception {
         RefreshRequestDto request = new RefreshRequestDto("old-refresh");
         AuthResponseDto response = new AuthResponseDto(
-                new AuthUserDto("2", "user@example.com", null), "new-jwt", "new-refresh");
+                new AuthUserDto("2", "user@example.com", null, "USER"), "new-jwt", "new-refresh");
         when(authService.refresh(any())).thenReturn(response);
 
         mockMvc.perform(post("/api/v1/auth/refresh")
