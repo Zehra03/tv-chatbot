@@ -60,11 +60,19 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
      * <p>{@code upper} rather than {@code lower} for the same Turkish dotless-ı reason documented on
      * {@link #findByReservationNumberAndPassengerSurname} — PNRs are ASCII today, but folding the
      * two the same way everywhere keeps the rule one rule.
+     *
+     * <p><b>Why {@code cast(:pnr as string)}</b>: without it, an absent PNR reaches PostgreSQL as an
+     * untyped null, which it infers as {@code bytea} — and {@code upper(bytea)} does not exist, so
+     * the UNFILTERED list (the screen's default view) failed with a grammar error. The cast pins the
+     * parameter to text so the same query serves both the filtered and unfiltered cases.
+     * {@code :status} / {@code :productType} need no cast: they are compared with {@code =} against a
+     * column, so the type is inferred from the column.
      */
     @Query("""
             select r from Reservation r
-            where (:pnr is null or upper(r.reservationNumber) like upper(concat('%', :pnr, '%'))
-                   or upper(r.externalReservationNumber) like upper(concat('%', :pnr, '%')))
+            where (:pnr is null
+                   or upper(r.reservationNumber) like upper(concat('%', cast(:pnr as string), '%'))
+                   or upper(r.externalReservationNumber) like upper(concat('%', cast(:pnr as string), '%')))
               and (:status is null or r.status = :status)
               and (:productType is null or r.productType = :productType)
             """)
