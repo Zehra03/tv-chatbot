@@ -99,6 +99,11 @@ public class AdminController {
                     ResponseEntity.status(HttpStatus.CONFLICT).body(new OutcomeResponse("NOT_CANCELLABLE", "Bu rezervasyon iptal edilemiyor."));
             case CancelResult.TourVisioRejected ignored ->
                     ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new OutcomeResponse("TOURVISIO_REJECTED", "İptal talebi sağlayıcı tarafından reddedildi."));
+            // 202: the sale is still settling right after booking; the provider won't accept the void yet.
+            // Nothing changed and it is retryable.
+            case CancelResult.NotReadyYet ignored ->
+                    ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("CANCEL_NOT_READY",
+                            "Rezervasyon yeni oluşturulduğu için iptal şu an yapılamıyor; işlem tamamlanınca birkaç dakika içinde tekrar deneyin."));
             case CancelResult.TourVisioUnavailable ignored ->
                     ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new OutcomeResponse("TOURVISIO_UNAVAILABLE", "Sağlayıcıya ulaşılamıyor."));
             case CancelResult.OutcomeUnknown ignored ->

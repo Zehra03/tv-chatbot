@@ -408,7 +408,20 @@ public class ReservationService {
         }
         if (result instanceof BusinessFailure<CancelReservationResponse> rejected) {
             TourVisioResponseHeader header = rejected.header();
-            return new CancelResult.TourVisioRejected(header == null ? null : header.primaryCode(), firstMessage(header));
+            String code = header == null ? null : header.primaryCode();
+            String message = firstMessage(header);
+            // The provider's actual reason lives in the message, not the code: code=ProviderDynamicErrorMessage
+            // only says "the supplier returned free text" (e.g. an airline explaining why it won't cancel).
+            // Log both so WHY the cancel was refused is visible — a provider error string, not passenger PII.
+            log.warn("TourVisio cancelReservation rejected: reservationId={}, external={}, code={}, message={}",
+                    id, external, code, message);
+            if (isCancelNotReadyYet(message)) {
+                // Transient: the just-made sale has not settled at the payment gateway yet, so the
+                // provider refuses the void. Nothing changed and it is retryable — surface it as
+                // "try again shortly", not a permanent rejection.
+                return new CancelResult.NotReadyYet(message);
+            }
+            return new CancelResult.TourVisioRejected(code, message);
         }
         if (!(result instanceof Success<CancelReservationResponse> success)) {
             String description = result instanceof TechnicalFailure<CancelReservationResponse> tf ? tf.description() : "unknown technical failure";
@@ -800,6 +813,23 @@ public class ReservationService {
         return header.messages().get(0).message();
     }
 
+    /**
+     * Recognises TourVisio's transient "the sale has not settled yet" refusal (delivered as a free-text
+     * {@code ProviderDynamicErrorMessage}, e.g. "A validate void request cannot be sent until the sale
+     * transaction is completed at the payment gateway step. Please wait for a few minutes."). This is a
+     * retryable state right after booking — not a permanent rejection — so it is surfaced as
+     * {@link CancelResult.NotReadyYet}. Matched conservatively on stable phrases so an unrelated provider
+     * error still falls through to {@link CancelResult.TourVisioRejected}.
+     */
+    private boolean isCancelNotReadyYet(String message) {
+        if (message == null) {
+            return false;
+        }
+        String m = message.toLowerCase(java.util.Locale.ROOT);
+        return m.contains("payment gateway")
+                && (m.contains("cannot be sent") || m.contains("wait") || m.contains("completed"));
+    }
+
     /** Internal/UI reservation code, e.g. {@code PAX-20260707-A1B2C3}. Uniqueness enforced by the DB. */
     private String generateReservationNumber() {
         String date = LocalDate.now().format(RES_NO_DATE);
@@ -846,8 +876,25 @@ public class ReservationService {
                     "SUCCESS", "Reservation " + id + " cancelled by user " + userId + " -> " + cancelled.newStatus());
         } else if (!(result instanceof CancelResult.NotFound)) {
             activityLog.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
-                    "FAILED", "Cancel failed for user " + userId + ": " + result.getClass().getSimpleName());
+                    "FAILED", "Cancel failed for user " + userId + ": " + describeCancelFailure(result));
         }
+    }
+
+    /** One-line, PII-free reason for a failed cancel — carries the TourVisio code/message when present. */
+    private String describeCancelFailure(CancelResult result) {
+        return switch (result) {
+            case CancelResult.TourVisioRejected r ->
+                    "TourVisioRejected (code=" + r.code() + ", message=" + r.message() + ")";
+            case CancelResult.NotReadyYet n ->
+                    "NotReadyYet (message=" + n.message() + ")";
+            case CancelResult.TourVisioUnavailable u ->
+                    "TourVisioUnavailable (" + u.description() + ")";
+            case CancelResult.OutcomeUnknown u ->
+                    "OutcomeUnknown (" + u.description() + ")";
+            case CancelResult.NotCancellable n ->
+                    "NotCancellable (" + n.reason() + ")";
+            default -> result.getClass().getSimpleName();
+        };
     }
 
     /** PII-safe one-line summary of a booking command for logs: product mix, amount, traveller count. */
