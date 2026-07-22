@@ -59,7 +59,15 @@ function DetailMarker() {
   return <div>Rezervasyon detayı #{id}</div>
 }
 
-function renderPage(draft: ReservationDraft | null = hotelDraft) {
+/** Hesabı olan kullanıcı — 0. adımı (giriş/misafir seçimi) atlar, doğrudan forma girer. */
+const accountUser = { id: 'u-1', email: 'zehra@example.com', name: 'Zehra' }
+/** Misafir oturumu — jetonu yoktur, X-Guest-Id ile gider (authSlice.guestSessionStarted). */
+const guestUser = { id: 'guest', email: '', name: 'Misafir', guest: true }
+
+function renderPage(
+  draft: ReservationDraft | null = hotelDraft,
+  { guest = false }: { guest?: boolean } = {},
+) {
   const store = configureStore({
     reducer: {
       auth: authReducer,
@@ -67,7 +75,15 @@ function renderPage(draft: ReservationDraft | null = hotelDraft) {
       reservationDraft: reservationDraftReducer,
       ui: uiReducer,
     },
-    preloadedState: { reservationDraft: { draft } },
+    preloadedState: {
+      reservationDraft: { draft },
+      auth: {
+        user: guest ? guestUser : accountUser,
+        token: guest ? null : 'token-1',
+        refreshToken: guest ? null : 'refresh-1',
+        guestId: guest ? 'guest-abc' : null,
+      },
+    },
   })
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -81,6 +97,9 @@ function renderPage(draft: ReservationDraft | null = hotelDraft) {
             {/* Kesin onay başarıda buraya yönlendirir (created → detay, fallback → liste). */}
             <Route path="/reservations/:id" element={<DetailMarker />} />
             <Route path="/reservations" element={<div>Rezervasyon listesi</div>} />
+            {/* Misafirin "Giriş Yaparak Devam Et" yolu. */}
+            <Route path="/login" element={<div>Giriş sayfası</div>} />
+            <Route path="/chat" element={<div>Sohbet sayfası</div>} />
           </Routes>
         </MemoryRouter>
       </QueryClientProvider>
@@ -397,5 +416,122 @@ describe('ReservationFormPage', () => {
     ).toBeTruthy()
     expect(requests).not.toContain('POST /api/v1/reservations/preview')
     server.events.removeAllListeners()
+  })
+})
+
+/**
+ * Misafir (guest) rezervasyonu — hesabı olmayan kullanıcı 0. adımda yolunu seçer, misafir
+ * akışında e-posta/telefon zorunlu kalır ve sonuçta PNR'ını satır içinde görür (detay sayfasına
+ * yönlendirilemez: RequireAccount + backend'in USER/ADMIN kısıtı onu /login'e düşürürdü).
+ */
+describe('ReservationFormPage — misafir akışı', () => {
+  const guest = { guest: true }
+
+  it('misafire önce giriş/misafir seçimi sunulur; form doğrudan açılmaz', () => {
+    renderPage(hotelDraft, guest)
+
+    expect(screen.getByRole('heading', { name: 'Nasıl devam etmek istersiniz?' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Giriş Yaparak Devam Et' })).toBeTruthy()
+    expect(
+      screen.getByRole('button', { name: 'Üye Olmadan (Misafir) Devam Et' }),
+    ).toBeTruthy()
+    // Seçim yapılmadan yolcu formu görünmez.
+    expect(screen.queryByLabelText('Ad')).toBeNull()
+    // Ürün özeti seçimle birlikte görünür — kullanıcı neyi rezerve ettiğini bilerek karar verir.
+    expect(screen.getByText('MOCK Grand Antalya Resort')).toBeTruthy()
+  })
+
+  it('hesabı olan kullanıcı seçim ekranını hiç görmez', () => {
+    renderPage()
+    expect(screen.queryByText('Nasıl devam etmek istersiniz?')).toBeNull()
+    expect(screen.getByLabelText('Ad')).toBeTruthy()
+  })
+
+  it('"Giriş Yaparak Devam Et" /login\'e götürür (taslak korunur)', async () => {
+    const user = userEvent.setup()
+    const { store } = renderPage(hotelDraft, guest)
+
+    await user.click(screen.getByRole('link', { name: 'Giriş Yaparak Devam Et' }))
+
+    expect(await screen.findByText('Giriş sayfası')).toBeTruthy()
+    // Giriş sonrası buraya dönülebilsin diye seçilen ürün taslakta DURMALI.
+    expect(store.getState().reservationDraft.draft).not.toBeNull()
+  })
+
+  it('misafir devam edince form açılır ve e-posta/telefon zorunluluğu korunur', async () => {
+    const user = userEvent.setup()
+    renderPage(hotelDraft, guest)
+
+    await user.click(screen.getByRole('button', { name: 'Üye Olmadan (Misafir) Devam Et' }))
+
+    expect(screen.getByLabelText('Ad')).toBeTruthy()
+    expect(screen.getByText(/Misafir rezervasyonunda e-posta ve telefon zorunludur/)).toBeTruthy()
+
+    // Boş gönderim: iki iletişim alanı da hata vermeli (Zod sınır doğrulaması).
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(await screen.findByText('E-posta girin')).toBeTruthy()
+    expect(screen.getByText('Telefon numarası girin')).toBeTruthy()
+
+    // Geçersiz e-posta biçimi de reddedilir.
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    expect(await screen.findByText('Geçerli bir e-posta girin')).toBeTruthy()
+  })
+
+  it('rezervasyon tamamlanınca PNR, bilet özeti ve e-posta bilgisi gösterilir (yönlendirme YOK)', async () => {
+    const user = userEvent.setup()
+    renderPage(hotelDraft, guest)
+
+    await user.click(screen.getByRole('button', { name: 'Üye Olmadan (Misafir) Devam Et' }))
+    await user.type(screen.getByLabelText('Ad'), 'Zehra')
+    await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
+    await user.type(screen.getByLabelText('Telefon'), '5551112233')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+    await screen.findByText(/Toplam:/, {}, { timeout: 3000 })
+    await user.click(screen.getByRole('checkbox'))
+    await user.click(screen.getByRole('button', { name: 'Rezervasyonu onayla' }))
+
+    expect(
+      await screen.findByText('Rezervasyonunuz tamamlandı', {}, { timeout: 3000 }),
+    ).toBeTruthy()
+    // PNR kodu belirgin şekilde ekranda (MSW: PAX-MOCK-<id>).
+    expect(screen.getByText('PNR kodu')).toBeTruthy()
+    expect(screen.getByText(/^PAX-MOCK-\d+$/)).toBeTruthy()
+    // "PNR bilgisi e-posta adresinize gönderilmiştir" + adresin kendisi.
+    expect(screen.getByText(/gönderilmiştir/)).toBeTruthy()
+    expect(screen.getByText('zehra@example.com')).toBeTruthy()
+    // Bilet özeti: otel + yolcu + toplam.
+    expect(screen.getByRole('heading', { name: 'Bilet özeti' })).toBeTruthy()
+    expect(screen.getByText('Zehra Yılmaz')).toBeTruthy()
+
+    // Misafir hesap sayfalarına YÖNLENDİRİLMEZ (oraya giremez).
+    expect(screen.queryByText(/Rezervasyon detayı #/)).toBeNull()
+    expect(screen.queryByText('Rezervasyon listesi')).toBeNull()
+  })
+
+  it('backend misafir booking\'ini 401 ile reddederse giriş yolu sunulur', async () => {
+    server.use(
+      http.post('/api/v1/reservations/preview', () =>
+        HttpResponse.json({ message: 'Unauthorized' }, { status: 401 }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderPage(hotelDraft, guest)
+
+    await user.click(screen.getByRole('button', { name: 'Üye Olmadan (Misafir) Devam Et' }))
+    await user.type(screen.getByLabelText('Ad'), 'Zehra')
+    await user.type(screen.getByLabelText('Soyad'), 'Yılmaz')
+    await user.type(screen.getByLabelText('E-posta'), 'zehra@example.com')
+    await user.type(screen.getByLabelText('Telefon'), '5551112233')
+    await user.click(screen.getByRole('button', { name: 'Önizlemeye geç' }))
+
+    // Ham "Unauthorized" değil, yapılabilecek şeyi anlatan mesaj + giriş bağlantısı.
+    expect(
+      await screen.findByText(/Misafir rezervasyonu şu an sunucu tarafından kabul edilmiyor/, {}, {
+        timeout: 3000,
+      }),
+    ).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Giriş yap' })).toBeTruthy()
   })
 })

@@ -41,10 +41,15 @@ function ProtectedRoute() {
 }
 
 /**
- * Gerçek hesap gerektiren rota sarmalı — sohbet/arama misafire açıktır ama rezervasyon
- * ve profil hesap ister ("kontrollü rezervasyon" ilkesi; rezervasyonu sonradan yalnızca
- * kayıtlı kullanıcı görüntüleyebilir). Misafiri /login'e yönlendirir ve giriş/kayıt sonrası
- * geldiği sayfaya dönebilmesi için nereden geldiğini state'te taşır.
+ * Gerçek hesap gerektiren rota sarmalı — sohbet/arama/rezervasyon KURMA misafire açıktır ama
+ * rezervasyon GEÇMİŞİ ve profil hesap ister: bu sayfalar kimliğe bağlı kalıcı veriyi listeler
+ * ve misafirin taşıyıcı anahtarı (X-Guest-Id) o veriyi sahiplenmeye yetmez. Misafiri /login'e
+ * yönlendirir ve giriş/kayıt sonrası geldiği sayfaya dönebilmesi için nereden geldiğini
+ * state'te taşır.
+ *
+ * `/reservation/new` bilerek DIŞARIDA: misafir de rezervasyon yapabilir, ama seçimi form
+ * sayfasının kendi 0. adımında ("Giriş yap" / "Misafir devam et") açıkça yapar — kapıda sessizce
+ * /login'e atılmaz. "Kontrollü rezervasyon" ilkesi korunur: booking'i hâlâ YALNIZ bu form yapar.
  */
 function RequireAccount() {
   const user = useAppSelector((s) => s.auth.user)
@@ -99,13 +104,15 @@ export const routes: RouteObject[] = [
                     element: <FlightsPage />,
                   },
                   {
+                    // Misafire AÇIK: kapıda /login'e atmak yerine sayfa kendi 0. adımında
+                    // "Giriş yap / Misafir devam et" seçimini sunar (GuestCheckoutChoice).
+                    path: '/reservation/new',
+                    element: <ReservationFormPage />,
+                  },
+                  {
                     // Hesap gerektiren sayfalar: misafir buraya giremez, /login'e düşer.
                     element: <RequireAccount />,
                     children: [
-                      {
-                        path: '/reservation/new',
-                        element: <ReservationFormPage />,
-                      },
                       {
                         path: '/reservations',
                         element: <ReservationsPage />,

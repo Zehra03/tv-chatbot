@@ -5,6 +5,8 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { AlertTriangle, CheckCircle2, Clock, XCircle } from 'lucide-react'
 import { AiOffBanner } from '@/features/reservation/AiOffBanner'
 import { FormStepper } from '@/features/reservation/FormStepper'
+import { GuestCheckoutChoice } from '@/features/reservation/GuestCheckoutChoice'
+import { GuestPnrPanel } from '@/features/reservation/GuestPnrPanel'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -34,10 +36,28 @@ import type { ApiError, NeedsConfirmationResponse, PreviewReservationCommand } f
 import { formatDate, formatDateTime, formatPrice } from '@/utils/format'
 
 /**
+ * Misafir rezervasyonu sunucu tarafında reddedildiğinde gösterilen mesaj. Backend
+ * `/api/v1/reservations/**` yolunu USER/ADMIN'e kilitlediği sürece (SecurityConfig) misafir onayı
+ * 401 döner; misafir akışı MSW'ye karşı uçtan uca çalışır, gerçek backend bu izni açana kadar
+ * kullanıcı burada çıkmaza değil giriş yoluna yönlendirilir.
+ */
+const GUEST_BOOKING_BLOCKED =
+  'Misafir rezervasyonu şu an sunucu tarafından kabul edilmiyor. Lütfen giriş yapın ya da ' +
+  'ücretsiz bir hesap oluşturun — seçtiğiniz ürün korunur, kaldığınız yerden devam edersiniz.'
+
+/** Hata, misafir booking'inin sunucuda kapalı olmasından mı kaynaklanıyor? */
+function isGuestBlocked(error: ApiError | null, hasAccount: boolean): boolean {
+  return !hasAccount && (error?.status === 401 || error?.status === 403)
+}
+
+/**
  * Kesin onaydaki backend hata kodunu (ApiError.code = OutcomeResponse.outcome) kullanıcı mesajına
  * çevirir. Bilinmeyen kodda backend mesajına düşer.
  */
-function confirmErrorMessage(error: ApiError): string {
+function confirmErrorMessage(error: ApiError, hasAccount: boolean): string {
+  // Misafir + 401/403: backend booking'i hesaba kilitliyor (SecurityConfig). Ham "Unauthorized"
+  // yerine yapılabilecek şeyi söyle — seçilen ürün taslakta durduğu için giriş sonrası akış sürer.
+  if (!hasAccount && (error.status === 401 || error.status === 403)) return GUEST_BOOKING_BLOCKED
   switch (error.code) {
     case 'PREVIEW_EXPIRED':
       return 'Önizleme süresi doldu. Lütfen formu tekrar gönderip yeniden onaylayın.'
@@ -62,11 +82,13 @@ function confirmErrorMessage(error: ApiError): string {
 /** Önizleme (preview) isteğinin hata kodunu kullanıcı mesajına çevirir. Sunucu tarafı doğrulama
  * (400) çoğu zaman gövdede alan detayı taşımaz; istemci ön-kontrolü (validatePreviewCommand) sorunu
  * zaten yakalar, bu yalnız ağ/sunucu kaynaklı hatalar için okunur bir mesajdır. */
-function previewErrorMessage(error: ApiError): string {
+function previewErrorMessage(error: ApiError, hasAccount: boolean): string {
   if (error.status === 400) {
     return 'Rezervasyon bilgileri sunucu tarafından reddedildi. Lütfen bilgilerinizi kontrol edin ya da aramayı yenileyip ürünü tekrar seçin.'
   }
-  if (error.status === 401) return 'Bu işlem için giriş yapmanız gerekiyor.'
+  if (error.status === 401 || error.status === 403) {
+    return hasAccount ? 'Bu işlem için giriş yapmanız gerekiyor.' : GUEST_BOOKING_BLOCKED
+  }
   return apiErrorMessage(error)
 }
 
@@ -79,6 +101,11 @@ function previewErrorMessage(error: ApiError): string {
  */
 export function ReservationFormPage() {
   const draft = useAppSelector((s) => s.reservationDraft.draft)
+  const user = useAppSelector((s) => s.auth.user)
+  // Hesabı olan kullanıcı 0. adımı hiç görmez; misafir (ve oturumsuz test/derin-bağlantı durumu)
+  // önce "Giriş yap / Misafir devam et" seçimini yapar. RequireAccount ile aynı tanım.
+  const hasAccount = !!user && !user.guest
+  const [guestFlowAccepted, setGuestFlowAccepted] = useState(false)
   const navigate = useNavigate()
   const preview = useReservationPreview()
   const confirm = useConfirmReservation()
@@ -113,6 +140,9 @@ export function ReservationFormPage() {
   // sayfası rezervasyonu backend'den okur ve yenilemeye dayanır. replace: geri tuşuyla forma dönülmez;
   // state.justBooked: detay sayfası tek seferlik "alındı" bandını gösterir (toast'a ek).
   useEffect(() => {
+    // Misafir bu sayfalara GİREMEZ (RequireAccount + backend USER/ADMIN kısıtı): yönlendirmek onu
+    // /login'e düşürür ve PNR'ını hiç göremez. Sonucu satır içi GuestPnrPanel gösterir.
+    if (!hasAccount) return
     if (confirm.data?.kind === 'created') {
       navigate(`/reservations/${confirm.data.reservation.id}`, {
         replace: true,
@@ -122,7 +152,7 @@ export function ReservationFormPage() {
       // Özet yeniden okunamadı (id yok) → listeye götür; onay toast'ı kullanıcıyı zaten bilgilendirir.
       navigate('/reservations', { replace: true, state: { justBooked: true } })
     }
-  }, [confirm.data, navigate])
+  }, [confirm.data, navigate, hasAccount])
 
   // Şema ürüne göre kurulur: uçuşta doğum tarihi + kimlik no ZORUNLU olur ve hata artık alanın
   // yanında görünür (eskiden yalnız validatePreviewCommand'in toplu listesinde çıkıyordu).
@@ -174,6 +204,40 @@ export function ReservationFormPage() {
     setWarning(null)
   }
 
+  // MİSAFİR sonucu (3. adım) — hesabı olmayan kullanıcı /reservations/:id'ye giremediği için PNR,
+  // bilet özeti ve "e-postanıza gönderildi" bilgisi burada, satır içinde gösterilir. Hesap dalından
+  // ÖNCE gelir. `request` onaydan önce dondurulan komuttur; taslak başarıda temizlendiği için özetin
+  // tek kaynağı odur. Pratikte hep dolu (onay ancak önizlemeden sonra çağrılabilir) — yoksa da
+  // rezervasyonun oluştuğunu saklamayız, yalnız özetsiz anlatırız.
+  if (
+    !hasAccount &&
+    (confirm.data?.kind === 'created' || confirm.data?.kind === 'createdFallback')
+  ) {
+    const reservation = confirm.data.kind === 'created' ? confirm.data.reservation : null
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <FormStepper current={3} />
+        {reservation && request ? (
+          <GuestPnrPanel reservation={reservation} command={request} />
+        ) : (
+          <Card className="border-border bg-card text-foreground">
+            <CardContent className="space-y-4 p-8 text-center">
+              <CheckCircle2 className="mx-auto h-10 w-10 text-success" aria-hidden />
+              <h1 className="text-xl font-bold">Rezervasyonunuz tamamlandı</h1>
+              <p className="text-sm text-muted-foreground">
+                Rezervasyonunuz oluşturuldu ancak özeti şu an görüntülenemiyor. PNR bilgisi e-posta
+                adresinize gönderilmiştir.
+              </p>
+              <Button asChild variant="cta">
+                <Link to="/chat">Sohbete dön</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    )
+  }
+
   // Kesin onay başarılı — yukarıdaki useEffect kullanıcıyı kalıcı rezervasyon sayfasına yönlendirir.
   // Bu erken dönüş, yönlendirme gerçekleşene kadarki tek render'da no-draft ekranının görünmemesi
   // içindir (taslak onSuccess'te temizlenmiş olabilir). Yönlendirme herhangi bir sebeple gecikirse
@@ -213,17 +277,27 @@ export function ReservationFormPage() {
             <XCircle className="mx-auto h-10 w-10 text-destructive-emphasis" aria-hidden />
             <h1 className="text-xl font-bold">Rezervasyon oluşturulamadı</h1>
             <p role="alert" className="text-sm text-destructive-emphasis">
-              {confirmErrorMessage(confirm.error)}
+              {confirmErrorMessage(confirm.error, hasAccount)}
             </p>
             <div className="flex justify-center gap-3">
-              <Button
-                onClick={() => {
-                  confirm.reset()
-                  setWarning(null)
-                }}
-              >
-                Önizlemeye dön
-              </Button>
+              {/* Misafir sunucu tarafında engellendiyse tek işe yarar eylem giriş yapmaktır —
+                  "Önizlemeye dön" onu aynı 401'e geri sokardı. */}
+              {isGuestBlocked(confirm.error, hasAccount) ? (
+                <Button asChild variant="cta">
+                  <Link to="/login" state={{ from: '/reservation/new' }}>
+                    Giriş yap
+                  </Link>
+                </Button>
+              ) : (
+                <Button
+                  onClick={() => {
+                    confirm.reset()
+                    setWarning(null)
+                  }}
+                >
+                  Önizlemeye dön
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 className="text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -332,6 +406,20 @@ export function ReservationFormPage() {
             </Button>
           ))}
         </div>
+      </div>
+    )
+  }
+
+  // 0. adım — hesabı olmayan kullanıcıya giriş/misafir seçimi. `!draft` kontrolünden SONRA gelir:
+  // ürünü olmayan kullanıcıya önce "bir ürün seçin" demek, sonra nasıl devam edeceğini sormak
+  // yerine doğru sıradır. Seçim yerel state'te tutulur — kalıcı olması gerekmez, çünkü ürün
+  // taslağı da (Redux) kalıcı değil: sayfa yenilenirse ikisi birden sıfırlanır, tutarlı kalır.
+  if (!hasAccount && !guestFlowAccepted) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <FormStepper current={1} />
+        <h1 className="text-2xl font-bold text-foreground">Rezervasyon</h1>
+        <GuestCheckoutChoice draft={draft} onGuestContinue={() => setGuestFlowAccepted(true)} />
       </div>
     )
   }
@@ -709,6 +797,14 @@ export function ReservationFormPage() {
 
         <section className="space-y-3">
           <h2 className="font-semibold text-foreground">İletişim</h2>
+          {/* İki alan da herkes için zaten zorunlu (Zod); misafirde kritik olan, rezervasyona
+              sonradan ulaşmanın TEK yolunun bu iletişim bilgisi olması — bunu açıkça söyle. */}
+          {!hasAccount && (
+            <p className="text-xs text-muted-foreground">
+              Misafir rezervasyonunda e-posta ve telefon zorunludur — PNR kodunuzu ve bilet özetinizi
+              buraya göndeririz.
+            </p>
+          )}
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="contact-email">E-posta</Label>
@@ -802,9 +898,18 @@ export function ReservationFormPage() {
           </div>
         )}
         {preview.isError && (
-          <p role="alert" className="text-sm text-destructive-emphasis">
-            {previewErrorMessage(preview.error)}
-          </p>
+          <div className="space-y-2">
+            <p role="alert" className="text-sm text-destructive-emphasis">
+              {previewErrorMessage(preview.error, hasAccount)}
+            </p>
+            {isGuestBlocked(preview.error, hasAccount) && (
+              <Button asChild variant="cta" size="sm">
+                <Link to="/login" state={{ from: '/reservation/new' }}>
+                  Giriş yap
+                </Link>
+              </Button>
+            )}
+          </div>
         )}
         <Button type="submit" variant="cta" disabled={preview.isPending}>
           {preview.isPending ? (
