@@ -91,7 +91,29 @@ openssl rand -base64 48
 - [ ] `AUTH_JWT_SECRET` is a fresh value, **not** `dev-only-insecure-secret-change-me-please-32bytes+`
 - [ ] `.env` is not committed (`git ls-files | grep .env` → empty; already gitignored)
 
-## 4. Logs
+## 4. Known security limitations (accepted, 2026-07-22)
+
+Recorded here so they are decisions, not surprises. Both are known and deliberately deferred —
+revisit before this is used by anyone outside the team.
+
+**Password reset is unauthenticated.** `POST /api/v1/auth/reset-password` is `permitAll` and takes
+only `{email, password}`: no token, no e-mail link, no current password. Anyone who knows a
+registered e-mail address can set a new one and take over that account — and then read the
+passenger names, e-mails and phone numbers on that user's reservations, or cancel them (which calls
+TourVisio, with real penalties). The endpoint also returns 404 `EMAIL_NOT_FOUND`, so registered
+addresses can be enumerated. Rate limiting does not help: the attack is a single request.
+
+Why it is like this: there is no SMTP in the project, and a safe self-service reset needs a channel
+only the account owner controls. The real fix is either an e-mail provider (a free tier is enough at
+this volume) or removing the endpoint until there is one.
+
+**API docs are public in production.** `/swagger-ui/**` and `/v3/api-docs/**` are `permitAll` and
+SpringDoc is not disabled under the `prod` profile, so the full endpoint and schema inventory —
+including the reset endpoint above — is browsable, with a live "Try it out" console. This is not a
+vulnerability by itself, but it removes the reconnaissance cost of finding the one above. Disabling
+it is two properties (`springdoc.api-docs.enabled=false`, `springdoc.swagger-ui.enabled=false`).
+
+## 5. Logs
 
 The app writes everything to **stdout** and nothing to the database — there is no log table and no
 log service (see [architecture.md](architecture.md)). Under `SPRING_PROFILES_ACTIVE=prod` each line
@@ -117,7 +139,7 @@ repo. That window is the real limit on how far back an incident can be investiga
 Nothing here is a substitute for the database: a reservation is a row in `reservations`, and that row
 does not expire when the logs do.
 
-## 5. CI / auto-deploy
+## 6. CI / auto-deploy
 
 Railway and Vercel both watch the connected GitHub branch and redeploy on push — no extra workflow
 needed. Point each at the branch you release from (e.g. `main`). The existing
