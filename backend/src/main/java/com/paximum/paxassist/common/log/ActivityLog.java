@@ -23,9 +23,11 @@ import org.springframework.stereotype.Component;
  * writing a line to stdout does not need a thread hop, and adding one would cost more than it saves
  * while scrambling the order of events relative to the surrounding logs.
  *
- * <p><b>PII:</b> {@code requestData} is written verbatim. Callers pass a masked summary (see
- * {@code ReservationService#maskedSummary}); passenger names and contact details must never reach
- * this method.
+ * <p><b>PII:</b> callers pass a masked summary (see {@code ReservationService#maskedSummary}) —
+ * passenger names and contact details must never reach this method. That remains the contract, but
+ * it is no longer only a contract: every value goes through {@link LogSafeText}, which strips CR/LF
+ * and masks card/national-id/IBAN shapes, so a careless caller leaks nothing and cannot forge a log
+ * line.
  */
 @Component
 public class ActivityLog {
@@ -50,17 +52,21 @@ public class ActivityLog {
         MDC.put(MODULE, module);
         MDC.put(ACTION, action);
         MDC.put(STATUS, status);
-        if (requestData != null) {
-            MDC.put(REQUEST, requestData);
+        String safeRequest = LogSafeText.scrub(requestData);
+        if (safeRequest != null) {
+            MDC.put(REQUEST, safeRequest);
         }
+        String safeMessage = LogSafeText.scrub(message);
         try {
-            // A failed activity is a WARN, not an ERROR: the call sites that hit a genuine fault
-            // already log it at ERROR with the stack trace. A second ERROR line for the same event
-            // would double-count in any alerting built on error rate.
-            if (isFailure(status)) {
-                log.warn(message);
-            } else {
-                log.info(message);
+            // Level follows the outcome, so alerting can key on level without parsing status text.
+            //
+            // FAILED/FAILURE is WARN rather than ERROR on purpose: most of them are user-level
+            // outcomes, not server faults — an expired preview, an ownership mismatch, a duplicate
+            // confirm. A genuine fault throws, and the exception is logged at ERROR with its stack
+            // trace by the global handler, so real errors are still ERROR exactly once.
+            switch (levelFor(status)) {
+                case WARN -> log.warn(safeMessage);
+                default -> log.info(safeMessage);
             }
         } finally {
             // Threads are pooled and reused. Without this, these fields would stick to every
@@ -73,8 +79,14 @@ public class ActivityLog {
         }
     }
 
-    private boolean isFailure(String status) {
-        return status != null
-                && (status.startsWith("FAIL") || "ERROR".equals(status));
+    private Level levelFor(String status) {
+        if (status == null) {
+            return Level.INFO;
+        }
+        return status.startsWith("FAIL") || "ERROR".equals(status) || "WARNING".equals(status)
+                ? Level.WARN
+                : Level.INFO;
     }
+
+    private enum Level { INFO, WARN }
 }

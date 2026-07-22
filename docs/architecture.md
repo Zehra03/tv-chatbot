@@ -8,8 +8,9 @@ graph TD
     %%  - Rate limiter "kimliği doğrulanmış principal'a göre anahtarlar" notu eklendi.
     %%  - Orchestrator'a Evaluator-Optimizer (AI serbest-metin çıktısında guardrail döngüsü) eklendi.
     %%  - Runtime MCP Server (arama araçlarını yayınlar) eklendi — dev-time MCP'lerden farklıdır.
-    %%  - LogDB kaldırıldı (V8): loglar veritabanında tutulmuyor. Log hedefi olarak
-    %%    "yapılandırılmış stdout" seçildi: prod'da JSON (ECS) satırlar, platform toplar.
+    %%  - LogDB kaldırıldı (V8): loglar veritabanında tutulmuyor. Log hedefi "yapılandırılmış
+    %%    stdout": prod'da JSON (ECS) satırlar, platform toplar. Her istek requestId +
+    %%    userId/guestId ile korele ediliyor; güvenlik olayları da aynı alanları taşıyor.
     %%  - Reservation "planlanan" olarak işaretlendi.
     %% =====================================================================
     %% --- STİL VE RENK TANIMLAMALARI ---
@@ -50,7 +51,7 @@ graph TD
         %% Önbellek + MCP + Log
         RedisCache[Redis Cache <br> TourVisio canlı sonuçları]:::cache
         McpServer[MCP Server -runtime- <br> Arama araçlarını yayınlar · SEARCH-ONLY, booking YOK]:::mcp
-        LogMod[Loglama <br> SLF4J · ActivityLog -module/action/status alanları- <br> prod'da JSON -ECS- stdout]:::log
+        LogMod[Loglama <br> ActivityLog -module/action/status- + korelasyon -requestId/userId/guestId- <br> prod'da JSON -ECS- stdout]:::log
     end
 
     %% --- VERİTABANI KATMANI ---

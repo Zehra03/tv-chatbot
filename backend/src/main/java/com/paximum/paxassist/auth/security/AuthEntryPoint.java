@@ -34,7 +34,7 @@ public class AuthEntryPoint implements AuthenticationEntryPoint {
             HttpServletResponse response,
             AuthenticationException authException) throws IOException {
 
-        auditLogger.logAuthenticationFailureAsync(request.getRequestURI(), authException.getMessage());
+        auditLogger.logAuthenticationFailure(request.getRequestURI(), authException.getMessage());
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
