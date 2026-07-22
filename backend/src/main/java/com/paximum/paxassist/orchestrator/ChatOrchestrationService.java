@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.ai.ChatHistoryEntry;
 import com.paximum.paxassist.ai.IntentExtractionResult;
 import com.paximum.paxassist.ai.IntentExtractionService;
@@ -28,25 +29,31 @@ import com.paximum.paxassist.orchestrator.intent.IntentRouter;
 @Service
 public class ChatOrchestrationService {
 
+    private static final String MODULE = "OrchestratorModule";
+    private static final String ACTION = "chatTurn";
+
     private final GuardOrchestrator guard;
     private final GuardAuditLogger guardAuditLogger;
     private final IntentExtractionService intentExtraction;
     private final ChatSessionStore sessionStore;
     private final IntentRouter intentRouter;
     private final ReplyLocalizer replyLocalizer;
+    private final ActivityLog activityLog;
 
     public ChatOrchestrationService(GuardOrchestrator guard,
                                     GuardAuditLogger guardAuditLogger,
                                     IntentExtractionService intentExtraction,
                                     ChatSessionStore sessionStore,
                                     IntentRouter intentRouter,
-                                    ReplyLocalizer replyLocalizer) {
+                                    ReplyLocalizer replyLocalizer,
+                                    ActivityLog activityLog) {
         this.guard = guard;
         this.guardAuditLogger = guardAuditLogger;
         this.intentExtraction = intentExtraction;
         this.sessionStore = sessionStore;
         this.intentRouter = intentRouter;
         this.replyLocalizer = replyLocalizer;
+        this.activityLog = activityLog;
     }
 
     public OrchestrationOutcome handle(String sessionId, String userMessage, ChatCaller caller) {
@@ -121,6 +128,14 @@ public class ChatOrchestrationService {
         session.addMessage("user", userMessage);
         session.addMessage("assistant", result.reply());
         sessionStore.save(session);
+
+        // The turn itself, as an activity event. The classified INTENT is recorded, never the
+        // user's message: that text is free-form and routinely carries names, dates and phone
+        // numbers a traveller typed into the chat, and the transcript already lives in the chat
+        // DB where it is access-controlled. The log needs to know what kind of turn happened,
+        // not what the person said.
+        activityLog.logActivity(MODULE, ACTION, "intent=" + intent, "SUCCESS",
+                "Chat turn handled");
         return new OrchestrationOutcome(result.withSessionId(session.getId()), session);
     }
 
@@ -130,7 +145,11 @@ public class ChatOrchestrationService {
      */
     private OrchestrationOutcome blockedOutcome(ChatSession session, String userMessage,
                                                 GuardBlockedException e) {
-        guardAuditLogger.logBlockedRequestAsync(userMessage, e.getDetailedReason());
+        guardAuditLogger.logBlockedRequest(userMessage, e.getDetailedReason());
+        // Neither the message nor the guard's detailed reason belongs here — the reason can quote
+        // the offending input. GuardAuditLogger owns the masked security record; this line only
+        // marks that a turn ended in a block, so blocked turns are countable alongside normal ones.
+        activityLog.logActivity(MODULE, ACTION, "intent=blocked", "BLOCKED", "Chat turn blocked by guard");
         OrchestrationResult blocked = OrchestrationResult.message(e.getMessage())
                 .withSessionId(session.getId());
         return new OrchestrationOutcome(blocked, session);

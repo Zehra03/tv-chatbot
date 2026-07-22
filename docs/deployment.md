@@ -91,7 +91,33 @@ openssl rand -base64 48
 - [ ] `AUTH_JWT_SECRET` is a fresh value, **not** `dev-only-insecure-secret-change-me-please-32bytes+`
 - [ ] `.env` is not committed (`git ls-files | grep .env` → empty; already gitignored)
 
-## 4. CI / auto-deploy
+## 4. Logs
+
+The app writes everything to **stdout** and nothing to the database — there is no log table and no
+log service (see [architecture.md](architecture.md)). Under `SPRING_PROFILES_ACTIVE=prod` each line
+is a JSON object (Elastic Common Schema), so Railway's log viewer can filter by field rather than by
+substring. Useful fields:
+
+| Field | Use it to |
+|---|---|
+| `requestId` | pull every line belonging to one request (also returned to the browser as the `X-Request-Id` response header, so a user can quote it) |
+| `userId` / `guestId` | follow one visitor across chat, search and booking |
+| `activity.module` / `activity.action` | filter to one operation, e.g. `confirmReservation` |
+| `activity.status` | `SUCCESS` / `FAILED` / `BLOCKED` / `INVALID_LOCATION` … |
+
+**Retention — decide this before you need it.** Railway keeps logs for a limited window that depends
+on the plan (on the free/hobby tiers it is days, not months), and it is *not* configurable from this
+repo. That window is the real limit on how far back an incident can be investigated, so:
+
+- [ ] Check the current retention on the project's Railway plan and write the number here: `____`
+- [ ] If it is shorter than the period you need to answer "what happened to this booking?", forward
+      the stream to an external collector. Because the output is already ECS JSON, any standard
+      collector ingests it without a parser — this is a Railway-side log drain, not a code change.
+
+Nothing here is a substitute for the database: a reservation is a row in `reservations`, and that row
+does not expire when the logs do.
+
+## 5. CI / auto-deploy
 
 Railway and Vercel both watch the connected GitHub branch and redeploy on push — no extra workflow
 needed. Point each at the branch you release from (e.g. `main`). The existing

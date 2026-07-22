@@ -670,6 +670,11 @@ public class ReservationService {
 
         // The booking was committed at a price we had not seen. Record the truth and flag it loudly:
         // the money moved, and only the provider's figure reconciles with what the customer is charged.
+        //
+        // Deliberately logged twice, unlike everywhere else: the ERROR line is the alert (this is the
+        // highest-severity thing that can happen here — a customer charged an amount nobody approved),
+        // and the activity line is the queryable record that carries the correlation and activity
+        // fields. Dropping either one loses something that matters.
         log.error("BOOKED PRICE DIFFERS — confirmed at {} {} but TourVisio booked {} {} "
                         + "(externalReservationNumber={}). Recording TourVisio's amount.",
                 command.totalAmount(), command.currency(), charged, chargedCurrency, externalReservationNumber);
