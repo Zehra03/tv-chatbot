@@ -66,20 +66,34 @@ describe('misafir erişim yerleşimi', () => {
       .children!.filter((r) => r.path)
       .map((r) => r.path)
     expect(directPaths).toEqual(expect.arrayContaining(['/chat', '/hotels', '/flights']))
-    // Rezervasyon/profil doğrudan DEĞİL (bir guard sarmalının altında).
+    // Rezervasyon GEÇMİŞİ/profil doğrudan DEĞİL (bir guard sarmalının altında).
     expect(directPaths).not.toContain('/reservations')
     expect(directPaths).not.toContain('/profile')
   })
 
-  it('rezervasyon ve profil ayrı bir hesap-guard sarmalının altında', () => {
+  /**
+   * Rezervasyon FORMU misafire açıktır: kapıda /login'e atmak yerine sayfanın kendi 0. adımı
+   * "Giriş yap / Misafir devam et" seçimini sunar (GuestCheckoutChoice). Bu rotayı hesap-guard'ın
+   * altına geri taşımak misafir rezervasyonunu tümden kapatır — bu test onu yakalar.
+   */
+  it('rezervasyon formu misafire açık: doğrudan çocuk rota', () => {
+    const directPaths = innerBoundary()
+      .children!.filter((r) => r.path)
+      .map((r) => r.path)
+    expect(directPaths).toContain('/reservation/new')
+  })
+
+  it('rezervasyon geçmişi ve profil ayrı bir hesap-guard sarmalının altında', () => {
     const accountGuard = innerBoundary().children!.find(
       (r) => !r.path && !r.index && r.children,
     ) as RouteObject
     expect(accountGuard).toBeTruthy()
     const guardedPaths = accountGuard.children!.map((r) => r.path)
     expect(guardedPaths).toEqual(
-      expect.arrayContaining(['/reservation/new', '/reservations', '/reservations/:id', '/profile']),
+      expect.arrayContaining(['/reservations', '/reservations/:id', '/profile']),
     )
+    // Form BU guard'ın altında olmamalı (misafir de rezervasyon yapabilir).
+    expect(guardedPaths).not.toContain('/reservation/new')
   })
 })
 
