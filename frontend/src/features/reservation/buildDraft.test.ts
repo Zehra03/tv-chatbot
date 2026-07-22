@@ -81,7 +81,7 @@ describe('buildHotelDraft', () => {
 
 describe('buildFlightDraft — tripType her zaman dolu (backend @NotNull)', () => {
   it('kriterin tripType\'ını kullanır', () => {
-    const draft = buildFlightDraft(flight, { tripType: 'round_trip', passengers: 2 })
+    const draft = buildFlightDraft(flight, { tripType: 'round_trip', adults: 2 })
     expect(draft.flight.tripType).toBe('round_trip')
     expect(draft.flight.passengerCount).toBe(2)
     // Booking, arama-satırı UUID'si (`id`) değil, TourVisio teklif jetonu (`offerId`) ile yapılmalı.
@@ -100,5 +100,21 @@ describe('buildFlightDraft — tripType her zaman dolu (backend @NotNull)', () =
       buildFlightDraft({ ...noTrip, returnDepartTime: '2026-08-05T10:00:00Z' }, undefined).flight
         .tripType,
     ).toBe('round_trip')
+  })
+
+  /**
+   * HATA 5 (fix): yolcu sayısı artık yetişkin + çocuk toplamı, ve çocuk yaşları taslağa taşınır ki
+   * initialPassengers doğru sayıda/yaşta yolcu satırı açsın (eskiden hep tam yetişkin sayılırdı).
+   */
+  it('yetişkin + çocuk yaşlarını yolcu sayısına ve taslağa yansıtır', () => {
+    const draft = buildFlightDraft(flight, { adults: 2, childAges: [6] })
+    expect(draft.flight.passengerCount).toBe(3)
+    expect(draft.childAges).toEqual([6])
+  })
+
+  it('adults/childAges yoksa 1 yetişkine ve boş çocuk listesine düşer', () => {
+    const draft = buildFlightDraft(flight, undefined)
+    expect(draft.flight.passengerCount).toBe(1)
+    expect(draft.childAges).toEqual([])
   })
 })

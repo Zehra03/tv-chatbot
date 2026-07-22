@@ -133,7 +133,7 @@ function fillFlight(f: Partial<FlightSearchCriteria>, msg: string): void {
   const dates = extractDates(msg)
   if (dates.length && !f.departDate) f.departDate = dates[0]
   const count = extractCount(msg)
-  if (count && !f.passengers) f.passengers = count
+  if (count && !f.adults) f.adults = count
 }
 
 const HOTEL_QUESTIONS: Array<[keyof HotelSearchCriteria, string]> = [
@@ -147,7 +147,7 @@ const FLIGHT_QUESTIONS: Array<[keyof FlightSearchCriteria, string]> = [
   ['origin', 'Nereden kalkış yapacaksınız?'],
   ['destination', 'Nereye gitmek istiyorsunuz?'],
   ['departDate', 'Gidiş tarihi nedir? (örn. 2026-08-01)'],
-  ['passengers', 'Kaç yolcu için arama yapayım?'],
+  ['adults', 'Kaç yolcu için arama yapayım?'],
 ]
 
 function isEmpty(v: unknown): boolean {

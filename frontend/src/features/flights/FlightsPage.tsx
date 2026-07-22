@@ -23,7 +23,7 @@ import { FlightFilters } from '@/features/flights/FlightFilters'
 import { FlightList } from '@/features/flights/FlightList'
 import { LocationAutocomplete } from '@/features/flights/LocationAutocomplete'
 import { flightApi } from '@/api'
-import { MAX_PARTY_SIZE } from '@/types'
+import { MAX_PARTY_SIZE, FLIGHT_CHILD_MAX_AGE } from '@/types'
 import type { FlightLocation, FlightSearchCriteria, TripType } from '@/types'
 import flightHero from '@/assets/flight/philip-myrtorp-iiqpxCg2GD4-unsplash.jpg'
 
@@ -48,11 +48,22 @@ export function FlightsPage() {
   const [destinationCode, setDestinationCode] = useState<string | null>(prefill?.destination ?? null)
   const [departDate, setDepartDate] = useState(prefill?.departDate ?? '')
   const [returnDate, setReturnDate] = useState(prefill?.returnDate ?? '')
-  const [passengers, setPassengers] = useState(prefill?.passengers ?? 1)
+  const [adults, setAdults] = useState(prefill?.adults ?? 1)
+  const [childCount, setChildCount] = useState(prefill?.childAges?.length ?? 0)
+  const [childAges, setChildAges] = useState<number[]>(prefill?.childAges ?? [])
   const [tripType, setTripType] = useState<TripType>(prefill?.tripType ?? 'one_way')
   const [criteria, setCriteria] = useState<FlightSearchCriteria | null>(null)
   // Sınırda (submit) doğrulama mesajı — geçersiz kriterde arama tetiklenmez.
   const [formError, setFormError] = useState<string | null>(null)
+
+  // childAges uzunluğu her zaman childCount ile tutarlı tutulur (types/search.ts
+  // invariantı) — otel formundakiyle aynı desen (HotelsPage.changeChildCount).
+  const changeChildCount = (next: number) => {
+    setChildCount(next)
+    setChildAges((ages) =>
+      next > ages.length ? [...ages, ...Array<number>(next - ages.length).fill(7)] : ages.slice(0, next),
+    )
+  }
 
   const query = useFlightSearch(criteria)
   const filters = useAppSelector((s) => s.ui.flightFilters)
@@ -139,7 +150,8 @@ export function FlightsPage() {
       origin: from,
       destination: to,
       departDate,
-      passengers,
+      adults,
+      childAges,
       currency: 'EUR',
       tripType,
       ...(tripType === 'round_trip' && returnDate ? { returnDate } : {}),
@@ -282,17 +294,57 @@ export function FlightsPage() {
                 fieldClassName={heroFieldClass}
               />
             )}
+            {/* HATA 5 (düzeltildi): tek "yolcu sayısı" yerine yetişkin + çocuk (yaş bazlı) —
+                otel formundaki misafir picker'ıyla aynı desen. Çocuğun yaşı backend'de
+                PassengerCount.ofChildAges ile ücret tipini (infant/child/adult) belirler. */}
             <PeoplePicker
               id="flight-passengers"
               label="Yolcu"
-              summary={`${passengers} yolcu`}
+              summary={`${adults} yetişkin${childCount ? `, ${childCount} çocuk` : ''}`}
               rows={[
-                { key: 'passengers', label: 'Yolcu', value: passengers, min: 1, max: MAX_PARTY_SIZE },
+                { key: 'adults', label: 'Yetişkin', hint: '12 yaş ve üzeri', value: adults, min: 1, max: MAX_PARTY_SIZE },
+                { key: 'children', label: 'Çocuk / bebek', hint: `0–${FLIGHT_CHILD_MAX_AGE} yaş`, value: childCount, min: 0, max: 6 },
               ]}
-              onRowChange={(_, v) => setPassengers(v)}
-              fieldClassName={cn('w-32', heroFieldClass)}
+              onRowChange={(key, v) => {
+                if (key === 'adults') setAdults(v)
+                else changeChildCount(v)
+              }}
+              fieldClassName={cn('w-40', heroFieldClass)}
               align="right"
-            />
+            >
+              {childCount > 0 && (
+                <div className="mt-4 border-t border-border pt-3">
+                  <p className="text-xs font-medium text-muted-foreground">
+                    Çocuk/bebek yaşları (ücret tipi için)
+                  </p>
+                  <div className="mt-2 grid grid-cols-[repeat(auto-fit,minmax(6.5rem,1fr))] gap-2">
+                    {childAges.map((age, i) => (
+                      <label
+                        key={i}
+                        className="grid min-w-0 grid-rows-[auto_auto] gap-1 text-start text-xs text-muted-foreground"
+                      >
+                        <span className="truncate">{i + 1}. çocuğun yaşı</span>
+                        <select
+                          value={age}
+                          onChange={(e) =>
+                            setChildAges((ages) =>
+                              ages.map((a, j) => (j === i ? Number(e.target.value) : a)),
+                            )
+                          }
+                          className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        >
+                          {Array.from({ length: FLIGHT_CHILD_MAX_AGE + 1 }, (_, y) => (
+                            <option key={y} value={y} className="bg-background text-foreground">
+                              {y}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </PeoplePicker>
             {/* Yükseklik hero alanlarıyla (h-12) eşit — items-end satırında üst/alt hizalı.
                 text-white: Button'ın default varyantı text-foreground'dur; hero'nun
                 lacivert örtüsünde açık temada siyaha dönerdi (bkz. SearchHero). */}

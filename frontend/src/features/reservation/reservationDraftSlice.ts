@@ -39,6 +39,10 @@ export interface FlightReservationDraft {
   price: number
   currency: string
   flight: FlightSnapshotInput
+  /** Çocuk/bebek yaşları (aramadan) — HATA 5 fix: form yolcu satırlarını doğru sayı/tip/yaşla
+   * önden doldurmak için (bkz. HotelReservationDraft.childAges). Uzunluğu
+   * `flight.passengerCount - adults` ile tutarlıdır; backend snapshot'ında saklanmaz. */
+  childAges: number[]
 }
 
 export type ReservationDraft = HotelReservationDraft | FlightReservationDraft

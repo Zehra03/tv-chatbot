@@ -53,7 +53,7 @@ describe('isSearchTurn', () => {
   it('uçuşta tam kriter aramadır; gidiş-dönüşte dönüş tarihi eksikse değildir', () => {
     expect(
       isSearchTurn(
-        flight({ origin: 'IST', destination: 'AYT', departDate: '2026-08-01', passengers: 1 }),
+        flight({ origin: 'IST', destination: 'AYT', departDate: '2026-08-01', adults: 1 }),
         undefined,
       ),
     ).toBe(true)
@@ -63,7 +63,7 @@ describe('isSearchTurn', () => {
           origin: 'IST',
           destination: 'AYT',
           departDate: '2026-08-01',
-          passengers: 1,
+          adults: 1,
           tripType: 'round_trip',
         }),
         'Dönüş tarihi nedir?',

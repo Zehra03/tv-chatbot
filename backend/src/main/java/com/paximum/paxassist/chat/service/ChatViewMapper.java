@@ -23,11 +23,18 @@ import com.paximum.paxassist.hotel.HotelProduct;
 @Component
 public class ChatViewMapper {
 
-    /** Frontend criteria keys (see {@code CriteriaChips.tsx}); everything else is dropped. */
+    /**
+     * Frontend criteria keys (see {@code CriteriaChips.tsx}); everything else is dropped.
+     *
+     * <p>{@code adults}/{@code childAges} are shared verbatim by both domains (HATA 5 fix): the flight
+     * search form now carries the same breakdown the hotel one always has —
+     * {@code frontend/src/types/search.ts}'s {@code FlightSearchCriteria} has {@code adults} +
+     * {@code childAges}, no single passenger count — so unlike before, nothing needs folding here.
+     */
     private static final Set<String> KNOWN_KEYS = Set.of(
             "destination", "hotelName", "checkIn", "checkOut", "nights", "adults", "children",
             "childAges", "rooms", "nationality", "currency", "origin", "departDate", "returnDate",
-            "passengers", "tripType");
+            "tripType");
 
     /** SlotCriteria field names that differ from the frontend's criteria field names. */
     private static final Map<String, String> KEY_RENAMES = Map.of(
@@ -76,45 +83,7 @@ public class ChatViewMapper {
                 criteria.put(key, entry.getValue());
             }
         }
-        if ("flight".equals(intent)) {
-            foldFlightPassengers(criteria);
-        }
         return criteria.isEmpty() ? null : new PartialCriteriaDto(intent, criteria);
-    }
-
-    /**
-     * Collapses the slot map's {@code adults}/{@code children} pair into the single {@code passengers}
-     * count the frontend's flight criteria carry ({@code FlightSearchCriteria} in
-     * {@code frontend/src/types/search.ts} has no adults/children — the flight search form posts one
-     * number). Their SUM is the right value: {@code FlightCriteriaMapper} sends both to the provider,
-     * so the returned offer is priced for that many seats.
-     *
-     * <p>Without this fold the frontend read {@code passengers} as undefined and
-     * {@code buildFlightDraft} fell back to 1, so a 2-passenger chat search opened ONE traveller row
-     * in the reservation form — which TourVisio rejects for not matching the offer's pax. The search
-     * itself was always correct; only this view of the criteria was wrong.
-     *
-     * <p>{@code childAges} is dropped for the same reason (no such field on the flight type). Note the
-     * reservation form types every flight traveller row as an adult — a pre-existing limit of the
-     * flight booking model (the REST path always posts {@code children: 0}); what matters to TourVisio
-     * is that the row COUNT matches the offer.
-     */
-    private void foldFlightPassengers(Map<String, Object> criteria) {
-        Integer adults = asCount(criteria.remove("adults"));
-        Integer children = asCount(criteria.remove("children"));
-        criteria.remove("childAges");
-        if (adults == null && children == null) {
-            return;
-        }
-        int total = (adults == null ? 0 : adults) + (children == null ? 0 : children);
-        if (total > 0) {
-            criteria.put("passengers", total);
-        }
-    }
-
-    /** Slot values survive a jsonb round-trip on GET, so a count can come back as any {@link Number}. */
-    private Integer asCount(Object value) {
-        return (value instanceof Number number) ? number.intValue() : null;
     }
 
     /** SlotCriteria fields that only a hotel search fills. */
