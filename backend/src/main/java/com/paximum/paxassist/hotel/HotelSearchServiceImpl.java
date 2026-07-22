@@ -62,7 +62,8 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         }
 
         if (!missingParameters.isEmpty()) {
-            log.warn("Search request is incomplete. Missing parameters: {}", missingParameters);
+            // One line per event: the activity call below already carries this message plus the
+            // module/action/status fields, so a second plain line would only double-count it.
             activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
@@ -78,7 +79,6 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         try {
             locationId = firstCityId(tourVisioHotelApiClient.getArrivalAutocomplete(request.destination()), request.destination());
         } catch (Exception e) {
-            log.error("Failed to autocomplete destination: {}", e.getMessage());
             activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
@@ -90,12 +90,13 @@ public class HotelSearchServiceImpl implements HotelSearchService {
         }
 
         if (locationId == null) {
-            log.warn("Could not find a valid location ID for destination: {}", request.destination());
+            // Not a SUCCESS: the user asked for a place we could not resolve and gets no results.
+            // Recording it as success made every "nothing found" complaint invisible in the logs.
             activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
                 request.toString(),
-                "SUCCESS",
+                "INVALID_LOCATION",
                 "No location ID found for destination " + request.destination()
             );
             return HotelSearchResponse.invalidLocation(request.destination());
@@ -116,7 +117,6 @@ public class HotelSearchServiceImpl implements HotelSearchService {
             
             return HotelSearchResponse.success(searchResult);
         } catch (Exception e) {
-            log.error("TourVisio price search failed: {}", e.getMessage());
             activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",

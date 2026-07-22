@@ -9,6 +9,7 @@ import com.paximum.paxassist.ai.IntentExtractionResult;
 import com.paximum.paxassist.ai.IntentExtractionService;
 import com.paximum.paxassist.ai.IntentType;
 import com.paximum.paxassist.chat.domain.ChatCaller;
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.chat.domain.ChatSession;
 import com.paximum.paxassist.chat.service.ChatSessionStore;
 import com.paximum.paxassist.chat.service.ReplyLocalizer;
@@ -53,7 +54,7 @@ class ChatOrchestrationServiceTest {
 
     private ChatOrchestrationService service() {
         return new ChatOrchestrationService(guard, guardAuditLogger, intentExtraction, sessionStore,
-                intentRouter, replyLocalizer);
+                intentRouter, replyLocalizer, new ActivityLog());
     }
 
     /**
@@ -69,7 +70,7 @@ class ChatOrchestrationServiceTest {
 
         assertThat(result.reply()).isEqualTo("Güvenlik politikaları gereği reddedildi.");
         assertThat(result.sessionId()).isEqualTo("s1");
-        verify(guardAuditLogger).logBlockedRequestAsync("zararlı", "Prompt Injection");
+        verify(guardAuditLogger).logBlockedRequest("zararlı", "Prompt Injection");
         verifyNoInteractions(intentExtraction);
         verify(intentRouter, never()).route(any());
     }
@@ -189,7 +190,7 @@ class ChatOrchestrationServiceTest {
 
         assertThat(result.reply())
                 .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
-        verify(guardAuditLogger).logBlockedRequestAsync("merhaba", "Out-of-scope abuse: user temporarily blocked");
+        verify(guardAuditLogger).logBlockedRequest("merhaba", "Out-of-scope abuse: user temporarily blocked");
         verifyNoInteractions(intentExtraction);
         verify(intentRouter, never()).route(any());
         verify(sessionStore, never()).save(any());
@@ -208,7 +209,7 @@ class ChatOrchestrationServiceTest {
 
         assertThat(result.reply())
                 .isEqualTo("Çok fazla konu dışı istek gönderdiniz. Lütfen bir süre sonra tekrar deneyin.");
-        verify(guardAuditLogger).logBlockedRequestAsync("nasılsın", "Out-of-scope abuse: user temporarily blocked");
+        verify(guardAuditLogger).logBlockedRequest("nasılsın", "Out-of-scope abuse: user temporarily blocked");
         verify(intentRouter, never()).route(any());
         verify(sessionStore, never()).save(any());
     }

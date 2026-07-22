@@ -25,6 +25,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.paximum.paxassist.auth.security.AuthAccessDeniedHandler;
 import com.paximum.paxassist.auth.security.AuthEntryPoint;
 import com.paximum.paxassist.auth.security.JwtAuthenticationFilter;
+import com.paximum.paxassist.common.log.RequestCorrelationFilter;
 import com.paximum.paxassist.ratelimiter.RateLimitFilter;
 
 import jakarta.servlet.DispatcherType;
@@ -57,8 +58,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter)
-            throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, RateLimitFilter rateLimitFilter,
+            RequestCorrelationFilter correlationFilter) throws Exception {
         http
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
@@ -114,9 +115,13 @@ public class SecurityConfig {
                         .hasAnyRole("USER", "ADMIN")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                // Correlation right after authentication: it needs the principal the JWT filter just
+                // populated, and it must run BEFORE the rate limiter so a 429 is logged with the
+                // identity that got throttled — that is precisely the request worth investigating.
+                .addFilterAfter(correlationFilter, JwtAuthenticationFilter.class)
                 // Rate limit after authentication so buckets are keyed by the authenticated
                 // principal (SecurityContextRateLimitKeyResolver), falling back to client IP.
-                .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+                .addFilterAfter(rateLimitFilter, RequestCorrelationFilter.class);
 
         return http.build();
     }
