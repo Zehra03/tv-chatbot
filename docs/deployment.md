@@ -105,17 +105,33 @@ substring. Useful fields:
 | `activity.module` / `activity.action` | filter to one operation, e.g. `confirmReservation` |
 | `activity.status` | `SUCCESS` / `FAILED` / `BLOCKED` / `INVALID_LOCATION` … |
 
-**Retention — decide this before you need it.** Railway keeps logs for a limited window that depends
-on the plan (on the free/hobby tiers it is days, not months), and it is *not* configurable from this
-repo. That window is the real limit on how far back an incident can be investigated, so:
+**Retention.** Railway keeps logs for a window fixed by the *plan*; it cannot be configured from
+this repo, and there is no CLI command for it either (`railway logs` reads, it does not set policy).
+Per Railway's own docs:
 
-- [ ] Check the current retention on the project's Railway plan and write the number here: `____`
-- [ ] If it is shorter than the period you need to answer "what happened to this booking?", forward
-      the stream to an external collector. Because the output is already ECS JSON, any standard
-      collector ingests it without a parser — this is a Railway-side log drain, not a code change.
+| Plan | Log retention |
+|---|---|
+| Hobby / Trial | 7 days |
+| Pro | 30 days |
+| Enterprise | up to 90 days |
 
-Nothing here is a substitute for the database: a reservation is a row in `reservations`, and that row
-does not expire when the logs do.
+Raising it therefore means changing plan — a billing decision, not a setting. Upgrading restores
+logs that had already fallen outside the old window, so it is not urgent to decide in advance.
+
+**Which plan are we on?** As of 2026-07-22 this could not be told apart by measurement: the project's
+first deploy was 2026-07-16, so its entire history is 6 days and nothing has aged out yet under any
+plan. The cheap test, if it still matters: ask for logs from the oldest deployment
+(`railway deployment list --limit 300`, then `railway logs <oldest-id>`) once the project is more
+than 7 days old. If they come back empty, the plan is Hobby/Trial.
+
+That window is the real limit on how far back an incident can be investigated:
+
+- [ ] If 7 (or 30) days is shorter than the period you need to answer "what happened to this
+      booking?", forward the stream to an external collector instead of upgrading. Because the
+      output is already ECS JSON, any standard collector ingests it without a parser — this is a
+      Railway-side log drain, not a code change.
+
+Nothing here changes what the database keeps: a reservation row does not expire when the logs do.
 
 ## 5. CI / auto-deploy
 
