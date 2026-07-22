@@ -2,11 +2,12 @@ import { useQuery } from '@tanstack/react-query'
 import {
   adminApi,
   type AdminReservationQuery,
+  type AdminReservationRow,
   type AdminUser,
   type ApiError,
   type DashboardStats,
 } from '@/api'
-import type { Page, ReservationSummary } from '@/types'
+import type { Page } from '@/types'
 import { useAppSelector } from '@/app/hooks'
 import { selectIdentity } from '@/features/auth/selectors'
 
@@ -39,7 +40,7 @@ export function useAdminUsers(page: number, size = 20) {
 
 export function useAdminReservations(query: AdminReservationQuery) {
   const identity = useAppSelector(selectIdentity)
-  return useQuery<Page<ReservationSummary>, ApiError>({
+  return useQuery<Page<AdminReservationRow>, ApiError>({
     // Filtreler key'in parçası: her filtre kombinasyonu ayrı bir cache girdisi, böylece
     // aramada geri gidince sonuç anında gelir ve iki filtre birbirinin verisini göstermez.
     queryKey: [...ADMIN_KEY, 'reservations', identity ?? 'anon', query],

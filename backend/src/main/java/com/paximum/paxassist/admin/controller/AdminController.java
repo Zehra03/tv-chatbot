@@ -18,18 +18,18 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.paximum.paxassist.admin.dto.AdminReservationResponse;
 import com.paximum.paxassist.admin.dto.DashboardStatsResponse;
 import com.paximum.paxassist.admin.dto.UserAdminDto;
+import com.paximum.paxassist.admin.service.AdminReservationService;
 import com.paximum.paxassist.auth.repository.UserRepository;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.ReservationStatus;
 import com.paximum.paxassist.reservation.repository.ReservationRepository;
 import com.paximum.paxassist.reservation.service.CancelResult;
 import com.paximum.paxassist.reservation.service.ReservationService;
-import com.paximum.paxassist.reservation.web.ReservationWebMapper;
 import com.paximum.paxassist.reservation.web.dto.CancelRequest;
 import com.paximum.paxassist.reservation.web.dto.OutcomeResponse;
-import com.paximum.paxassist.reservation.web.dto.ReservationSummaryResponse;
 
 import jakarta.validation.Valid;
 
@@ -40,16 +40,16 @@ public class AdminController {
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationService reservationService;
-    private final ReservationWebMapper reservationMapper;
+    private final AdminReservationService adminReservationService;
 
     public AdminController(UserRepository userRepository,
                            ReservationRepository reservationRepository,
                            ReservationService reservationService,
-                           ReservationWebMapper reservationMapper) {
+                           AdminReservationService adminReservationService) {
         this.userRepository = userRepository;
         this.reservationRepository = reservationRepository;
         this.reservationService = reservationService;
-        this.reservationMapper = reservationMapper;
+        this.adminReservationService = adminReservationService;
     }
 
     @GetMapping("/dashboard/stats")
@@ -69,14 +69,7 @@ public class AdminController {
 
         // Keyed by the enum's lowercase JSON form so the map lines up with the productType values
         // the frontend already uses everywhere else ("hotel" / "flight" / "combined").
-        Map<String, Long> byProductType = new HashMap<>();
-        for (Object[] row : reservationRepository.countByProductType()) {
-            ProductType type = (ProductType) row[0];
-            Long count = (Long) row[1];
-            if (type != null && count != null) {
-                byProductType.put(type.toJson(), count);
-            }
-        }
+        Map<String, Long> byProductType = adminReservationService.countsByProductType();
 
         return new DashboardStatsResponse(totalReservations, totalUsers, revenueMap, byProductType);
     }
@@ -105,15 +98,14 @@ public class AdminController {
      * one casing convention across body and query string.
      */
     @GetMapping("/reservations")
-    public Page<ReservationSummaryResponse> listReservations(
+    public Page<AdminReservationResponse> listReservations(
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String productType,
             Pageable pageable) {
         String pnr = (q == null || q.isBlank()) ? null : q.trim();
-        return reservationRepository
-                .searchForAdmin(pnr, parseStatus(status), parseProductType(productType), pageable)
-                .map(reservationMapper::toSummary);
+        return adminReservationService.search(
+                pnr, parseStatus(status), parseProductType(productType), pageable);
     }
 
     private static ReservationStatus parseStatus(String raw) {

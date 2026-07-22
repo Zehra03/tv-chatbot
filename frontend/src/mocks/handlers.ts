@@ -443,9 +443,17 @@ export const handlers: RequestHandler[] = [
       return true
     })
 
+    // Admin satırı özetin üstüne sahip hesabı ekler (backend `AdminReservationResponse`).
+    // Misafir rezervasyonda hesap yoktur; sahip alanları null kalır.
+    const rows = filtered.map((r, i) => ({
+      ...toReservationSummary(r),
+      ownerEmail: r.guest ? null : (adminUsers[(i % (adminUsers.length - 1)) + 1]?.email ?? null),
+      ownerName: r.guest ? null : (adminUsers[(i % (adminUsers.length - 1)) + 1]?.displayName ?? null),
+    }))
+
     return HttpResponse.json(
       pageOf(
-        filtered.map(toReservationSummary),
+        rows,
         Number(url.searchParams.get('page') ?? 0),
         Number(url.searchParams.get('size') ?? 20),
       ),

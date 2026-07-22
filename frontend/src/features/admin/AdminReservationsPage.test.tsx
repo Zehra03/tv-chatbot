@@ -60,14 +60,20 @@ function renderPage() {
 }
 
 describe('AdminReservationsPage', () => {
-  it('rezervasyonları listeler ve misafir rezervasyonu işaretler', async () => {
+  it('tüm müşterilerin rezervasyonlarını hesap sahibiyle listeler', async () => {
     renderPage()
 
+    // Üç fixture'ın üçü de görünür: liste hiçbir kullanıcıya göre daraltılmaz.
     expect(await screen.findByText('PAX-MOCK-1001')).toBeTruthy()
-    // Misafir fixture'ı (PAX-MOCK-1002) "Misafir" rozetiyle ayrılır — üye/misafir ayrımı
-    // yalnızca backend'in guest bayrağından gelir, satırdan türetilmez.
-    expect(await screen.findByText('Misafir')).toBeTruthy()
-    expect(screen.getAllByText('Üye').length).toBeGreaterThan(0)
+    expect(screen.getByText('PAX-MOCK-1002')).toBeTruthy()
+    expect(screen.getByText('PAX-MOCK-1003')).toBeTruthy()
+
+    // Üye rezervasyonunda hesap sahibinin e-postası görünür — "Hesap" sütununun tüm varlık
+    // sebebi bu: hangi kayıtlı kullanıcıya ait olduğu yolcu adından okunamaz.
+    expect(screen.getAllByText(/@example\.com$/).length).toBeGreaterThan(0)
+
+    // Misafir fixture'ının (PAX-MOCK-1002) hesabı yoktur; e-posta yerine rozet çıkar.
+    expect(screen.getByText('Misafir')).toBeTruthy()
   })
 
   /**

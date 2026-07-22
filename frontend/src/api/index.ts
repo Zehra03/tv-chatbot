@@ -39,6 +39,7 @@ export { adminApi } from './adminApi'
 export type {
   DashboardStats,
   AdminUser,
+  AdminReservationRow,
   AdminReservationQuery,
 } from './adminApi'
 

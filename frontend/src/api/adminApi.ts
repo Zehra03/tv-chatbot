@@ -37,6 +37,21 @@ export interface AdminUser {
   createdAt: string
 }
 
+/**
+ * Admin rezervasyon listesi satırı (backend `AdminReservationResponse`).
+ *
+ * `ReservationSummary`'yi genişletir: aynı başlık alanları + rezervasyonun HANGİ HESABA ait
+ * olduğu. Kullanıcının kendi listesinde bu alanlar yoktur — sahip kimliği yalnızca admin
+ * görünümünün sorusudur, o yüzden backend'de de ayrı bir DTO.
+ *
+ * Misafir rezervasyonlarda `ownerEmail`/`ownerName` null'dur (hesap yok, `guest` bunu söyler).
+ * Misafirin taşıyıcı jetonu hiçbir zaman dönmez.
+ */
+export interface AdminReservationRow extends ReservationSummary {
+  ownerEmail?: string | null
+  ownerName?: string | null
+}
+
 /** Rezervasyon listesi sorgusu; tüm alanlar opsiyonel (yok = filtre yok). */
 export interface AdminReservationQuery {
   /** 0 tabanlı sayfa indeksi. */
@@ -61,9 +76,9 @@ export const adminApi = {
     return res.data
   },
 
-  async listReservations(query: AdminReservationQuery = {}): Promise<Page<ReservationSummary>> {
+  async listReservations(query: AdminReservationQuery = {}): Promise<Page<AdminReservationRow>> {
     const { page = 0, size = 20, q, status, productType } = query
-    const res = await apiClient.get<Page<ReservationSummary>>('/api/v1/admin/reservations', {
+    const res = await apiClient.get<Page<AdminReservationRow>>('/api/v1/admin/reservations', {
       // Boş/tanımsız filtreler hiç gönderilmez: backend boş `q`'yu zaten "filtre yok" sayıyor
       // ama isteği de kirletmeyelim — Ağ sekmesinde ne filtrelendiği okunur kalsın.
       params: {

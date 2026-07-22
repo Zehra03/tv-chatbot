@@ -16,7 +16,8 @@ import {
   RESERVATION_STATUS_LABELS,
   reservationStatusVariant,
 } from '@/features/reservation/status'
-import type { ReservationStatus, ReservationSummary } from '@/types'
+import type { AdminReservationRow } from '@/api'
+import type { ReservationStatus } from '@/types'
 import { formatDate, formatPrice } from '@/utils/format'
 import { AdminCell, AdminPagination, AdminRow, AdminTable } from './AdminPage'
 import { useAdminReservations } from './useAdminData'
@@ -53,7 +54,7 @@ function CancelDialog({
   reservation,
   onClose,
 }: {
-  reservation: ReservationSummary
+  reservation: AdminReservationRow
   onClose: () => void
 }) {
   const cancel = useAdminCancelReservation(reservation.id)
@@ -128,7 +129,7 @@ export function AdminReservationList({
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
-  const [cancelTarget, setCancelTarget] = useState<ReservationSummary | null>(null)
+  const [cancelTarget, setCancelTarget] = useState<AdminReservationRow | null>(null)
 
   // Her tuşta backend'e gitmemek için gecikmeli; sorgu bu değerle kurulur.
   const debouncedSearch = useDebouncedValue(search, 350)
@@ -197,11 +198,13 @@ export function AdminReservationList({
 
       {rows.length > 0 && (
         <AdminTable
-          headers={['PNR', 'Tip', 'Tarih', 'Müşteri', 'Tutar', 'Durum', '']}
+          headers={['PNR', 'Tip', 'Tarih', 'Hesap', 'Yolcu', 'Tutar', 'Durum', '']}
         >
           {rows.map((r) => (
             <AdminRow key={r.id}>
-              <AdminCell label="PNR">
+              {/* PNR sarmamalı: tek parça bir koddur, üç satıra bölününce taranamaz hâle gelir.
+                  Hesap sütunu genişleyince satır sonu buraya düşüyordu. */}
+              <AdminCell label="PNR" className="md:whitespace-nowrap">
                 <span className="font-mono text-sm font-semibold text-foreground">
                   {r.reservationNumber}
                 </span>
@@ -217,15 +220,31 @@ export function AdminReservationList({
               <AdminCell label="Tarih" className="whitespace-nowrap">
                 {formatDate(r.reservationDate)}
               </AdminCell>
-              <AdminCell label="Müşteri">
+              {/* Hesap = rezervasyonu yapan KAYITLI KULLANICI; Yolcu = bilette yazan lider ad.
+                  İkisi ayrı sütun çünkü aynı şey değiller: bir üye başkası adına rezervasyon
+                  yapabilir. Misafir rezervasyonun hesabı yoktur — rozet bunu söyler. */}
+              {/* E-postalar uzun olabiliyor; sınırlanmazsa tablo yatayda taşıp eylem sütununu
+                  kaydırma alanının dışına itiyor. Kırpılan adresin tamamı title ile erişilebilir. */}
+              <AdminCell label="Hesap" className="md:max-w-[13rem]">
                 <span className="flex flex-wrap items-center justify-end gap-2 md:justify-start">
-                  <span className="truncate">{r.leadGuestName ?? '—'}</span>
-                  {/* Üye/misafir ayrımı: misafir rezervasyonun hesabı yok, geri dönüşü yalnız
-                      PNR + soyadı ile olur — yöneticinin bunu görmesi işi değiştirir. */}
-                  <Badge variant={r.guest ? 'warning' : 'glass'}>
-                    {r.guest ? 'Misafir' : 'Üye'}
-                  </Badge>
+                  {r.guest ? (
+                    <Badge variant="warning">Misafir</Badge>
+                  ) : (
+                    <span className="block min-w-0 max-w-[13rem]">
+                      <span className="block truncate" title={r.ownerEmail ?? undefined}>
+                        {r.ownerEmail ?? '—'}
+                      </span>
+                      {r.ownerName && (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {r.ownerName}
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </span>
+              </AdminCell>
+              <AdminCell label="Yolcu">
+                <span className="truncate">{r.leadGuestName ?? '—'}</span>
               </AdminCell>
               <AdminCell label="Tutar" className="whitespace-nowrap font-semibold">
                 {formatPrice(r.totalAmount, r.currency)}
