@@ -43,15 +43,18 @@ describe('admin rota yerleşimi', () => {
     expect(adminBranch()).toBeTruthy()
   })
 
-  it('dört modül rotası da AdminLayout altında tanımlı', () => {
+  it('modül rotaları AdminLayout altında tanımlı', () => {
     const adminLayoutRoute = adminBranch().children!.find(
       (r) => elementType(r.element) === AdminLayout,
     ) as RouteObject
     const boundary = adminLayoutRoute.children!.find((r) => r.errorElement) as RouteObject
     const paths = boundary.children!.map((r) => r.path)
     expect(paths).toEqual(
-      expect.arrayContaining(['/admin', '/admin/flights', '/admin/reservations', '/admin/users']),
+      expect.arrayContaining(['/admin', '/admin/reservations', '/admin/users']),
     )
+    // Ayrı uçuş ekranı KALDIRILDI: uçuş rezervasyonları da rezervasyon listesinde. Rotanın geri
+    // sızması, sidebar'da karşılığı olmayan ölü bir sayfa bırakırdı.
+    expect(paths).not.toContain('/admin/flights')
   })
 })
 

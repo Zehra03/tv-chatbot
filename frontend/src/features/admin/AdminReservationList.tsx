@@ -24,9 +24,11 @@ import { useAdminReservations } from './useAdminData'
 import { useAdminCancelReservation } from './useAdminCancelReservation'
 
 /**
- * Rezervasyon listesi + filtreler + iptal — hem /admin/reservations hem /admin/flights bunu
- * kullanır; ikincisi `productType` vererek listeyi uçuşlara sabitler. Tek bir tablo/iptal
- * mantığı iki ekranda paylaşılır, aynı davranış iki yerde bakım gerektirmez.
+ * Rezervasyon listesi + filtreler + iptal. Tek tüketicisi /admin/reservations'tır; ayrı bir uçuş
+ * ekranı yoktur — uçuş rezervasyonları da bu listede, "Tip" sütunuyla ayrışır.
+ *
+ * Ürün tipine göre daraltma backend'de duruyor (`GET /admin/reservations?productType=`), ama
+ * arayüzde kullanan kalmadığı için buradaki prop kaldırıldı; gerekirse bir filtre olarak geri gelir.
  */
 
 const STATUS_OPTIONS = [
@@ -118,14 +120,7 @@ function CancelDialog({
   )
 }
 
-export function AdminReservationList({
-  productType,
-  emptyMessage,
-}: {
-  /** Verilirse liste bu ürün tipine sabitlenir (uçuş ekranı) ve filtre gösterilmez. */
-  productType?: string
-  emptyMessage: string
-}) {
+export function AdminReservationList({ emptyMessage }: { emptyMessage: string }) {
   const [page, setPage] = useState(0)
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState('')
@@ -138,13 +133,12 @@ export function AdminReservationList({
   // listenin boş 5. sayfasında gösterirdi ("kayıt yok" gibi görünür).
   useEffect(() => {
     setPage(0)
-  }, [debouncedSearch, status, productType])
+  }, [debouncedSearch, status])
 
   const { data, isError, isFetching, error, refetch } = useAdminReservations({
     page,
     q: debouncedSearch,
     status: (status || undefined) as ReservationStatus | undefined,
-    productType,
   })
 
   const rows = data?.content ?? []

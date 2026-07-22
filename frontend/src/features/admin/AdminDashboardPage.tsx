@@ -104,12 +104,13 @@ export function AdminDashboardPage() {
               to="/admin/reservations"
               delay={0.05}
             />
+            {/* Sayaç kalır (gerçek veri), bağlantı yok: ayrı bir uçuş ekranı bulunmuyor —
+                uçuş rezervasyonları da Rezervasyon Yönetimi listesinde. */}
             <StatCard
               label="Uçuş rezervasyonu"
               value={flights}
               hint="Paket (otel + uçuş) dahil"
               icon={<Plane className="h-5 w-5" />}
-              to="/admin/flights"
               delay={0.1}
             />
             <StatCard

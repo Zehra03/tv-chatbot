@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { CalendarCheck, LayoutDashboard, Menu, Plane, UserRound, Users, X } from 'lucide-react'
+import { CalendarCheck, LayoutDashboard, Menu, UserRound, Users, X } from 'lucide-react'
 import { AnimatedOutlet } from '@/components/AnimatedOutlet'
 import { Logo } from '@/components/Logo'
 import { ThemeToggle } from '@/components/ThemeToggle'
@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils'
  */
 const NAV = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, end: true },
-  { to: '/admin/flights', label: 'Uçuşlar', icon: Plane, end: false },
   { to: '/admin/reservations', label: 'Rezervasyonlar', icon: CalendarCheck, end: false },
   { to: '/admin/users', label: 'Kullanıcılar', icon: Users, end: false },
 ]
@@ -31,7 +30,6 @@ const NAV = [
 /** Başlık çubuğundaki sayfa adı — rotadan türer, her sayfa ayrıca kendi h1'ini taşır. */
 const TITLES: Record<string, string> = {
   '/admin': 'Dashboard',
-  '/admin/flights': 'Uçuş Yönetimi',
   '/admin/reservations': 'Rezervasyon Yönetimi',
   '/admin/users': 'Kullanıcı Yönetimi',
 }

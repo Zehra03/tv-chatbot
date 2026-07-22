@@ -22,7 +22,6 @@ import { ReservationPrintPage } from '@/features/reservation/ReservationPrintPag
 import { ProfilePage } from '@/features/profile/ProfilePage'
 import { AdminLayout } from '@/features/admin/AdminLayout'
 import { AdminDashboardPage } from '@/features/admin/AdminDashboardPage'
-import { AdminFlightsPage } from '@/features/admin/AdminFlightsPage'
 import { AdminReservationsPage } from '@/features/admin/AdminReservationsPage'
 import { AdminUsersPage } from '@/features/admin/AdminUsersPage'
 
@@ -175,7 +174,6 @@ export const routes: RouteObject[] = [
                     errorElement: <RouteErrorPage />,
                     children: [
                       { path: '/admin', element: <AdminDashboardPage /> },
-                      { path: '/admin/flights', element: <AdminFlightsPage /> },
                       { path: '/admin/reservations', element: <AdminReservationsPage /> },
                       { path: '/admin/users', element: <AdminUsersPage /> },
                     ],
