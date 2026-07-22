@@ -106,6 +106,9 @@ public class SecurityConfig {
                         // rate-limit filter below (keyed by client IP for anonymous callers).
                         .requestMatchers(HttpMethod.GET, "/api/v1/reservations/lookup")
                         .permitAll()
+                        // Admin panel routes restricted to ADMIN role
+                        .requestMatchers("/api/v1/admin/**")
+                        .hasRole("ADMIN")
                         // Everything else under /reservations stays account-only: the list, the
                         // id-scoped detail and cancel are keyed by user id. Path-based so the
                         // Reservation controller needs no security annotations - RBAC lives
