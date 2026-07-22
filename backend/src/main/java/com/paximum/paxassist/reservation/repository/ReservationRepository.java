@@ -47,4 +47,34 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
 
     @Query("SELECT r.currency, SUM(r.totalAmount) FROM Reservation r WHERE r.status = :status GROUP BY r.currency")
     List<Object[]> sumRevenueByCurrency(@Param("status") com.paximum.paxassist.reservation.domain.ReservationStatus status);
+
+    /**
+     * Admin list: every reservation, optionally narrowed by PNR text, status and product type.
+     * Each filter is skipped when its parameter is null, so one query serves the unfiltered list
+     * and every combination of the three — no Specification/Criteria plumbing for three fields.
+     *
+     * <p>The text search covers BOTH our own {@code reservationNumber} and TourVisio's
+     * {@code externalReservationNumber}: an admin chasing a booking usually has whichever code the
+     * caller read to them, and which of the two it is isn't something they should have to know.
+     *
+     * <p>{@code upper} rather than {@code lower} for the same Turkish dotless-ı reason documented on
+     * {@link #findByReservationNumberAndPassengerSurname} — PNRs are ASCII today, but folding the
+     * two the same way everywhere keeps the rule one rule.
+     */
+    @Query("""
+            select r from Reservation r
+            where (:pnr is null or upper(r.reservationNumber) like upper(concat('%', :pnr, '%'))
+                   or upper(r.externalReservationNumber) like upper(concat('%', :pnr, '%')))
+              and (:status is null or r.status = :status)
+              and (:productType is null or r.productType = :productType)
+            """)
+    org.springframework.data.domain.Page<Reservation> searchForAdmin(
+            @Param("pnr") String pnr,
+            @Param("status") com.paximum.paxassist.reservation.domain.ReservationStatus status,
+            @Param("productType") com.paximum.paxassist.reservation.domain.ProductType productType,
+            org.springframework.data.domain.Pageable pageable);
+
+    /** Reservation counts grouped by product type — feeds the admin dashboard's hotel/flight cards. */
+    @Query("SELECT r.productType, COUNT(r) FROM Reservation r GROUP BY r.productType")
+    List<Object[]> countByProductType();
 }

@@ -62,7 +62,8 @@ public class ReservationWebMapper {
                 r.getReservationDate(),
                 r.getTotalAmount(),
                 r.getCurrency(),
-                r.getLeadGuestName());
+                r.getLeadGuestName(),
+                r.isGuest());
     }
 
     public ReservationDetailResponse toDetail(Reservation r, List<CancelPenalty> cancellationOptions) {
