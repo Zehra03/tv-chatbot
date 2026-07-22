@@ -129,48 +129,6 @@ const outcomeResponse = (code: string, message: string, status: number) =>
   HttpResponse.json({ outcome: code, message }, { status })
 
 /**
- * Spring Data `Page<T>` zarfını taklit eder — admin uçları listeleri bu biçimde döndürür.
- * Sayfa numarası 0 tabanlıdır; `size` 1'in altına düşürülmez ki bölme sıfıra bölme olmasın.
- */
-function pageOf<T>(items: T[], page: number, size: number) {
-  const safeSize = Math.max(1, size)
-  const safePage = Math.max(0, page)
-  const start = safePage * safeSize
-  return {
-    content: items.slice(start, start + safeSize),
-    totalElements: items.length,
-    totalPages: Math.max(1, Math.ceil(items.length / safeSize)),
-    number: safePage,
-    size: safeSize,
-  }
-}
-
-/** Kullanıcı yönetimi ekranı için sabit mock kadro (backend `UserAdminDto` biçiminde). */
-const adminUsers = [
-  {
-    id: 1,
-    email: 'admin@paxassist.test',
-    displayName: 'Sistem Yöneticisi',
-    role: 'ADMIN',
-    createdAt: '2026-01-12T09:30:00Z',
-  },
-  {
-    id: 2,
-    email: 'ada@example.com',
-    displayName: 'Ada Yılmaz',
-    role: 'USER',
-    createdAt: '2026-03-04T14:05:00Z',
-  },
-  {
-    id: 3,
-    email: 'mert@example.com',
-    displayName: 'Mert Demir',
-    role: 'USER',
-    createdAt: '2026-05-21T18:45:00Z',
-  },
-]
-
-/**
  * Mock oturum — gerçek backend'in kalıcı kullanıcı tablosunun karşılığı olarak
  * localStorage'a yazılır: sayfa yenilenince modül state'i sıfırlansa da
  * GET /auth/me saklı jetonu tanımaya devam eder (istemci oturumu kalıcıdır).
@@ -396,78 +354,6 @@ export const handlers: RequestHandler[] = [
     return outcomeResponse('CANCELLED', `Reservation ${r.id} is now cancelled`, 200)
   }),
 
-  // ── Admin paneli ───────────────────────────────────────────────────────────
-  // Yetki DENETLENMEZ: gerçek koruma backend'de (SecurityConfig `/api/v1/admin/**` →
-  // hasRole('ADMIN')). Mock'un işi sözleşmeyi taklit etmek; rol kontrolünü burada taklit
-  // etmek, sahte bir güvenlik hissi verirdi.
-  http.get('/api/v1/admin/dashboard/stats', () => {
-    const byType: Record<string, number> = {}
-    for (const r of reservations) {
-      byType[r.productType] = (byType[r.productType] ?? 0) + 1
-    }
-    const revenue: Record<string, number> = {}
-    for (const r of reservations.filter((x) => x.status === 'confirmed')) {
-      revenue[r.currency] = (revenue[r.currency] ?? 0) + r.totalAmount
-    }
-    return HttpResponse.json({
-      totalReservations: reservations.length,
-      activeUsers: adminUsers.length,
-      totalRevenueByCurrency: revenue,
-      reservationsByProductType: byType,
-    })
-  }),
-
-  http.get('/api/v1/admin/users', ({ request }) => {
-    const url = new URL(request.url)
-    return HttpResponse.json(
-      pageOf(adminUsers, Number(url.searchParams.get('page') ?? 0), Number(url.searchParams.get('size') ?? 20)),
-    )
-  }),
-
-  http.get('/api/v1/admin/reservations', ({ request }) => {
-    const url = new URL(request.url)
-    const q = url.searchParams.get('q')?.trim().toUpperCase()
-    const status = url.searchParams.get('status')
-    const productType = url.searchParams.get('productType')
-
-    // Backend `searchForAdmin` ile aynı davranış: her filtre yoksa atlanır, PNR araması hem iç
-    // numarada hem TourVisio numarasında ve kısmi eşleşmeyle çalışır.
-    const filtered = reservations.filter((r) => {
-      if (status && r.status !== status) return false
-      if (productType && r.productType !== productType) return false
-      if (q) {
-        const own = r.reservationNumber?.toUpperCase() ?? ''
-        const external = r.externalReservationNumber?.toUpperCase() ?? ''
-        if (!own.includes(q) && !external.includes(q)) return false
-      }
-      return true
-    })
-
-    // Admin satırı özetin üstüne sahip hesabı ekler (backend `AdminReservationResponse`).
-    // Misafir rezervasyonda hesap yoktur; sahip alanları null kalır.
-    const rows = filtered.map((r, i) => ({
-      ...toReservationSummary(r),
-      ownerEmail: r.guest ? null : (adminUsers[(i % (adminUsers.length - 1)) + 1]?.email ?? null),
-      ownerName: r.guest ? null : (adminUsers[(i % (adminUsers.length - 1)) + 1]?.displayName ?? null),
-    }))
-
-    return HttpResponse.json(
-      pageOf(
-        rows,
-        Number(url.searchParams.get('page') ?? 0),
-        Number(url.searchParams.get('size') ?? 20),
-      ),
-    )
-  }),
-
-  http.put('/api/v1/admin/reservations/:id/status', ({ params }) => {
-    const r = reservations.find((x) => x.id === Number(params.id))
-    if (!r) return notFound('Rezervasyon bulunamadı.')
-    r.status = 'cancelled'
-    r.cancellationOptions = []
-    return outcomeResponse('CANCELLED', 'Rezervasyon iptal edildi.', 200)
-  }),
-
   // ── Auth (mock; gerçek doğrulama backend'de — şifre burada denetlenmez) ────
   // Durum kodları ve hata gövdeleri backend AuthController/AuthExceptionHandler
   // paritesinde: 201, 400 VALIDATION_ERROR, 409 EMAIL_ALREADY_EXISTS,
@@ -519,10 +405,11 @@ export const handlers: RequestHandler[] = [
       id: crypto.randomUUID(),
       email: body.email,
       name: body.email.split('@')[0],
-      // Mock'ta rol e-postadan türer: "admin…" ile başlayan adresle giren yönetici olur, böylece
-      // panel MSW'yle de gezilebilir. Gerçek backend'de rol users.role sütunundan gelir; şifre
-      // burada zaten denetlenmiyor, bu da aynı ölçüde mock-only bir kolaylık.
-      role: body.email.toLowerCase().startsWith('admin') ? 'ADMIN' : 'USER',
+      // Rol HER ZAMAN USER. Bir zamanlar "admin…" ile başlayan e-posta ADMIN sayılıyordu ki
+      // panel mock'la gezilebilsin; kaldırıldı — yetki kararını e-posta metninden türetmek,
+      // testte bile taklit edilmemesi gereken bir kural. Yönetici gerektiren bir testin rolü
+      // kendi içinde açıkça kurması gerekir.
+      role: 'USER',
     }
     const session = issueSession(user)
     writeAuthSession(session)

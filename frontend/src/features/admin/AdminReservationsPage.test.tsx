@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
@@ -28,7 +28,63 @@ const toastMock = vi.hoisted(() => ({
 }))
 vi.mock('sonner', () => ({ toast: toastMock }))
 
+/**
+ * Admin uçlarının sahte yanıtları BU DOSYADA yaşar, ortak `mocks/handlers.ts`'te değil.
+ *
+ * Gerekçe: ortak handler'lar bir zamanlar tarayıcıda da servis ediliyordu ve panelin uydurma
+ * kullanıcı/rezervasyon göstermesi mümkündü. O yol tümüyle kapatıldı; sahte veri artık yalnızca
+ * testin kendi girdisi ve kapsamı bu dosya. Beklentiler de burada okunur — satırların nereden
+ * geldiğini görmek için başka dosyaya bakmak gerekmez.
+ */
+const ROWS = [
+  {
+    id: 9001,
+    reservationNumber: 'PAX-TEST-0001',
+    externalReservationNumber: 'RC-TEST-1',
+    status: 'confirmed',
+    productType: 'hotel',
+    reservationDate: '2026-07-14',
+    totalAmount: 528,
+    currency: 'EUR',
+    leadGuestName: 'Ada Yılmaz',
+    guest: false,
+    ownerEmail: 'ada@example.com',
+    ownerName: 'Ada Yılmaz',
+  },
+  {
+    id: 9002,
+    reservationNumber: 'PAX-TEST-0002',
+    externalReservationNumber: 'RC-TEST-2',
+    status: 'confirmed',
+    productType: 'flight',
+    reservationDate: '2026-07-15',
+    totalAmount: 4131,
+    currency: 'TRY',
+    // Hesapsız rezervasyon: sahip alanları boş, "Misafir" rozetiyle ayrışmalı.
+    leadGuestName: 'Mert Demir',
+    guest: true,
+    ownerEmail: null,
+    ownerName: null,
+  },
+]
+
+const page = (rows: unknown[]) => ({
+  content: rows,
+  totalElements: rows.length,
+  totalPages: 1,
+  number: 0,
+  size: 20,
+})
+
+const adminHandlers = [
+  http.get('/api/v1/admin/reservations', () => HttpResponse.json(page(ROWS))),
+  http.put('/api/v1/admin/reservations/:id/status', () =>
+    HttpResponse.json({ outcome: 'CANCELLED', message: 'Rezervasyon iptal edildi.' }, { status: 200 }),
+  ),
+]
+
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }))
+beforeEach(() => server.use(...adminHandlers))
 afterEach(() => {
   cleanup()
   server.resetHandlers()
@@ -63,16 +119,15 @@ describe('AdminReservationsPage', () => {
   it('tüm müşterilerin rezervasyonlarını hesap sahibiyle listeler', async () => {
     renderPage()
 
-    // Üç fixture'ın üçü de görünür: liste hiçbir kullanıcıya göre daraltılmaz.
-    expect(await screen.findByText('PAX-MOCK-1001')).toBeTruthy()
-    expect(screen.getByText('PAX-MOCK-1002')).toBeTruthy()
-    expect(screen.getByText('PAX-MOCK-1003')).toBeTruthy()
+    // Üye ve misafir kayıtları birlikte: liste hiçbir kullanıcıya göre daraltılmaz.
+    expect(await screen.findByText('PAX-TEST-0001')).toBeTruthy()
+    expect(screen.getByText('PAX-TEST-0002')).toBeTruthy()
 
     // Üye rezervasyonunda hesap sahibinin e-postası görünür — "Hesap" sütununun tüm varlık
     // sebebi bu: hangi kayıtlı kullanıcıya ait olduğu yolcu adından okunamaz.
-    expect(screen.getAllByText(/@example\.com$/).length).toBeGreaterThan(0)
+    expect(screen.getByText('ada@example.com')).toBeTruthy()
 
-    // Misafir fixture'ının (PAX-MOCK-1002) hesabı yoktur; e-posta yerine rozet çıkar.
+    // Misafir kaydının hesabı yoktur; e-posta yerine rozet çıkar.
     expect(screen.getByText('Misafir')).toBeTruthy()
   })
 
@@ -97,9 +152,9 @@ describe('AdminReservationsPage', () => {
     )
 
     renderPage()
-    await userEvent.type(screen.getByLabelText('PNR ile ara'), 'MOCK-1002')
+    await userEvent.type(screen.getByLabelText('PNR ile ara'), 'TEST-0002')
 
-    await waitFor(() => expect(seen).toContain('MOCK-1002'))
+    await waitFor(() => expect(seen).toContain('TEST-0002'))
   })
 
   /**
