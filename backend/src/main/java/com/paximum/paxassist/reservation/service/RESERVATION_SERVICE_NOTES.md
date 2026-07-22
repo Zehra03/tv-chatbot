@@ -78,10 +78,18 @@ Handled in `handleOrphanedBooking`, two layers:
 
 Confirm returns `ConfirmationResult.OrphanedBooking` in this case.
 
+**Follow-up (fixed):** the fallback row was written but nothing ever read it back — no endpoint, no
+job. `OrphanedBookingService` + `OrphanedBookingController` (`GET /api/v1/reservations/orphaned`,
+`PATCH /api/v1/reservations/orphaned/{id}/reconcile`, both `ROLE_ADMIN`-only) close that gap; `V9`
+adds the `resolution_note` column an operator's reconcile action fills in.
+
 ## Accepted risks / assumptions (flagged)
 
-1. **No live price/availability re-check** before freezing the preview — no such method exists in the
-   Hotel/Flight modules yet. The submitted price is trusted. Clearly commented; revisit later.
+1. ~~No live price/availability re-check before freezing the preview~~ — **closed** (K21):
+   `previewReservation` now re-prices via `beginTransactionWithOffer` and freezes the provider's own
+   price (commit `491fc68`), `verifyPrice` re-checks again immediately before commit (`e55a5bb`), and
+   `reconcileWithBookedPrice` records what was actually charged after commit (`fd310c9`). Left here so
+   this note doesn't silently go stale again; see the class javadoc for the current state.
 2. **TourVisio numeric enum guesses** in the request mapper: `passengerType` ADULT=1/CHILD=2, traveller
    `type`=1, `status`=0. Confirm against docs.
 3. **`beginTransactionWithOffer` already seats the primary offers**; `addServices` is only called for

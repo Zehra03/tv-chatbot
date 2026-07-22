@@ -11,8 +11,9 @@ import type { FlightReservationDraft, HotelReservationDraft } from './reservatio
 /**
  * Seçilen ürün + arama kriterinden rezervasyon taslağı kurar. Otel snapshot'ının backend'in @NotNull
  * istediği alanları (check-in/out, oda/kişi, uyruk) ÜRÜNDE değil KRİTERDE yaşar — bu yüzden "Seç"
- * anında kriterden doldurulur (docs/frontend-architecture.md §9). Uçuşta ise yolcu sayısı dışında her
- * şey üründedir. Fiyat üründen alınır (uydurulmaz); backend `totalAmount`'ı bu snapshot'tan doğrular.
+ * anında kriterden doldurulur (docs/frontend-architecture.md §9). Uçuşta ise yolcu sayısı ve çocuk
+ * yaşları dışında her şey üründedir. Fiyat üründen alınır (uydurulmaz); backend `totalAmount`'ı bu
+ * snapshot'tan doğrular.
  */
 
 /**
@@ -73,7 +74,14 @@ export function buildHotelDraft(
   }
 }
 
-/** Uçuş taslağı; tüm snapshot alanları üründe var, yalnız yolcu sayısı kriterden (yoksa 1). */
+/**
+ * Uçuş taslağı; tüm snapshot alanları üründe var, yalnız yolcu sayısı kriterden (yoksa 1 yetişkin).
+ *
+ * HATA 5 (fix): yolcu sayısı artık yetişkin + çocuk/bebek toplamı (`adults + childAges.length`),
+ * eskiden yalnız `passengers` (tek sayı, hep tam yetişkin sayılırdı). `childAges` üründe DEĞİL
+ * kriterde yaşar (tıpkı otelinki gibi) — form yolcu satırlarını doğru sayı/tip/yaşla önden
+ * doldurabilsin diye taslağa taşınır (bkz. initialPassengers).
+ */
 export function buildFlightDraft(
   product: FlightProduct,
   criteria: Partial<FlightSearchCriteria> | undefined,
@@ -82,6 +90,7 @@ export function buildFlightDraft(
   // önce arama kriterinden (formda hep seçili), sonra üründen, en son dönüş bacağından türetilir.
   const tripType: TripType =
     criteria?.tripType ?? product.tripType ?? (product.returnDepartTime ? 'round_trip' : 'one_way')
+  const childAges = criteria?.childAges ?? []
   return {
     productType: 'flight',
     // Booking, arama-satırı UUID'si (`product.id`) ile değil, TourVisio teklif jetonu (`product.offerId`)
@@ -105,9 +114,10 @@ export function buildFlightDraft(
       returnArriveTime: product.returnArriveTime ?? null,
       stops: product.stops,
       baggage: product.baggage,
-      passengerCount: criteria?.passengers ?? 1,
+      passengerCount: (criteria?.adults ?? 1) + childAges.length,
       price: product.price,
       currency: product.currency,
     },
+    childAges,
   }
 }

@@ -83,7 +83,7 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
-                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                                + "\"adults\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value("F1"))
                 .andExpect(jsonPath("$[0].airline").value("Turkish Airlines"))
@@ -95,7 +95,7 @@ class FlightControllerTest {
     }
 
     /**
-     * A body missing origin/departDate/passengers used to reach the service and come back as an empty
+     * A body missing origin/departDate/adults used to reach the service and come back as an empty
      * array. Those fields are now required, so it is a 400 and the search service is never called —
      * @Min/@FutureOrPresent alone would have skipped the nulls and let a zero-passenger search through.
      */
@@ -110,7 +110,7 @@ class FlightControllerTest {
     }
 
     @Test
-    void search_rejectsNullPassengersWith400() throws Exception {
+    void search_rejectsNullAdultsWith400() throws Exception {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
@@ -121,11 +121,11 @@ class FlightControllerTest {
     }
 
     @Test
-    void search_rejectsZeroPassengersWith400() throws Exception {
+    void search_rejectsZeroAdultsWith400() throws Exception {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
-                                + "\"passengers\":0,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                                + "\"adults\":0,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
                 .andExpect(status().isBadRequest());
 
         org.mockito.Mockito.verifyNoInteractions(flightSearchService);
@@ -136,7 +136,7 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\""
-                                + LocalDate.now().minusDays(1) + "\",\"passengers\":1,\"currency\":\"EUR\","
+                                + LocalDate.now().minusDays(1) + "\",\"adults\":1,\"currency\":\"EUR\","
                                 + "\"tripType\":\"one_way\"}"))
                 .andExpect(status().isBadRequest());
 
@@ -148,7 +148,7 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + RETURN + "\","
-                                + "\"returnDate\":\"" + DEPART + "\",\"passengers\":1,\"currency\":\"EUR\","
+                                + "\"returnDate\":\"" + DEPART + "\",\"adults\":1,\"currency\":\"EUR\","
                                 + "\"tripType\":\"round_trip\"}"))
                 .andExpect(status().isBadRequest());
 
@@ -160,7 +160,7 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
-                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
+                                + "\"adults\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
                                 + "\"departTimeRange\":{\"from\":\"25:00\",\"to\":\"12:00\"}}"))
                 .andExpect(status().isBadRequest());
 
@@ -173,7 +173,7 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
-                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
+                                + "\"adults\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
                                 + "\"departTimeRange\":{\"from\":\"18:00\",\"to\":\"06:00\"}}"))
                 .andExpect(status().isBadRequest());
 
@@ -189,7 +189,7 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
-                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
+                                + "\"adults\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\","
                                 + "\"departTimeRange\":{\"from\":\"08:00\",\"to\":\"12:00\"}}"))
                 .andExpect(status().isOk());
 
@@ -202,7 +202,52 @@ class FlightControllerTest {
         mockMvc.perform(post("/api/v1/flights/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"origin\":\"IST\",\"destination\":\"ist\",\"departDate\":\"" + DEPART + "\","
-                                + "\"passengers\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                                + "\"adults\":1,\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    /**
+     * HATA 5 (fixed): the manual search form used to send a bare passenger count, so an accompanying
+     * child or infant was always booked — and priced — as a full adult. {@code childAges} is now typed
+     * by {@code PassengerCount.ofChildAges} the same way the chat/MCP search paths already do: age 5
+     * lands as a child, not a fourth adult.
+     */
+    @Test
+    void search_typesChildrenByAgeInTheSearchCriteria() throws Exception {
+        ArgumentCaptor<FlightSearchCriteria> captor = ArgumentCaptor.forClass(FlightSearchCriteria.class);
+        when(flightSearchService.search(captor.capture()))
+                .thenReturn(FlightSearchOutcome.complete(List.of()));
+
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"adults\":2,\"childAges\":[5,1],\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isOk());
+
+        assertThat(captor.getValue().getPassengers().getAdults()).isEqualTo(2);
+        assertThat(captor.getValue().getPassengers().getChildren()).isEqualTo(1);
+        assertThat(captor.getValue().getPassengers().getInfants()).isEqualTo(1);
+    }
+
+    @Test
+    void search_rejectsPartyLargerThanMaxSeatsWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"adults\":9,\"childAges\":[5],\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.mockito.Mockito.verifyNoInteractions(flightSearchService);
+    }
+
+    @Test
+    void search_rejectsMoreInfantsThanAdultsWith400() throws Exception {
+        mockMvc.perform(post("/api/v1/flights/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"origin\":\"IST\",\"destination\":\"LHR\",\"departDate\":\"" + DEPART + "\","
+                                + "\"adults\":1,\"childAges\":[0,1],\"currency\":\"EUR\",\"tripType\":\"one_way\"}"))
                 .andExpect(status().isBadRequest());
 
         org.mockito.Mockito.verifyNoInteractions(flightSearchService);

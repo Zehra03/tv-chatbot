@@ -55,6 +55,7 @@ const roundTripDraft: FlightReservationDraft = {
   summary: 'özet',
   price: 4200,
   currency: 'TRY',
+  childAges: [],
   flight: {
     origin: 'IST',
     destination: 'AYT',

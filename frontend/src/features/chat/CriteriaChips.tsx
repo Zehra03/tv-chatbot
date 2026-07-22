@@ -39,7 +39,8 @@ const FIELD_LABELS: Record<PartialCriteria['intent'], Record<string, string>> = 
     destination: 'Nereye',
     departDate: 'Gidiş',
     returnDate: 'Dönüş',
-    passengers: 'Yolcu',
+    adults: 'Yetişkin',
+    childAges: 'Çocuk yaşları',
     tripType: 'Yön',
   },
 }

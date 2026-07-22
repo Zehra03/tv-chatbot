@@ -143,35 +143,26 @@ class ChatViewMapperTest {
     }
 
     /**
-     * The chat slot map counts flight passengers in adults/children, but the frontend's flight
-     * criteria carry a single `passengers`. Before the fold it read undefined and buildFlightDraft
-     * fell back to 1 — a 2-passenger chat search opened ONE traveller row in the reservation form.
+     * HATA 5 (fixed): the flight search form used to carry a single {@code passengers} count, so this
+     * mapper folded the chat slot map's {@code adults}/{@code children} into that one number and
+     * dropped {@code childAges} entirely — a 2-adult-1-child chat search reached the reservation form
+     * as "3 adults", and the child's age was lost. The frontend's {@code FlightSearchCriteria} now
+     * carries {@code adults} + {@code childAges} directly (the same shape the hotel criteria always
+     * had), so both pass through unchanged like every other shared field.
      */
     @Test
-    void foldsFlightAdultsIntoASinglePassengerCount() {
-        SlotCriteria twoAdults = flightSlots(2, 0);
-
-        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(twoAdults), "flight");
-
-        assertThat(criteria.criteria())
-                .containsEntry("passengers", 2)
-                .doesNotContainKeys("adults", "children");
-    }
-
-    @Test
-    void countsFlightChildrenAsPassengersToo() {
-        // FlightCriteriaMapper sends adults + children to the provider, so the offer is priced for
-        // 3 seats; the reservation form must open 3 rows or TourVisio rejects the pax mismatch.
-        SlotCriteria twoAdultsOneChild = flightSlots(2, 1);
+    void leavesFlightAdultsAndChildAgesAlone() {
+        SlotCriteria twoAdultsOneChild = flightSlots(2, 1, List.of(6));
 
         PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(twoAdultsOneChild), "flight");
 
-        assertThat(criteria.criteria()).containsEntry("passengers", 3);
+        assertThat(criteria.criteria())
+                .containsEntry("adults", 2)
+                .containsEntry("childAges", List.of(6));
     }
 
     @Test
     void leavesHotelAdultsAndChildrenAlone() {
-        // The hotel draft needs the breakdown (adult rows + child rows with ages) — fold flight only.
         SlotCriteria hotelSearch = new SlotCriteria(
                 "Antalya", "2026-08-01", "2026-08-05", null, null, null, null, null, null, null,
                 null, null, null, null, null, null, null, null, null, null, null, null,
@@ -183,23 +174,14 @@ class ChatViewMapperTest {
         assertThat(criteria.criteria())
                 .containsEntry("adults", 2)
                 .containsEntry("children", 1)
-                .doesNotContainKey("passengers");
+                .containsEntry("childAges", List.of(7));
     }
 
-    @Test
-    void omitsPassengersWhenTheFlightSearchHasNoCountYet() {
-        SlotCriteria noCount = flightSlots(null, null);
-
-        PartialCriteriaDto criteria = mapper.toPartialCriteria(accumulatedOf(noCount), "flight");
-
-        assertThat(criteria.criteria()).doesNotContainKey("passengers");
-    }
-
-    private static SlotCriteria flightSlots(Integer adults, Integer children) {
+    private static SlotCriteria flightSlots(Integer adults, Integer children, List<Integer> childAges) {
         return new SlotCriteria(
                 null, null, null, null, null, null, null, null, null, null,
                 "IST", "LHR", "2026-08-01", null, null, null, null, null, null, null, null, null,
-                adults, children, null, "TR", "EUR",
+                adults, children, childAges, "TR", "EUR",
                 null, null, null);
     }
 
