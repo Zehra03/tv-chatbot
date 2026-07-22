@@ -61,9 +61,12 @@ import com.paximum.paxassist.reservation.service.command.PreviewReservationComma
  *       {@code setReservationInfo} warning (e.g. DuplicateReservationFound).</li>
  * </ul>
  *
- * <p><b>Accepted risk (flagged):</b> the frozen price/availability is trusted as-is — there is no
- * re-verification against the Hotel/Flight modules before confirming, because no such live-recheck
- * method exists there yet. Revisit when one does.
+ * <p><b>K21 closed:</b> price/availability ARE re-verified against TourVisio at two points — once in
+ * {@link #previewReservation} (freezes the provider's own price, not the client's) and again at the
+ * top of {@link #runTransactionFlow} via {@link #verifyPrice}, immediately before commit. After a
+ * successful commit, {@link #reconcileWithBookedPrice} reads the price back from the booking itself so
+ * what gets persisted is what was actually charged. See commits {@code 491fc68}, {@code e55a5bb} and
+ * {@code fd310c9}.
  */
 @Service
 public class ReservationService {
