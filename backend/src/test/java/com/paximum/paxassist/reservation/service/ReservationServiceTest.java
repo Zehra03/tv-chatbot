@@ -19,7 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.paximum.paxassist.common.log.LogModuleClient;
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
 import com.paximum.paxassist.reservation.infrastructure.tourvisio.client.TourVisioBookingClient;
@@ -47,7 +47,7 @@ class ReservationServiceTest {
     @Mock private ReservationEntityMapper entityMapper;
     @Mock private ReservationRepository reservationRepository;
     @Mock private OrphanedBookingRepository orphanedBookingRepository;
-    @Mock private LogModuleClient logModuleClient;
+    @Mock private ActivityLog activityLog;
 
     @InjectMocks
     private ReservationService reservationService;
@@ -255,7 +255,7 @@ class ReservationServiceTest {
         // Then
         assertThat(result).isInstanceOf(ConfirmationResult.Confirmed.class);
         verify(reservationRepository).save(reservation);
-        verify(logModuleClient).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(), eq("SUCCESS"), anyString());
+        verify(activityLog).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(), eq("SUCCESS"), anyString());
     }
 
     // =============================================================================================
@@ -334,7 +334,7 @@ class ReservationServiceTest {
         // The point of aborting at beginTransaction: no purchase, no DB row.
         verify(bookingClient, org.mockito.Mockito.never()).commitTransaction(any());
         verifyNoInteractions(reservationRepository);
-        verify(logModuleClient).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(),
+        verify(activityLog).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(),
                 eq("FAILED"), anyString());
     }
 
@@ -438,7 +438,7 @@ class ReservationServiceTest {
                 confirmAndCaptureTheRecordedCommand(command, reservationDetailPricedAt("1550.00"));
 
         assertThat(recorded.totalAmount()).isEqualByComparingTo(new BigDecimal("1550.00"));
-        verify(logModuleClient).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(),
+        verify(activityLog).logActivity(eq("ReservationModule"), eq("confirmReservation"), anyString(),
                 eq("WARNING"), anyString());
     }
 

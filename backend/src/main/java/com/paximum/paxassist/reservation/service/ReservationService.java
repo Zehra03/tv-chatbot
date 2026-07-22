@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
-import com.paximum.paxassist.common.log.LogModuleClient;
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.reservation.domain.ProductType;
 import com.paximum.paxassist.reservation.domain.Reservation;
 import com.paximum.paxassist.reservation.domain.ReservationCaller;
@@ -77,7 +77,7 @@ public class ReservationService {
     private final ReservationEntityMapper entityMapper;
     private final ReservationRepository reservationRepository;
     private final OrphanedBookingRepository orphanedBookingRepository;
-    private final LogModuleClient logModuleClient;
+    private final ActivityLog activityLog;
 
     public ReservationService(
             PendingReservationStore pendingStore,
@@ -86,14 +86,14 @@ public class ReservationService {
             ReservationEntityMapper entityMapper,
             ReservationRepository reservationRepository,
             OrphanedBookingRepository orphanedBookingRepository,
-            LogModuleClient logModuleClient) {
+            ActivityLog activityLog) {
         this.pendingStore = pendingStore;
         this.bookingClient = bookingClient;
         this.requestMapper = requestMapper;
         this.entityMapper = entityMapper;
         this.reservationRepository = reservationRepository;
         this.orphanedBookingRepository = orphanedBookingRepository;
-        this.logModuleClient = logModuleClient;
+        this.activityLog = activityLog;
     }
 
     // =========================================================================================
@@ -673,7 +673,7 @@ public class ReservationService {
         log.error("BOOKED PRICE DIFFERS — confirmed at {} {} but TourVisio booked {} {} "
                         + "(externalReservationNumber={}). Recording TourVisio's amount.",
                 command.totalAmount(), command.currency(), charged, chargedCurrency, externalReservationNumber);
-        logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
+        activityLog.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
                 "WARNING", "Booked price differs: confirmed " + command.totalAmount() + " " + command.currency()
                         + ", TourVisio " + charged + " " + chargedCurrency
                         + " (externalReservationNumber=" + externalReservationNumber + ")");
@@ -808,10 +808,10 @@ public class ReservationService {
             return;
         }
         if (result instanceof ConfirmationResult.Confirmed confirmed) {
-            logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
+            activityLog.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
                     "SUCCESS", "Reservation " + confirmed.reservationNumber() + " confirmed for " + callerLabel(caller));
         } else {
-            logModuleClient.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
+            activityLog.logActivity("ReservationModule", "confirmReservation", maskedSummary(command),
                     "FAILED", "Confirm failed for " + callerLabel(caller) + ": " + result.getClass().getSimpleName());
         }
     }
@@ -827,10 +827,10 @@ public class ReservationService {
     /** Emits a non-blocking LogMod event for a cancel outcome (a not-found/not-owned result is not logged). */
     private void logCancelOutcome(Long id, Long userId, CancelResult result) {
         if (result instanceof CancelResult.Cancelled cancelled) {
-            logModuleClient.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
+            activityLog.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
                     "SUCCESS", "Reservation " + id + " cancelled by user " + userId + " -> " + cancelled.newStatus());
         } else if (!(result instanceof CancelResult.NotFound)) {
-            logModuleClient.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
+            activityLog.logActivity("ReservationModule", "cancelReservation", "reservationId=" + id,
                     "FAILED", "Cancel failed for user " + userId + ": " + result.getClass().getSimpleName());
         }
     }

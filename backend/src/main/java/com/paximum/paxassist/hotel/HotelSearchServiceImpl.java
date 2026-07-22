@@ -1,6 +1,6 @@
 package com.paximum.paxassist.hotel;
 
-import com.paximum.paxassist.common.log.LogModuleClient;
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.hotel.dto.AutocompleteResponse;
 import com.paximum.paxassist.hotel.dto.HotelLocationDto;
 import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
@@ -29,11 +29,11 @@ public class HotelSearchServiceImpl implements HotelSearchService {
     private static final int MAX_SUGGESTIONS = 12;
     
     private final TourVisioHotelApiClient tourVisioHotelApiClient;
-    private final LogModuleClient logModuleClient;
+    private final ActivityLog activityLog;
 
-    public HotelSearchServiceImpl(TourVisioHotelApiClient tourVisioHotelApiClient, LogModuleClient logModuleClient) {
+    public HotelSearchServiceImpl(TourVisioHotelApiClient tourVisioHotelApiClient, ActivityLog activityLog) {
         this.tourVisioHotelApiClient = tourVisioHotelApiClient;
-        this.logModuleClient = logModuleClient;
+        this.activityLog = activityLog;
     }
 
     @Override
@@ -63,7 +63,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
 
         if (!missingParameters.isEmpty()) {
             log.warn("Search request is incomplete. Missing parameters: {}", missingParameters);
-            logModuleClient.logActivity(
+            activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
                 request.toString(),
@@ -79,7 +79,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
             locationId = firstCityId(tourVisioHotelApiClient.getArrivalAutocomplete(request.destination()), request.destination());
         } catch (Exception e) {
             log.error("Failed to autocomplete destination: {}", e.getMessage());
-            logModuleClient.logActivity(
+            activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
                 request.toString(),
@@ -91,7 +91,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
 
         if (locationId == null) {
             log.warn("Could not find a valid location ID for destination: {}", request.destination());
-            logModuleClient.logActivity(
+            activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
                 request.toString(),
@@ -106,7 +106,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
             log.info("Found location ID {} for {}. Querying PriceSearch...", locationId, request.destination());
             Object searchResult = tourVisioHotelApiClient.priceSearch(request, locationId);
             
-            logModuleClient.logActivity(
+            activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
                 request.toString(),
@@ -117,7 +117,7 @@ public class HotelSearchServiceImpl implements HotelSearchService {
             return HotelSearchResponse.success(searchResult);
         } catch (Exception e) {
             log.error("TourVisio price search failed: {}", e.getMessage());
-            logModuleClient.logActivity(
+            activityLog.logActivity(
                 "HotelSearchModule",
                 "searchHotels",
                 request.toString(),

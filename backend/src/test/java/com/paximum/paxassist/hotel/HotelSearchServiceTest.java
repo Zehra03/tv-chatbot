@@ -1,6 +1,6 @@
 package com.paximum.paxassist.hotel;
 
-import com.paximum.paxassist.common.log.LogModuleClient;
+import com.paximum.paxassist.common.log.ActivityLog;
 import com.paximum.paxassist.hotel.dto.AutocompleteResponse;
 import com.paximum.paxassist.hotel.dto.HotelLocationDto;
 import com.paximum.paxassist.hotel.dto.HotelSearchRequest;
@@ -26,14 +26,14 @@ import static org.mockito.Mockito.when;
 class HotelSearchServiceTest {
 
     private TourVisioHotelApiClient apiClient;
-    private LogModuleClient logModuleClient;
+    private ActivityLog activityLog;
     private HotelSearchService searchService;
 
     @BeforeEach
     void setUp() {
         apiClient = Mockito.mock(TourVisioHotelApiClient.class);
-        logModuleClient = Mockito.mock(LogModuleClient.class);
-        searchService = new HotelSearchServiceImpl(apiClient, logModuleClient);
+        activityLog = Mockito.mock(ActivityLog.class);
+        searchService = new HotelSearchServiceImpl(apiClient, activityLog);
     }
 
     @Test
