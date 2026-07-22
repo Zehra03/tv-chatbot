@@ -44,4 +44,7 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
             """)
     Optional<Reservation> findByReservationNumberAndPassengerSurname(
             @Param("pnr") String pnr, @Param("surname") String surname);
+
+    @Query("SELECT r.currency, SUM(r.totalAmount) FROM Reservation r WHERE r.status = :status GROUP BY r.currency")
+    List<Object[]> sumRevenueByCurrency(@Param("status") com.paximum.paxassist.reservation.domain.ReservationStatus status);
 }

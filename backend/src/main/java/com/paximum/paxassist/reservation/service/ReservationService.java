@@ -372,15 +372,22 @@ public class ReservationService {
      */
     @Transactional
     public CancelResult cancelReservation(Long id, Long userId, String reason, List<String> serviceIds) {
-        CancelResult result = doCancelReservation(id, userId, reason, serviceIds);
+        CancelResult result = doCancelReservation(id, userId, reason, serviceIds, false);
         logCancelOutcome(id, userId, result);
         return result;
     }
 
-    private CancelResult doCancelReservation(Long id, Long userId, String reason, List<String> serviceIds) {
+    @Transactional
+    public CancelResult adminCancelReservation(Long id, String reason, List<String> serviceIds) {
+        CancelResult result = doCancelReservation(id, null, reason, serviceIds, true);
+        logCancelOutcome(id, null, result);
+        return result;
+    }
+
+    private CancelResult doCancelReservation(Long id, Long userId, String reason, List<String> serviceIds, boolean bypassOwnership) {
         Optional<Reservation> found = reservationRepository.findById(id);
         // A non-owner (or missing) reservation is reported as NotFound so existence is not revealed.
-        if (found.isEmpty() || !Objects.equals(found.get().getUserId(), userId)) {
+        if (found.isEmpty() || (!bypassOwnership && !Objects.equals(found.get().getUserId(), userId))) {
             return new CancelResult.NotFound();
         }
         Reservation reservation = found.get();
