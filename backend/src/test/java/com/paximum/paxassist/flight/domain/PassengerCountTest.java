@@ -19,10 +19,10 @@ class PassengerCountTest {
 
     @Test
     void ageBoundaries() {
-        PassengerCount party = PassengerCount.ofChildAges(0, List.of(0, 1, 2, 11, 12));
+        PassengerCount party = PassengerCount.ofChildAges(0, List.of(0, 1, 2, 3, 11, 12));
 
-        assertThat(party.getInfants()).isEqualTo(2);   // 0, 1
-        assertThat(party.getChildren()).isEqualTo(2);  // 2, 11
+        assertThat(party.getInfants()).isEqualTo(3);   // 0, 1, 2
+        assertThat(party.getChildren()).isEqualTo(2);  // 3, 11
         assertThat(party.getAdults()).isEqualTo(1);    // 12
     }
 

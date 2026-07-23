@@ -12,8 +12,8 @@ public class PassengerCount {
     private final int children;
     private final int infants;
 
-    /** Oldest age still carried as a lap infant; from age 2 an airline seats and prices a child. */
-    private static final int INFANT_MAX_AGE = 1;
+    /** Oldest age still carried as a lap infant; from age 3 an airline seats and prices a child. */
+    private static final int INFANT_MAX_AGE = 2;
     /** Oldest age still priced as a child; from 12 an airline charges the adult fare. */
     private static final int CHILD_MAX_AGE = 11;
 

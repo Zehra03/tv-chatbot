@@ -86,7 +86,7 @@ export interface HotelSearchCriteria {
  * Uçuşta refakatteki bebeğin (kucak bebeği) en büyük yaşı — backend
  * `PassengerCount.ofChildAges`teki `INFANT_MAX_AGE` ile birebir aynı tutulmalı.
  */
-export const FLIGHT_INFANT_MAX_AGE = 1
+export const FLIGHT_INFANT_MAX_AGE = 2
 
 /**
  * Uçuşta bir çocuğun en büyük yaşı — bu sınırın üstü yetişkin ücretiyle uçar.
@@ -94,7 +94,7 @@ export const FLIGHT_INFANT_MAX_AGE = 1
  * bebeği, backend `PassengerCount.ofChildAges`), {@link FLIGHT_INFANT_MAX_AGE}+1–
  * {@link FLIGHT_CHILD_MAX_AGE} CHILD.
  */
-export const FLIGHT_CHILD_MAX_AGE = 17
+export const FLIGHT_CHILD_MAX_AGE = 11
 
 /**
  * Uçuş arama kriteri. origin/destination DB alanlarıyla hizalı; yolcu sayısı

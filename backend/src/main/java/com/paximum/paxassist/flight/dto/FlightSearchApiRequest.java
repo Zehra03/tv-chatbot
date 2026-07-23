@@ -35,7 +35,7 @@ import jakarta.validation.constraints.Size;
  * already differentiate passenger type ({@code FlightCriteriaMapper}, {@code HotelFlightTools}).
  * This boundary now takes the same two inputs those paths do — {@link #adults()} and
  * {@link #childAges()} — and types each accompanying child by age via
- * {@link PassengerCount#ofChildAges}, the one place that rule lives (0–1 flies as an infant, 2–11 as
+ * {@link PassengerCount#ofChildAges}, the one place that rule lives (0–2 flies as an infant, 3–11 as
  * a child, 12+ pays the adult fare — see {@link PassengerCount}).
  *
  * <p>Unlike the chat path — where {@code TravelDateGuard} and slot-filling vet the criteria — this
@@ -123,7 +123,7 @@ public record FlightSearchApiRequest(
 
     /**
      * Cross-field: mirrors {@code FlightSearchHandler}'s check on the chat path — each infant flies on
-     * an adult's lap, so a party can never hold more infants (age 0–1, per
+     * an adult's lap, so a party can never hold more infants (age 0–2, per
      * {@link PassengerCount#ofChildAges}) than adults.
      */
     @AssertTrue(message = "Each infant needs an accompanying adult; infants cannot outnumber adults")
