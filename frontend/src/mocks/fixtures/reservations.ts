@@ -56,6 +56,8 @@ export const reservationFixtures: ReservationDetail[] = [
   {
     id: 1002,
     reservationNumber: 'PAX-MOCK-1002',
+    // Hesapsız (misafir) rezervasyon — admin listesindeki üye/misafir ayrımı mock'ta da görünsün.
+    guest: true,
     externalReservationNumber: 'RC001002',
     productType: 'flight',
     status: 'pending',

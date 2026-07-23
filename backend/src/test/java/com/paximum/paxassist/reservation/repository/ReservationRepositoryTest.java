@@ -8,6 +8,8 @@ import java.time.LocalDate;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
@@ -127,6 +129,75 @@ class ReservationRepositoryTest {
 
         assertThatThrownBy(() -> entityManager.persistAndFlush(reservation))
                 .isInstanceOf(PersistenceException.class);
+    }
+
+    /**
+     * The admin search must work with NO filters — that is the screen's default view.
+     *
+     * <p>Regression guard for a real failure: with an absent PNR the parameter reached PostgreSQL as
+     * an untyped null, which it inferred as {@code bytea}, and {@code upper(bytea)} does not exist —
+     * so the unfiltered list died with a SQL grammar error. The controller test cannot catch this
+     * class of bug at all: it mocks the repository, so no SQL is ever generated.
+     */
+    @Test
+    void searchForAdmin_withNoFilters_returnsRowsInsteadOfFailingOnAnUntypedNull() {
+        entityManager.persistAndFlush(guestReservation("PAX-20260721-NOFILT", "guest-token-nf"));
+        entityManager.clear();
+
+        Page<Reservation> page = reservationRepository
+                .searchForAdmin(null, null, null, PageRequest.of(0, 20));
+
+        assertThat(page.getContent()).isNotEmpty();
+    }
+
+    @Test
+    void searchForAdmin_matchesPartialPnrCaseInsensitivelyAndHonoursFilters() {
+        entityManager.persistAndFlush(guestReservation("PAX-20260721-FIND01", "guest-token-f1"));
+        entityManager.clear();
+
+        // Kısmi ve küçük harfli parça da bulmalı: yönetici kodun tamamını nadiren elinde tutar.
+        assertThat(reservationRepository
+                .searchForAdmin("find01", null, null, PageRequest.of(0, 20))
+                .getContent())
+                .extracting(Reservation::getReservationNumber)
+                .contains("PAX-20260721-FIND01");
+
+        // Eşleşmeyen PNR boş dönmeli — "filtre yok" davranışına düşmemeli.
+        assertThat(reservationRepository
+                .searchForAdmin("NO-SUCH-PNR", null, null, PageRequest.of(0, 20))
+                .getContent())
+                .isEmpty();
+
+        // Durum filtresi: kayıt CONFIRMED, dolayısıyla CANCELLED sorgusu onu getirmemeli.
+        assertThat(reservationRepository
+                .searchForAdmin("FIND01", ReservationStatus.CANCELLED, null, PageRequest.of(0, 20))
+                .getContent())
+                .isEmpty();
+
+        // Ürün tipi filtresi: kayıt HOTEL, FLIGHT sorgusu onu getirmemeli.
+        assertThat(reservationRepository
+                .searchForAdmin("FIND01", null, ProductType.FLIGHT, PageRequest.of(0, 20))
+                .getContent())
+                .isEmpty();
+
+        assertThat(reservationRepository
+                .searchForAdmin("FIND01", ReservationStatus.CONFIRMED, ProductType.HOTEL,
+                        PageRequest.of(0, 20))
+                .getContent())
+                .hasSize(1);
+    }
+
+    /** Dashboard kırılımı gerçekten SQL'de gruplanıyor mu — sayaç kartlarının kaynağı. */
+    @Test
+    void countByProductType_groupsRows() {
+        entityManager.persistAndFlush(guestReservation("PAX-20260721-CNT001", "guest-token-c1"));
+        entityManager.clear();
+
+        assertThat(reservationRepository.countByProductType())
+                .anySatisfy(row -> {
+                    assertThat(row[0]).isInstanceOf(ProductType.class);
+                    assertThat(row[1]).isInstanceOf(Long.class);
+                });
     }
 
     private Reservation guestReservation(String reservationNumber, String guestToken) {

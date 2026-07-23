@@ -35,6 +35,10 @@ export function ChatPage() {
   const navigate = useNavigate()
   const pendingQuestion = useAppSelector((s) => s.chat.pendingQuestion)
   const messages = useAppSelector((s) => s.chat.messages)
+  // Boş sohbette hero başlığındaki selamlamayı kişiselleştirir; misafirde ad yok,
+  // sade "Merhaba!" kalır ("Merhaba Misafir!" istenmedi).
+  const user = useAppSelector((s) => s.auth.user)
+  const greetingName = user && !user.guest ? user.name ?? undefined : undefined
   // Biriken arama kriteri — sonuç panelindeki "Seç"in rezervasyon snapshot'ını kurabilmesi için
   // kartlara iletilir (otelde giriş/çıkış-oda/kişi, uçuşta yolcu sayısı ürün dışında burada yaşar).
   const criteria = useAppSelector((s) => s.chat.accumulatedCriteria)
@@ -117,6 +121,7 @@ export function ChatPage() {
             onSend={handleSend}
             disabled={sendMessage.isPending}
             placeholder={pendingQuestion}
+            greetingName={greetingName}
           />
         </div>
       </div>

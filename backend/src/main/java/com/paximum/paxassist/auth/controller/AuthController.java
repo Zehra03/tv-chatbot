@@ -64,7 +64,8 @@ public class AuthController {
 
     @GetMapping("/me")
     public AuthUserDto me(@AuthenticationPrincipal UserPrincipal principal) {
-        return new AuthUserDto(String.valueOf(principal.getId()), principal.getUsername(), principal.getDisplayName());
+        return new AuthUserDto(String.valueOf(principal.getId()), principal.getUsername(),
+                principal.getDisplayName(), principal.getRole().name());
     }
 
     // Updates the authenticated user's login email. Requires a valid access token (this path is not

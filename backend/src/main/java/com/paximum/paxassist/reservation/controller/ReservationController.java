@@ -239,6 +239,13 @@ public class ReservationController {
             case CancelResult.TourVisioRejected ignored ->
                     ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(new OutcomeResponse("TOURVISIO_REJECTED",
                             "İptal talebiniz sağlayıcı tarafından reddedildi. Rezervasyonunuz değişmedi."));
+            // 202 (not a failure): the sale is still settling right after booking, so the provider won't
+            // accept the cancellation YET. Nothing changed and it is retryable — the frontend renders any
+            // 202 as a warning + this message (not a red error, not a false "cancelled").
+            case CancelResult.NotReadyYet ignored ->
+                    ResponseEntity.status(HttpStatus.ACCEPTED).body(new OutcomeResponse("CANCEL_NOT_READY",
+                            "Rezervasyon yeni oluşturulduğu için iptal şu an yapılamıyor. "
+                                    + "İşlem tamamlanınca birkaç dakika içinde tekrar deneyin."));
             case CancelResult.TourVisioUnavailable ignored ->
                     ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new OutcomeResponse("TOURVISIO_UNAVAILABLE",
                             "Rezervasyon sistemine şu anda ulaşılamıyor. Rezervasyonunuz değişmedi; lütfen birazdan tekrar deneyin."));

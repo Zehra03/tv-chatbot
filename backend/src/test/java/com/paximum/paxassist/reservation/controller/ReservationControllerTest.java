@@ -181,7 +181,8 @@ class ReservationControllerTest {
         when(reservationService.getReservation(7L)).thenReturn(java.util.Optional.of(saved));
         when(mapper.toSummary(saved)).thenReturn(new ReservationSummaryResponse(
                 7L, "PAX-20260714-A1B2C3", "TV-99", ReservationStatus.CONFIRMED, ProductType.HOTEL,
-                java.time.LocalDate.now(), new java.math.BigDecimal("1500.00"), "EUR", "Ada Yılmaz"));
+                java.time.LocalDate.now(), new java.math.BigDecimal("1500.00"), "EUR", "Ada Yılmaz",
+                false));
 
         postConfirm(PREVIEW_BODY)
                 .andExpect(status().isCreated())
