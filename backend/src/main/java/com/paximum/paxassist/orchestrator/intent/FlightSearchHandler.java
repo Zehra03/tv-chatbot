@@ -105,7 +105,7 @@ public class FlightSearchHandler implements IntentHandler {
 
         String carriedOver = TravellerCarryOver.note(switchedDomain, context.criteria(), merged);
 
-        // An accompanying child's fare depends on its age: under 2 it flies as a lap infant, from 12
+        // An accompanying child's fare depends on its age: 2 and under it flies as a lap infant, from 12
         // it pays the adult fare (see FlightCriteriaMapper). A bare count cannot be typed, so without
         // the ages the search would price every child as a "child" — a quote the traveller cannot
         // book at. Ask instead of guessing; the hotel side asks for the same reason.

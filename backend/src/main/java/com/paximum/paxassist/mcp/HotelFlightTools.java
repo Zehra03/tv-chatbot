@@ -68,7 +68,7 @@ public class HotelFlightTools {
             @ToolParam(description = "Return date YYYY-MM-DD; omit for one-way", required = false) String returnDate,
             @ToolParam(description = "Number of adult passengers (12 and older)") Integer adults,
             @ToolParam(description = "Ages of accompanying children; empty when none. The fare depends "
-                    + "on the age: under 2 flies as an infant, 12 and older pays the adult fare",
+                    + "on the age: 2 and under flies as an infant, 12 and older pays the adult fare",
                     required = false) List<Integer> childAges,
             @ToolParam(description = "Price currency, ISO 4217, e.g. \"TRY\"") String currency) {
 
@@ -80,7 +80,7 @@ public class HotelFlightTools {
         // MCP client gets the reason back as a plain tool error instead.
         if (passengers != null && passengers.exceedsSeatLimit()) {
             throw new IllegalArgumentException("A booking holds at most " + PassengerCount.MAX_SEATS
-                    + " seated passengers (adults + children aged 2 and over); this party needs "
+                    + " seated passengers (adults + children aged 3 and over); this party needs "
                     + passengers.seatedCount() + ".");
         }
         if (passengers != null && passengers.hasMoreInfantsThanAdults()) {

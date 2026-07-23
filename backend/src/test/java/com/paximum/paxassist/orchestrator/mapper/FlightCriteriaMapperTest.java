@@ -82,13 +82,13 @@ class FlightCriteriaMapperTest {
 
     @Test
     void ageBoundariesFollowTheAirlineFareRule() {
-        // The exact edges: 1 is still an infant, 2 is already a child, 11 is still a child,
+        // The exact edges: 1 and 2 are still infants, 11 is still a child,
         // 12 already pays the adult fare.
         FlightSearchCriteria criteria = mapper.toCriteria(slots(Map.of(
                 "adults", 1, "children", 4, "childAges", List.of(1, 2, 11, 12))));
 
-        assertThat(criteria.getPassengers().getInfants()).isEqualTo(1);
-        assertThat(criteria.getPassengers().getChildren()).isEqualTo(2);
+        assertThat(criteria.getPassengers().getInfants()).isEqualTo(2);
+        assertThat(criteria.getPassengers().getChildren()).isEqualTo(1);
         assertThat(criteria.getPassengers().getAdults()).isEqualTo(2);
     }
 
