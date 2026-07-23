@@ -4,6 +4,7 @@ import {
   CHILD_MAX_AGE,
   CHILD_MIN_AGE,
   formatE164,
+  HOTEL_CHILD_MIN_AGE,
   initialPhoneCountry,
   isValidTcKimlikNo,
   makeReservationFormSchema,
@@ -208,13 +209,36 @@ describe('yaş ↔ yolcu tipi tutarlılığı (backend kuralının kopyası)', (
     expect(firstError(withPassenger({ age: 'abc' }))).toBe('Geçerli bir yaş girin (18–120)')
   })
 
-  it('çocuk 3–17 arası ve yaşı zorunlu', () => {
+  it('otelde çocuk 0–17 arası ve yaşı zorunlu (otel-yalnız rezervasyonda INFANT yok)', () => {
     const child = { passengerType: 'child' as const, age: '8' }
     expect(withPassenger(child).success).toBe(true)
     expect(firstError(withPassenger({ ...child, age: '' }))).toBe('Çocuk için yaş gerekli')
-    // 2 yaş bebektir (backend: INFANT 0-2) — 'çocuk' olarak gönderilemez.
-    expect(firstError(withPassenger({ ...child, age: '2' }))).toContain('3–17')
-    expect(firstError(withPassenger({ ...child, age: '30' }))).toContain('3–17')
+    // parse() hotelSchema kullanır: uçuşsuz rezervasyonda 0-2 yaş CHILD'dır (backend
+    // PreviewReservationCommand.ageMatchesType), INFANT değil — artık kabul edilir.
+    expect(withPassenger({ ...child, age: '2' }).success).toBe(true)
+    expect(withPassenger({ ...child, age: '0' }).success).toBe(true)
+    expect(firstError(withPassenger({ ...child, age: '30' }))).toContain('0–17')
+  })
+
+  it('uçuşta çocuk hâlâ 3–17: under-3 orada INFANT olmalı (adult/child şeması infant sunmuyor)', () => {
+    const flightSchema = makeReservationFormSchema('flight')
+    // Ocak 1'i doğum günü seçmek, testin çalıştığı günden bağımsız olarak yaşı tam ${age} yapar
+    // (yılın en erken günü olduğu için ageFromBirthDate hiçbir zaman bir yıl düşürmez).
+    const birthDateForAge = (age: number) => `${new Date().getUTCFullYear() - age}-01-01`
+    const flightChild = (age: number) =>
+      flightSchema.safeParse({
+        ...validValues,
+        passengers: [{
+          ...validValues.passengers[0],
+          passengerType: 'child',
+          age: String(age),
+          birthDate: birthDateForAge(age),
+          identityNumber: '10000000146',
+        }],
+      })
+    expect(flightChild(8).success).toBe(true)
+    expect(flightChild(2).success).toBe(false)
+    expect(flightChild(0).success).toBe(false)
   })
 })
 
@@ -269,29 +293,24 @@ describe('uçuş alanları (doğum tarihi + kimlik no)', () => {
  * Ayrıştıklarında (arama 0–17 sunarken şema 3–17 istiyordu) kullanıcı, rezervasyon formunu
  * asla gönderemeyeceği bir yaş seçebiliyordu — yolcu satırı teklifin pax'ına sabit olduğu
  * için silinemiyor, yani akış tamamen çıkışsız kalıyordu.
+ *
+ * Otel-yalnız (uçuşsuz) rezervasyonda gerçek alt sınır HOTEL_CHILD_MIN_AGE (0) — backend'in
+ * PassengerType.CHILD bandı (3–17) uçuş içeren rezervasyonlar için geçerli kalır (orada under-3
+ * hâlâ INFANT'a ait), bkz. PreviewReservationCommand.ageMatchesType.
  */
 describe('çocuk yaş aralığı — arama ve şema tek kaynak', () => {
-  it('sınırlar backend PassengerType ile aynı (CHILD 3–17)', () => {
+  it('sınırlar backend PassengerType ile aynı (CHILD 3–17, otelde alt sınır 0)', () => {
     expect(CHILD_MIN_AGE).toBe(3)
     expect(CHILD_MAX_AGE).toBe(17)
+    expect(HOTEL_CHILD_MIN_AGE).toBe(0)
   })
 
-  it('aralıktaki her yaşı şema kabul eder — seçilebilen yaş rezerve EDİLEBİLİR olmalı', () => {
-    for (let age = CHILD_MIN_AGE; age <= CHILD_MAX_AGE; age++) {
+  it('otel aramasının sunduğu her yaşı (0–17) otel şeması kabul eder — seçilebilen yaş rezerve EDİLEBİLİR olmalı', () => {
+    for (let age = HOTEL_CHILD_MIN_AGE; age <= CHILD_MAX_AGE; age++) {
       const result = parse({
         passengers: [{ ...validValues.passengers[0], passengerType: 'child', age: String(age) }],
       })
       expect(result.success, `${age} yaş reddedildi`).toBe(true)
-    }
-  })
-
-  it('aralık dışındaki bebek yaşlarını reddeder (otelde INFANT yok)', () => {
-    for (const age of ['0', '1', '2']) {
-      expect(
-        parse({
-          passengers: [{ ...validValues.passengers[0], passengerType: 'child', age }],
-        }).success,
-      ).toBe(false)
     }
   })
 })

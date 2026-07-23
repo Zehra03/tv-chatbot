@@ -11,7 +11,7 @@ import { DateRangePicker } from '@/components/ui/date-range-picker'
 import { PeoplePicker } from '@/components/ui/people-picker'
 import { useAppDispatch, useAppSelector } from '@/app/hooks'
 import { apiErrorMessage } from '@/lib/apiErrorMessage'
-import { CHILD_MAX_AGE, CHILD_MIN_AGE } from '@/features/reservation/reservationFormSchema'
+import { CHILD_MAX_AGE, HOTEL_CHILD_MIN_AGE } from '@/features/reservation/reservationFormSchema'
 import { heroFieldClass } from '@/lib/field-styles'
 import { cn } from '@/lib/utils'
 import { hotelFiltersChanged, hotelFiltersReset } from '@/features/ui/uiSlice'
@@ -190,9 +190,9 @@ export function HotelsPage() {
               {
                 key: 'children',
                 label: 'Çocuk',
-                // İpucu de şemayla aynı kaynaktan: '0–17' yazmak seçilemeyen (ve rezerve
-                // edilemeyen) bir yaşı davet ediyordu.
-                hint: `${CHILD_MIN_AGE}–${CHILD_MAX_AGE} yaş`,
+                // İpucu şemayla aynı kaynaktan (HOTEL_CHILD_MIN_AGE): otel-yalnız rezervasyonda
+                // 0-2 yaş artık CHILD olarak kabul ediliyor (INFANT yalnız uçuşa özgü bir tip).
+                hint: `${HOTEL_CHILD_MIN_AGE}–${CHILD_MAX_AGE} yaş`,
                 value: childCount,
                 min: 0,
                 max: 6,
@@ -238,13 +238,12 @@ export function HotelsPage() {
                         // zorla koyu render ediyordu.
                         className="h-9 w-full min-w-0 rounded-md border border-border bg-background px-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                       >
-                        {/* Aralık şemayla TEK kaynaktan gelir (CHILD_MIN_AGE–CHILD_MAX_AGE).
-                            Eskiden 0'dan başlıyordu: 0–2 seçen kullanıcı aramayı yapabiliyor
-                            ama rezervasyon formunu ASLA gönderemiyordu (şema 3–17 istiyor,
-                            yolcu satırı teklifin pax'ına sabit olduğu için silinemiyor).
-                            Otelde 0–2 zaten geçersiz — INFANT yalnız uçuş ücret tipi. */}
-                        {Array.from({ length: CHILD_MAX_AGE - CHILD_MIN_AGE + 1 }, (_, i) => {
-                          const y = CHILD_MIN_AGE + i
+                        {/* Aralık şemayla TEK kaynaktan gelir (HOTEL_CHILD_MIN_AGE–CHILD_MAX_AGE).
+                            Otel-yalnız rezervasyonda INFANT tipi yok, 0–2 yaş CHILD olarak
+                            fiyatlanır — bu yüzden arama ve rezervasyon formu artık ikisi de 0–17
+                            kabul ediyor (backend PreviewReservationCommand.ageMatchesType). */}
+                        {Array.from({ length: CHILD_MAX_AGE - HOTEL_CHILD_MIN_AGE + 1 }, (_, i) => {
+                          const y = HOTEL_CHILD_MIN_AGE + i
                           return (
                             <option key={y} value={y} className="bg-background text-foreground">
                               {y}

@@ -323,6 +323,28 @@ class PreviewReservationCommandTest {
                 .contains(AGE_TYPE_MISMATCH);
     }
 
+    @Test
+    void underTwoDeclaredAsChildOnAHotelOnlyBooking_isAccepted() {
+        // The one case PassengerType's own band can't express: no INFANT type exists for a
+        // flightless booking, so an under-2 is booked as a CHILD instead (see
+        // infantOnAHotelOnlyBooking_isRejected — INFANT itself is still refused here).
+        assertThat(violations(command(
+                List.of(adult("Ada"), traveller("Bebek", PassengerType.CHILD, 1, false)), hotelFor(1, 1), null)))
+                .doesNotContain(AGE_TYPE_MISMATCH);
+    }
+
+    @Test
+    void underTwoDeclaredAsChildOnAFlightOrCombinedBooking_isStillRejected() {
+        // The hotel-only exception must not leak into a booking that HAS a flight: there, an
+        // under-3 still belongs to INFANT, matching ageBandBoundaries_threeIsAChildAndTwoIsAnInfant.
+        assertThat(violations(command(
+                List.of(adult("Ada"), traveller("Bebek", PassengerType.CHILD, 1, false)), null, flightFor(2))))
+                .contains(AGE_TYPE_MISMATCH);
+        assertThat(violations(command(
+                List.of(adult("Ada"), traveller("Bebek", PassengerType.CHILD, 1, false)), hotelFor(1, 1), flightFor(2))))
+                .contains(AGE_TYPE_MISMATCH);
+    }
+
     // ── Traveller count vs the priced snapshot ───────────────────────────────────────────────
 
     @Test

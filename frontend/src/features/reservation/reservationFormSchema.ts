@@ -48,6 +48,15 @@ export const MAX_AGE = 120
 export const CHILD_MIN_AGE = INFANT_MAX_AGE + 1
 export const CHILD_MAX_AGE = ADULT_MIN_AGE - 1
 
+/**
+ * Otel-YALNIZ (uçuşsuz) rezervasyonda çocuğun alt yaş sınırı — 0, {@link CHILD_MIN_AGE}'in (3)
+ * aksine. Backend `PreviewReservationCommand.ageMatchesType`'ın aynısı: INFANT sadece uçuşa özgü
+ * bir ücret tipi olduğundan (bkz. `PassengerType` javadoc'u), uçuşsuz rezervasyonda 0-2 yaş bir
+ * INFANT değil, yaşından fiyatlanan bir CHILD'dır. Uçuş içeren (flight/combined) rezervasyonlarda
+ * hâlâ {@link CHILD_MIN_AGE} (3) geçerli — orada under-3 INFANT'a aittir.
+ */
+export const HOTEL_CHILD_MIN_AGE = 0
+
 /** DB sütun sınırları (passengers.first_name/last_name varchar(100), email varchar(254)). */
 const NAME_MAX = 50
 const EMAIL_MAX = 254
@@ -140,8 +149,11 @@ export const makePassengerSchema = (productType: ReservationDraft['productType']
     .superRefine((p, ctx) => {
       const rawAge = p.age?.trim() ?? ''
       const isChild = p.passengerType === 'child'
-      // Yaş ↔ tip tutarlılığı — backend'in isTravellerAgeConsistentWithType kuralı.
-      const [minAge, maxAge] = isChild ? [CHILD_MIN_AGE, CHILD_MAX_AGE] : [ADULT_MIN_AGE, MAX_AGE]
+      // Yaş ↔ tip tutarlılığı — backend'in isTravellerAgeConsistentWithType/ageMatchesType kuralı.
+      // Otel-yalnız (uçuşsuz) rezervasyonda çocuk 0-17'dir (INFANT tipi yok); uçuş varsa (flight/
+      // combined) under-3 hâlâ INFANT'a ait, o yüzden alt sınır CHILD_MIN_AGE (3) kalır.
+      const childMinAge = productType === 'hotel' ? HOTEL_CHILD_MIN_AGE : CHILD_MIN_AGE
+      const [minAge, maxAge] = isChild ? [childMinAge, CHILD_MAX_AGE] : [ADULT_MIN_AGE, MAX_AGE]
       const age = /^\d{1,3}$/.test(rawAge) ? Number(rawAge) : null
 
       if (!rawAge) {
