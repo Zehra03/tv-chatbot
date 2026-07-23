@@ -15,10 +15,20 @@ import { apiClient } from './client'
  * ile taşınır. refresh çağrısı normalde client.ts interceptor'ında otomatik yapılır.
  */
 
+/** Yetki rolü — backend `auth/domain/Role` ile birebir. */
+export type UserRole = 'USER' | 'ADMIN'
+
 export interface AuthUser {
   id: string
   email: string
   name?: string
+  /**
+   * Oturumdaki kullanıcının rolü. Admin panelinin GÖSTERİLİP gösterilmeyeceğine bunun için
+   * bakılır — ama bu bir güvenlik sınırı DEĞİLDİR: gerçek koruma backend'de, SecurityConfig
+   * `/api/v1/admin/**` yolunu `hasRole('ADMIN')` ile kapatır. Bu alanı kurcalamak yalnızca
+   * her isteği 403 alan bir ekran açar. Eski/misafir oturumlarda tanımsız olabilir.
+   */
+  role?: UserRole
 }
 
 export interface LoginRequest {

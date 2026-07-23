@@ -19,3 +19,23 @@ export type CurrencyCode = string
 
 /** ISO-3166 alpha-2 ülke kodu. DB: nationality varchar(2) (ör. "TR"). */
 export type CountryCode = string
+
+/**
+ * Spring Data `Page<T>` zarfı — admin uçları listeleri bu biçimde döndürür
+ * (`GET /api/v1/admin/users`, `/admin/reservations`). Sayfa numarası SIFIR tabanlıdır
+ * (`number`), yani ekranda gösterilen "3. sayfa" burada 2'dir.
+ *
+ * Spring bu zarfa başka alanlar da koyar (`sort`, `pageable`, `first`, `empty`…); burada
+ * yalnızca ekranların okuduğu alanlar tanımlı — fazlası tipe girmez, çünkü okumadığımız
+ * bir alanın sözleşmesini garanti etmiş gibi görünmek istemiyoruz.
+ */
+export interface Page<T> {
+  content: T[]
+  /** Toplam kayıt sayısı (tüm sayfalar). */
+  totalElements: number
+  totalPages: number
+  /** Bu sayfanın 0 tabanlı indeksi. */
+  number: number
+  /** Sayfa başına istenen kayıt sayısı. */
+  size: number
+}

@@ -4,37 +4,19 @@ import './index.css'
 import { Providers } from '@/app/providers'
 
 /**
- * Sahte backend'i (MSW) yalnızca development'ta ve VITE_ENABLE_MSW !== 'false'
- * iken başlat. Worker dinamik import edilir ki production bundle'ına girmesin.
+ * Uygulama HER ZAMAN gerçek backend'e konuşur (`VITE_API_BASE_URL`).
+ *
+ * Burada bir zamanlar MSW (sahte backend) önyüklemesi vardı; bir env anahtarıyla açılıyordu.
+ * Kaldırıldı: tarayıcıda hiçbir ayarla sahte veri gösterilememeli. Bir admin panelinde bu
+ * özellikle önemli — uydurma kullanıcı/rezervasyon listesi, gerçek olduğu sanılıp karar
+ * verilebilecek bir şeydir.
+ *
+ * MSW projeden tümüyle gitmedi: `src/mocks/` hâlâ var ama YALNIZCA birim testlerinde
+ * (`src/mocks/server.ts`, node tarafı) kullanılır. Orada sahte backend "gösterilen veri" değil,
+ * testin girdisidir — testler bu sayede Postgres/TourVisio olmadan koşar.
  */
-async function enableMocking() {
-  if (!import.meta.env.DEV || import.meta.env.VITE_ENABLE_MSW === 'false') return
-  const { worker } = await import('@/mocks/browser')
-  await worker.start({
-    // Handler'ı olmayan /api istekleri sessizce backend'e sızmasın — konsola
-    // uyarı düşsün (asset istekleri serbest).
-    onUnhandledRequest(request, print) {
-      if (new URL(request.url).pathname.startsWith('/api/')) print.warning()
-    },
-  })
-
-  // Hard refresh (Ctrl+F5) sayfayı service worker kontrolü DIŞINDA yükler:
-  // worker.start() başarılı görünse de istekler mock'a uğramadan Vite SPA
-  // fallback'ine düşer (200 + text/html → ApiError). Tek seferlik normal
-  // reload kontrolü geri kazandırır; sessionStorage bayrağı döngüyü önler.
-  const controlled = Boolean(navigator.serviceWorker?.controller)
-  if (!controlled && !sessionStorage.getItem('pax-msw-reload')) {
-    sessionStorage.setItem('pax-msw-reload', '1')
-    window.location.reload()
-  } else if (controlled) {
-    sessionStorage.removeItem('pax-msw-reload')
-  }
-}
-
-enableMocking().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <Providers />
-    </StrictMode>,
-  )
-})
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <Providers />
+  </StrictMode>,
+)

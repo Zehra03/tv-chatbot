@@ -50,6 +50,12 @@ export interface ReservationSummary {
   currency: CurrencyCode // currency char(3)
   /** Liste ekranı için denormalize misafir adı. DB: lead_guest_name varchar(200), nullable. */
   leadGuestName?: string | null
+  /**
+   * Rezervasyon hesapsız (misafir) yapıldıysa true. Backend'de `user_id`'nin yokluğundan
+   * TÜRETİLİR, ayrı bir sütun değil. Yalnızca admin listesi üye/misafir ayrımı için okur;
+   * sahibinin kimliğini (user id / guest token) taşımaz. Eski yanıtlarda bulunmayabilir.
+   */
+  guest?: boolean
 }
 
 /** Rezerve edilmiş otel snapshot'ı (backend `ReservationDetailResponse.Hotel`). */

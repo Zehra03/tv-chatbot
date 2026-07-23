@@ -120,6 +120,7 @@ function toReservationSummary(r: ReservationDetail): ReservationSummary {
     totalAmount: r.totalAmount,
     currency: r.currency,
     leadGuestName: r.leadGuestName,
+    guest: r.guest ?? false,
   }
 }
 
@@ -377,7 +378,12 @@ export const handlers: RequestHandler[] = [
       )
     }
     registeredEmails.add(body.email.toLowerCase())
-    const user: AuthUser = { id: crypto.randomUUID(), email: body.email, name: body.name }
+    const user: AuthUser = {
+      id: crypto.randomUUID(),
+      email: body.email,
+      name: body.name,
+      role: 'USER',
+    }
     const session = issueSession(user)
     writeAuthSession(session)
     claimSeedSessions(`user:${user.id}`)
@@ -399,6 +405,11 @@ export const handlers: RequestHandler[] = [
       id: crypto.randomUUID(),
       email: body.email,
       name: body.email.split('@')[0],
+      // Rol HER ZAMAN USER. Bir zamanlar "admin…" ile başlayan e-posta ADMIN sayılıyordu ki
+      // panel mock'la gezilebilsin; kaldırıldı — yetki kararını e-posta metninden türetmek,
+      // testte bile taklit edilmemesi gereken bir kural. Yönetici gerektiren bir testin rolü
+      // kendi içinde açıkça kurması gerekir.
+      role: 'USER',
     }
     const session = issueSession(user)
     writeAuthSession(session)

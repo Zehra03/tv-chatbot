@@ -14,18 +14,22 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
+import com.paximum.paxassist.admin.dto.AdminReservationResponse;
 import com.paximum.paxassist.admin.dto.DashboardStatsResponse;
 import com.paximum.paxassist.admin.dto.UserAdminDto;
+import com.paximum.paxassist.admin.service.AdminReservationService;
 import com.paximum.paxassist.auth.repository.UserRepository;
+import com.paximum.paxassist.reservation.domain.ProductType;
+import com.paximum.paxassist.reservation.domain.ReservationStatus;
 import com.paximum.paxassist.reservation.repository.ReservationRepository;
 import com.paximum.paxassist.reservation.service.CancelResult;
 import com.paximum.paxassist.reservation.service.ReservationService;
-import com.paximum.paxassist.reservation.web.ReservationWebMapper;
 import com.paximum.paxassist.reservation.web.dto.CancelRequest;
 import com.paximum.paxassist.reservation.web.dto.OutcomeResponse;
-import com.paximum.paxassist.reservation.web.dto.ReservationSummaryResponse;
 
 import jakarta.validation.Valid;
 
@@ -36,16 +40,16 @@ public class AdminController {
     private final UserRepository userRepository;
     private final ReservationRepository reservationRepository;
     private final ReservationService reservationService;
-    private final ReservationWebMapper reservationMapper;
+    private final AdminReservationService adminReservationService;
 
     public AdminController(UserRepository userRepository,
                            ReservationRepository reservationRepository,
                            ReservationService reservationService,
-                           ReservationWebMapper reservationMapper) {
+                           AdminReservationService adminReservationService) {
         this.userRepository = userRepository;
         this.reservationRepository = reservationRepository;
         this.reservationService = reservationService;
-        this.reservationMapper = reservationMapper;
+        this.adminReservationService = adminReservationService;
     }
 
     @GetMapping("/dashboard/stats")
@@ -53,7 +57,7 @@ public class AdminController {
         long totalUsers = userRepository.count();
         long totalReservations = reservationRepository.count();
 
-        List<Object[]> revenueData = reservationRepository.sumRevenueByCurrency(com.paximum.paxassist.reservation.domain.ReservationStatus.CONFIRMED);
+        List<Object[]> revenueData = reservationRepository.sumRevenueByCurrency(ReservationStatus.CONFIRMED);
         Map<String, BigDecimal> revenueMap = new HashMap<>();
         for (Object[] row : revenueData) {
             String currency = (String) row[0];
@@ -63,7 +67,11 @@ public class AdminController {
             }
         }
 
-        return new DashboardStatsResponse(totalReservations, totalUsers, revenueMap);
+        // Keyed by the enum's lowercase JSON form so the map lines up with the productType values
+        // the frontend already uses everywhere else ("hotel" / "flight" / "combined").
+        Map<String, Long> byProductType = adminReservationService.countsByProductType();
+
+        return new DashboardStatsResponse(totalReservations, totalUsers, revenueMap, byProductType);
     }
 
     @GetMapping("/users")
@@ -78,10 +86,44 @@ public class AdminController {
                 ));
     }
 
+    /**
+     * Admin reservation list, optionally filtered by PNR text, status and product type. All three
+     * are optional; a blank {@code q} counts as absent so an emptied search box does not become a
+     * "contains empty string" filter.
+     *
+     * <p>Status/product type are taken as Strings and parsed here rather than bound straight to the
+     * enums: Spring binds request-param enums with {@code Enum.valueOf}, which is case-sensitive and
+     * ignores the {@code @JsonCreator} these two carry — so {@code ?status=cancelled}, the exact
+     * spelling used everywhere else on the wire, would 400. Parsing through {@code fromJson} keeps
+     * one casing convention across body and query string.
+     */
     @GetMapping("/reservations")
-    public Page<ReservationSummaryResponse> listReservations(Pageable pageable) {
-        return reservationRepository.findAll(pageable)
-                .map(reservationMapper::toSummary);
+    public Page<AdminReservationResponse> listReservations(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String productType,
+            Pageable pageable) {
+        String pnr = (q == null || q.isBlank()) ? null : q.trim();
+        return adminReservationService.search(
+                pnr, parseStatus(status), parseProductType(productType), pageable);
+    }
+
+    private static ReservationStatus parseStatus(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return ReservationStatus.fromJson(raw);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçersiz rezervasyon durumu: " + raw);
+        }
+    }
+
+    private static ProductType parseProductType(String raw) {
+        if (raw == null || raw.isBlank()) return null;
+        try {
+            return ProductType.fromJson(raw);
+        } catch (IllegalArgumentException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Geçersiz ürün tipi: " + raw);
+        }
     }
 
     @PutMapping("/reservations/{id}/status")
