@@ -36,9 +36,9 @@ export function ChatPage() {
   const pendingQuestion = useAppSelector((s) => s.chat.pendingQuestion)
   const messages = useAppSelector((s) => s.chat.messages)
   // Boş sohbette hero başlığındaki selamlamayı kişiselleştirir; misafirde ad yok,
-  // sade "Merhaba!" kalır ("Merhaba Misafir!" istenmedi).
+  // sade "Merhaba!" kalır ("Merhaba Misafir!" istenmedi). Soyadı olmadan yalnız ilk isim.
   const user = useAppSelector((s) => s.auth.user)
-  const greetingName = user && !user.guest ? user.name ?? undefined : undefined
+  const greetingName = user && !user.guest ? user.name?.trim().split(/\s+/)[0] : undefined
   // Biriken arama kriteri — sonuç panelindeki "Seç"in rezervasyon snapshot'ını kurabilmesi için
   // kartlara iletilir (otelde giriş/çıkış-oda/kişi, uçuşta yolcu sayısı ürün dışında burada yaşar).
   const criteria = useAppSelector((s) => s.chat.accumulatedCriteria)
