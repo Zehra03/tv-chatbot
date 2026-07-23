@@ -143,6 +143,9 @@ interface AnimatedAIChatProps {
     disabled?: boolean;
     placeholder?: string;
     hero?: boolean;
+    /** Boş sohbette hero başlığında kullanılan selamlama adı (ör. kullanıcı adı) —
+     * verilmezse jenerik "Merhaba!" kalır. */
+    greetingName?: string;
 }
 
 /** Tek mesajın azami uzunluğu. */
@@ -150,7 +153,7 @@ const MAX_LENGTH = 2000;
 /** Sayaç bu uzunluktan sonra görünür — sınıra yaklaşmadan gürültü yapmasın. */
 const COUNTER_VISIBLE_AT = 1800;
 
-export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: AnimatedAIChatProps = {}) {
+export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true, greetingName }: AnimatedAIChatProps = {}) {
     const [value, setValue] = useState("");
     const [isTyping, setIsTyping] = useState(false);
     const [, startTransition] = useTransition();
@@ -343,7 +346,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     className="inline-block"
                                 >
                                     <h1 className="text-3xl font-medium tracking-tight text-foreground pb-1">
-                                        Bugün nereye gidiyoruz?
+                                        {`Merhaba${greetingName ? ` ${greetingName}` : ""}! Ben seyahat asistanın Paxi.`}
                                     </h1>
                                     <motion.div
                                         className="h-px bg-gradient-to-r from-transparent via-foreground/20 to-transparent"
@@ -358,7 +361,7 @@ export function AnimatedAIChat({ onSend, disabled, placeholder, hero = true }: A
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.3 }}
                                 >
-                                    Bir komut yazın ya da sorunuzu sorun
+                                    Sana nasıl yardımcı olabilirim? Otel mi yoksa uçuş mu arıyorsun?
                                 </motion.p>
                             </motion.div>
                         )}
