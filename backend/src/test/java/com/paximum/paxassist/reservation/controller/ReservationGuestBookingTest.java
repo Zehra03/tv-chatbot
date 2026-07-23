@@ -203,13 +203,13 @@ class ReservationGuestBookingTest {
     private ReservationPreview preview() {
         return new ReservationPreview("preview-1", Instant.now().plusSeconds(900), ProductType.HOTEL,
                 new BigDecimal("1500.00"), "EUR", "Ada Yılmaz", List.of("Ada Yılmaz"),
-                true, false, false, null, true, null, null);
+                true, false, false, null, null, true, null, null);
     }
 
     private PreviewResponse previewResponse() {
         return new PreviewResponse("preview-1", Instant.now().plusSeconds(900), ProductType.HOTEL,
                 new BigDecimal("1500.00"), "EUR", "Ada Yılmaz", List.of("Ada Yılmaz"),
-                true, false, false, null, true, null, null);
+                true, false, false, null, null, true, null, null);
     }
 
     private ReservationDetailResponse detailResponse(String reservationNumber) {

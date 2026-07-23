@@ -34,6 +34,7 @@ public class ReservationWebMapper {
                 preview.hasFlight(),
                 preview.priceChanged(),
                 preview.previousAmount(),
+                preview.previousCurrency(),
                 preview.available(),
                 toPreviewHotel(preview.hotel()),
                 toPreviewFlight(preview.flight()));
