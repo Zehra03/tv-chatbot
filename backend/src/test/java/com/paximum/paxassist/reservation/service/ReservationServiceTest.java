@@ -123,6 +123,7 @@ class ReservationServiceTest {
         ReservationPreview preview = ((PreviewResult.Priced) result).preview();
         assertThat(preview.priceChanged()).isTrue();
         assertThat(preview.previousAmount()).isEqualByComparingTo(new BigDecimal("1500.00"));
+        assertThat(preview.previousCurrency()).isEqualTo("EUR");
         assertThat(preview.totalAmount()).isEqualByComparingTo(new BigDecimal("1750.00"));
 
         // The frozen snapshot carries the live price, so the DB can never record the stale figure.
@@ -130,6 +131,29 @@ class ReservationServiceTest {
                 org.mockito.ArgumentCaptor.forClass(PendingReservation.class);
         verify(pendingStore).savePreview(captor.capture());
         assertThat(captor.getValue().command().totalAmount()).isEqualByComparingTo(new BigDecimal("1750.00"));
+    }
+
+    @Test
+    void previewReservation_liveCurrencyDiffersFromDeclared_previousAmountKeepsItsOwnCurrency() {
+        // The search declared 4309 TRY; TourVisio's live reprice comes back as 80 EUR. previousAmount
+        // must stay labeled TRY — pairing it with the live EUR currency would render "4309 TRY" as
+        // if it were EUR, which reads as an (incorrect) ~98% discount instead of a currency mismatch.
+        PreviewReservationCommand command =
+                bookingFor(new BigDecimal("4309.00")).withTotalAmount(new BigDecimal("4309.00"), "TRY");
+        when(requestMapper.toBeginRequest(command))
+                .thenReturn(new BeginTransactionWithOfferRequest(List.of(), "TRY", "en-US"));
+        when(bookingClient.beginTransactionWithOffer(any()))
+                .thenReturn(new TourVisioCallResult.Success<>(beginResponsePricedAt("80.00", "EUR")));
+        when(pendingStore.previewTtl()).thenReturn(java.time.Duration.ofMinutes(15));
+
+        ReservationPreview preview = ((PreviewResult.Priced)
+                reservationService.previewReservation(command)).preview();
+
+        assertThat(preview.priceChanged()).isTrue();
+        assertThat(preview.previousAmount()).isEqualByComparingTo(new BigDecimal("4309.00"));
+        assertThat(preview.previousCurrency()).isEqualTo("TRY");
+        assertThat(preview.totalAmount()).isEqualByComparingTo(new BigDecimal("80.00"));
+        assertThat(preview.currency()).isEqualTo("EUR");
     }
 
     @Test
@@ -146,6 +170,7 @@ class ReservationServiceTest {
 
         assertThat(preview.priceChanged()).isFalse();
         assertThat(preview.previousAmount()).isNull();
+        assertThat(preview.previousCurrency()).isNull();
     }
 
     @Test
@@ -281,6 +306,10 @@ class ReservationServiceTest {
      * beside it — the value that must NOT be compared against the user's declared amount.
      */
     private TransactionResponse beginResponsePricedAt(String amount) {
+        return beginResponsePricedAt(amount, "EUR");
+    }
+
+    private TransactionResponse beginResponsePricedAt(String amount, String currency) {
         com.fasterxml.jackson.databind.JsonNode reservationData = null;
         if (amount != null) {
             java.math.BigDecimal agencyNet = new java.math.BigDecimal(amount)
@@ -289,12 +318,12 @@ class ReservationServiceTest {
                 reservationData = new com.fasterxml.jackson.databind.ObjectMapper().readTree("""
                         {
                           "reservationInfo": {
-                            "priceToPay": {"amount": %s, "currency": "EUR"},
-                            "totalPrice": {"amount": %s, "currency": "EUR"},
-                            "agencyPriceToPay": {"amount": %s, "currency": "EUR"}
+                            "priceToPay": {"amount": %s, "currency": "%s"},
+                            "totalPrice": {"amount": %s, "currency": "%s"},
+                            "agencyPriceToPay": {"amount": %s, "currency": "%s"}
                           }
                         }
-                        """.formatted(amount, amount, agencyNet));
+                        """.formatted(amount, currency, amount, currency, agencyNet, currency));
             } catch (Exception e) {
                 throw new IllegalStateException(e);
             }

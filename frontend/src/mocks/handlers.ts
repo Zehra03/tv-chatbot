@@ -300,6 +300,7 @@ export const handlers: RequestHandler[] = [
       hasFlight: !!cmd.flight,
       priceChanged: repriced,
       previousAmount: repriced ? cmd.totalAmount : null,
+      previousCurrency: repriced ? cmd.currency : null,
       // Önizleme yalnız TourVisio'nun fiyatlamayı kabul ettiği teklif için oluşur.
       available: true,
     }

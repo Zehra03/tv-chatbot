@@ -113,13 +113,13 @@ class ReservationControllerTest {
     void preview_validRequest_routesToServiceAndReturnsMappedResponse() throws Exception {
         ReservationPreview previewResult = new ReservationPreview("preview-123", java.time.Instant.now(),
                 ProductType.HOTEL, java.math.BigDecimal.valueOf(1500), "EUR", "John Doe",
-                List.of("John Doe"), true, false, false, null, true, null, null);
+                List.of("John Doe"), true, false, false, null, null, true, null, null);
         when(reservationService.previewReservation(any(PreviewReservationCommand.class)))
                 .thenReturn(new PreviewResult.Priced(previewResult));
 
         PreviewResponse previewResponse = new PreviewResponse(
                 "preview-123", java.time.Instant.now(), ProductType.HOTEL, java.math.BigDecimal.valueOf(1500),
-                "EUR", "John Doe", List.of("John Doe"), true, false, false, null, true, null, null);
+                "EUR", "John Doe", List.of("John Doe"), true, false, false, null, null, true, null, null);
         when(mapper.toPreviewResponse(previewResult)).thenReturn(previewResponse);
 
         mockMvc.perform(post("/api/v1/reservations/preview")
@@ -403,11 +403,13 @@ class ReservationControllerTest {
     void preview_priceChanged_handsBothAmountsToTheUi() throws Exception {
         ReservationPreview preview = new ReservationPreview("preview-1", java.time.Instant.now(),
                 ProductType.HOTEL, new java.math.BigDecimal("1750.00"), "EUR", "Ada Yılmaz",
-                List.of("Ada Yılmaz"), true, false, true, new java.math.BigDecimal("1500.00"), true, null, null);
+                List.of("Ada Yılmaz"), true, false, true, new java.math.BigDecimal("1500.00"), "EUR",
+                true, null, null);
         when(reservationService.previewReservation(any())).thenReturn(new PreviewResult.Priced(preview));
         when(mapper.toPreviewResponse(preview)).thenReturn(new PreviewResponse("preview-1",
                 java.time.Instant.now(), ProductType.HOTEL, new java.math.BigDecimal("1750.00"), "EUR",
-                "Ada Yılmaz", List.of("Ada Yılmaz"), true, false, true, new java.math.BigDecimal("1500.00"), true, null, null));
+                "Ada Yılmaz", List.of("Ada Yılmaz"), true, false, true, new java.math.BigDecimal("1500.00"),
+                "EUR", true, null, null));
 
         mockMvc.perform(post("/api/v1/reservations/preview")
                         .contentType(MediaType.APPLICATION_JSON)

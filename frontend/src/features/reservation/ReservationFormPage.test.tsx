@@ -355,6 +355,42 @@ describe('ReservationFormPage', () => {
   })
 
   /**
+   * Eski/yeni tutar farklı para birimlerinde olabilir (ör. arama TRY ile yapıldı, TourVisio'nun
+   * canlı yeniden fiyatlaması EUR döndürdü). `previousAmount` her zaman KENDİ `previousCurrency`'si
+   * ile gösterilmeli — canlı `currency` ile değil, yoksa "4309 TRY" yanlışlıkla "€4.309" gibi
+   * (gerçekte olmayan) devasa bir indirim olarak okunur.
+   */
+  it('eski/yeni tutar farklı para biriminde ise her biri KENDİ para birimiyle gösterilir', async () => {
+    server.use(
+      http.post('/api/v1/reservations/preview', () =>
+        HttpResponse.json({
+          previewId: 'preview-currency-mismatch',
+          expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+          productType: 'hotel',
+          totalAmount: 80,
+          currency: 'EUR',
+          leadGuestName: 'Zehra Yılmaz',
+          passengerNames: ['Zehra Yılmaz'],
+          hasHotel: true,
+          hasFlight: false,
+          priceChanged: true,
+          previousAmount: 4309,
+          previousCurrency: 'TRY',
+          available: true,
+        }),
+      ),
+    )
+    const user = userEvent.setup()
+    renderPage(makeHotelDraft('OFFER-REPRICE'))
+
+    await fillAndPreview(user)
+
+    expect(await screen.findByText('Fiyat güncellendi', {}, { timeout: 3000 })).toBeTruthy()
+    expect(screen.getByText('₺4.309')).toBeTruthy() // eski tutar: previousCurrency (TRY)
+    expect(screen.getAllByText(/€80/).length).toBeGreaterThan(0) // yeni tutar: currency (EUR)
+  })
+
+  /**
    * Uyarıdan SONRA 202 (COMMIT_OUTCOME_UNKNOWN) gelirse: booking geçmiş OLABİLİR. Kullanıcıya
    * "Sonuç doğrulanıyor" gösterilmeli — uyarı ekranı değil. Regresyonda `warning` temizlenmediği
    * ve `warning` dalı `pending` dalından önce geldiği için kullanıcı "Yine de onayla"ya geri

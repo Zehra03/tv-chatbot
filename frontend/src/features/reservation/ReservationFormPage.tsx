@@ -522,7 +522,10 @@ export function ReservationFormPage() {
                 {preview.data.previousAmount != null && (
                   <p className="text-sm">
                     <span className="text-muted-foreground line-through">
-                      {formatPrice(preview.data.previousAmount, preview.data.currency)}
+                      {formatPrice(
+                        preview.data.previousAmount,
+                        preview.data.previousCurrency ?? preview.data.currency,
+                      )}
                     </span>{' '}
                     <span aria-hidden>→</span>{' '}
                     <span className="font-bold">

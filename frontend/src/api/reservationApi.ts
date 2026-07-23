@@ -121,6 +121,10 @@ export interface PreviewResponse {
    */
   priceChanged: boolean
   previousAmount?: number | null
+  /** `previousAmount`'ın kendi para birimi — canlı `currency`'den farklı olabilir (ör. arama TRY
+   * ile yapıldı, canlı yeniden fiyatlama EUR döndü). `previousAmount`'ı ASLA `currency` ile
+   * biçimlendirmeyin, her zaman bunu kullanın. */
+  previousCurrency?: string | null
   /** Önizleme yalnız TourVisio'nun fiyatlamayı kabul ettiği teklif için oluşur; sözleşmede
    * uygunluğu ima etmek yerine açıkça söyleyebilmek için var. */
   available: boolean

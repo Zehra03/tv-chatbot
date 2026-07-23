@@ -18,7 +18,9 @@ import com.paximum.paxassist.reservation.domain.TripType;
  * <p>{@link #totalAmount()} is TourVisio's own live price, re-read while building this preview — never
  * the client's declared figure. When the two differ, {@link #priceChanged()} is true and
  * {@link #previousAmount()} carries what the user was originally shown, so the UI can present old vs
- * new and take an explicit acceptance before confirming (K21).
+ * new and take an explicit acceptance before confirming (K21). {@link #previousCurrency()} is the
+ * currency that amount was actually declared in — it can differ from {@link #currency()} (TourVisio's
+ * live currency), so the two must never be mixed when formatting the old figure.
  *
  * <p>{@link #available()} is always true here: a preview only exists when TourVisio agreed to price the
  * offer. A sold-out product never reaches this record — it comes back as {@link PreviewResult.Unavailable}.
@@ -36,6 +38,7 @@ public record ReservationPreview(
         boolean hasFlight,
         boolean priceChanged,
         BigDecimal previousAmount,
+        String previousCurrency,
         boolean available,
         Hotel hotel,
         Flight flight) {

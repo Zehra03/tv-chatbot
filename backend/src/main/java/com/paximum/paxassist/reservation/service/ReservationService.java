@@ -184,6 +184,10 @@ public class ReservationService {
                 command.flight() != null,
                 priceChanged,
                 priceChanged ? declared : null,
+                // The declared amount's OWN currency, not TourVisio's live one — they can differ
+                // (e.g. search declared TRY, live reprice comes back in EUR), and mixing them here
+                // is what made the old figure render with the wrong currency symbol.
+                priceChanged ? command.currency() : null,
                 // Availability is not assumed: reaching this line means TourVisio just priced the offer.
                 true,
                 hotelSummary(command.hotel()),
