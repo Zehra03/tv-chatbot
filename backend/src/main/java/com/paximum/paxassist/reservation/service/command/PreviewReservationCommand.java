@@ -132,7 +132,8 @@ public record PreviewReservationCommand(
      * checked here.
      *
      * <p>The bands themselves belong to {@link PassengerType} — this rule only applies them, so the
-     * numbers exist in exactly one place.
+     * numbers exist in exactly one place — except the one case {@link PassengerType} itself cannot
+     * express: see {@link #ageMatchesType}.
      */
     @AssertTrue(message = "Yolcu yaşı seçilen tiple uyumlu değil (yetişkin: 18+, çocuk: 3-17, bebek: 0-2)")
     public boolean isTravellerAgeConsistentWithType() {
@@ -141,7 +142,23 @@ public record PreviewReservationCommand(
         }
         return travellers.stream()
                 .filter(t -> t != null && t.age() != null && t.passengerType() != null)
-                .allMatch(t -> t.passengerType().matchesAge(t.age()));
+                .allMatch(this::ageMatchesType);
+    }
+
+    /**
+     * A traveller's age must fall inside their declared type's band — except a hotel-only booking has
+     * no INFANT type ({@link #isInfantOnlyOnAFlightBooking}), so an under-2 there is booked as a CHILD
+     * and must be accepted even though 0-2 sits below {@link PassengerType#CHILD}'s normal 3-17 band.
+     * A flight or combined booking is unaffected: there, an under-3 still belongs to INFANT.
+     */
+    private boolean ageMatchesType(Traveller t) {
+        if (t.passengerType().matchesAge(t.age())) {
+            return true;
+        }
+        return flight == null
+                && t.passengerType() == PassengerType.CHILD
+                && t.age() >= 0
+                && t.age() < PassengerType.CHILD.minAge();
     }
 
     /**
